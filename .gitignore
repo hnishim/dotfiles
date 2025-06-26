@@ -1,0 +1,3 @@
+# dotfiles: gitignore
+# raycastフォルダのみを除外
+raycast/ 

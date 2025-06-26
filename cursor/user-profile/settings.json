@@ -1,0 +1,15 @@
+{
+    "window.commandCenter": 1,
+    "editor.accessibilitySupport": "off",
+    "workbench.colorTheme": "Default Dark+",
+    "diffEditor.experimental.useTrueInlineView": true,
+    "diffEditor.renderSideBySide": false,
+    "editor.unicodeHighlight.includeComments": false,
+    "editor.unicodeHighlight.nonBasicASCII": false,
+    "git.enableSmartCommit": true,
+    "files.trimFinalNewlines": true,
+    "editor.wordWrap": "on",
+    "editor.fontFamily": "'PlemolJP35'",
+    "terminal.integrated.fontFamily": "'PlemolJP Console', 'Hack Nerd Font'",
+    "textlint.run": "onType"
+}
