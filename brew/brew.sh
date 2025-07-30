@@ -37,6 +37,20 @@ if ! command -v brew &> /dev/null; then
 else
   echo "Homebrew is already installed."
 fi
+
+# --- Set Homebrew PATH (for Apple Silicon) ---
+echo "Configuring shell to use Homebrew..."
+
+# Add Homebrew to PATH in .zprofile if not already there
+# On Apple Silicon, the path is /opt/homebrew
+if ! grep -q 'eval "$(/opt/homebrew/bin/brew shellenv)"' ~/.zprofile 2>/dev/null; then
+  echo "Adding Homebrew to your PATH in ~/.zprofile..."
+  echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
+fi
+
+# Add Homebrew to the current shell session's PATH
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
 echo "Updating Homebrew..."
 brew update
 

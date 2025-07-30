@@ -5,6 +5,11 @@ defaults write -g AppleLanguages -array en ja
 # --- Dock ---
 # Dockの自動表示/非表示機能を有効化
 defaults write com.apple.dock autohide -bool true
+# ホットコーナーを無効化
+defaults write com.apple.dock wvous-tl-corner -int 1 && defaults write com.apple.dock wvous-tl-modifier -int 0
+defaults write com.apple.dock wvous-tr-corner -int 1 && defaults write com.apple.dock wvous-tr-modifier -int 0
+defaults write com.apple.dock wvous-bl-corner -int 1 && defaults write com.apple.dock wvous-bl-modifier -int 0
+defaults write com.apple.dock wvous-br-corner -int 1 && defaults write com.apple.dock wvous-br-modifier -int 0
 
 # --- Finder ---
 # ファイルの拡張子を常に表示
@@ -53,6 +58,12 @@ defaults write com.apple.controlcenter "Siri" -int 24
 defaults write com.apple.controlcenter "TimeMachine" -int 24
 defaults write com.apple.controlcenter "Weather" -int 24
 
+# --- Desktop & Window ---
+# 書類を開くときにタブで開くようにする
+defaults write -g AppleWindowTabbingMode -string "always"
+# ウインドウを画面上部にドラッグしてフルスクリーンにする機能を無効化
+defaults write com.apple.WindowManager dragToFullScreenEnabled -bool false
+
 # --- トラックパッド ---
 # トラックパッドのタップでクリックを有効化
 defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
@@ -72,6 +83,8 @@ defaults write com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int
 defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
 # Fnキーを標準のファンクションキーとして使用
 defaults write -g com.apple.keyboard.fnState -bool true
+# ダブルスペースでピリオドを入力する機能を無効化
+defaults write -g NSAutomaticPeriodSubstitutionEnabled -bool false
 
 # --- 日本語入力（Mac標準） ---
 # かわせみを使用する場合には特に不要な設定
@@ -111,6 +124,13 @@ defaults write com.apple.Preview NSUserKeyEquivalents -dict-add "Show Previous T
 
 # Notionで「現在のページへのリンクをコピー」のショートカットを設定 (⌘⇧C)
 defaults write notion.id NSUserKeyEquivalents -dict-add "Copy Link to Current Page" "@\$c"
+
+# --- Software Update ---
+# 注意: 以下のコマンドはsudo権限が必要な場合があります
+# macOSアップデートを自動的にインストール
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
+# App Storeからのアプリケーションアップデートを自動的にインストール
+sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool true
 
 # --- 変更の反映 ---
 killall Dock
