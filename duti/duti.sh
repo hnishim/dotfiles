@@ -1,15 +1,15 @@
 #!/bin/bash
 
-# コマンドが失敗した場合、即座にスクリプトを終了する
+# Exit immediately if a command exits with a non-zero status.
 set -euo pipefail
 
-# duti を使ってファイルのデフォルトアプリケーションを設定するスクリプト
-# duti_settings.yml ファイルに定義されたリストを元に設定を行います。
+# Sets default applications using duti.
+# It processes a settings file in the format recommended by the official duti documentation.
 
-# --- 設定 ---
-# スクリプトと同じディレクトリにあるduti_settings.ymlを指すように設定
+# --- Configuration ---
+# Point to the settings file in the same directory as the script.
 SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
-SETTINGS_FILE="$SCRIPT_DIR/duti_settings.yml"
+SETTINGS_FILE="$SCRIPT_DIR/duti_settings.duti"
 
 # --- 事前チェック ---
 
@@ -21,51 +21,24 @@ fi
 
 # dutiの存在チェックとインストール
 if ! command -v duti &> /dev/null; then
-  echo "dutiが見つかりません。Homebrew経由でインストールを試みます..."
+  echo "duti not found. Attempting to install via Homebrew..."
   if ! brew install duti; then
-      echo "dutiのインストールに失敗しました。手動でインストールしてから再度スクリプトを実行してください。"
-      exit 1
-  fi
-fi
-
-# yqの存在チェックとインストール
-if ! command -v yq &> /dev/null; then
-  echo "yq (YAMLプロセッサ)が見つかりません。Homebrew経由でインストールを試みます..."
-  if ! brew install yq; then
-      echo "yqのインストールに失敗しました。手動でインストールしてから再度スクリプトを実行してください。"
+      echo "Failed to install duti. Please install it manually and run this script again."
       exit 1
   fi
 fi
 
 # 設定ファイルの存在チェック
 if [ ! -f "$SETTINGS_FILE" ]; then
-    echo "エラー: 設定ファイルが見つかりません: $SETTINGS_FILE"
+    echo "Error: Settings file not found: $SETTINGS_FILE"
     exit 1
 fi
 
 # --- メイン処理 ---
 
-echo "--- dutiによるデフォルトアプリケーションの設定を開始します ---"
+echo "--- Setting default applications using duti ---"
+echo "Processing settings from: $SETTINGS_FILE"
 
-# yqを使ってYAMLファイルをパースし、各アプリケーション設定をループ処理
-num_apps=$(yq e 'length' "$SETTINGS_FILE")
+duti "$SETTINGS_FILE"
 
-for i in $(seq 0 $((num_apps - 1))); do
-    bundle_id=$(yq e ".[$i].bundle_id" "$SETTINGS_FILE")
-    extensions=$(yq e ".[$i].extensions[]" "$SETTINGS_FILE")
-
-    if [ -z "$bundle_id" ] || [ "$bundle_id" = "null" ] || [ -z "$extensions" ] || [ "$extensions" = "null" ]; then
-        echo "警告: エントリ $i の情報が不完全なためスキップします。"
-        continue
-    fi
-
-    echo "アプリケーション '$bundle_id' の設定中..."
-
-    echo "$extensions" | while IFS= read -r ext; do
-        if [ -z "$ext" ]; then continue; fi
-        echo "  - 拡張子 '$ext' を関連付け"
-        duti -s "$bundle_id" "$ext" all
-    done
-done
-
-echo "--- デフォルトアプリケーションの設定が正常に完了しました！ ---"
+echo "--- Default application settings have been successfully applied! ---"
