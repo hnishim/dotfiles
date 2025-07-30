@@ -3,10 +3,9 @@
         {
             "complex_modifications": {
                 "rules": [
-                    {
-                        "description": "Avoid send with return",
+                    {   "description": "Avoid send with return",
                         "manipulators": [
-                            {
+                            {   "description": "Enter → ⇧ Enter",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -18,7 +17,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "Enter → ⇧ Enter",
                                 "from": { "key_code": "return_or_enter" },
                                 "to": [
                                     {
@@ -28,7 +26,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "⌘ Enter → Enter",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -39,7 +37,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "⌘ Enter → Enter",
                                 "from": {
                                     "key_code": "return_or_enter",
                                     "modifiers": { "mandatory": ["left_command"] }
@@ -49,10 +46,9 @@
                             }
                         ]
                     },
-                    {
-                        "description": "括弧を自動的に閉じてカーソルを中に移動",
+                    {   "description": "括弧を自動的に閉じてカーソルを中に移動",
                         "manipulators": [
-                            {
+                            {   "description": "英語・角括弧",
                                 "conditions": [
                                     {
                                         "input_sources": [{ "language": "ja" }],
@@ -67,7 +63,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "日本語・角括弧",
                                 "conditions": [
                                     {
                                         "input_sources": [{ "language": "ja" }],
@@ -83,7 +79,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "角括弧（⌥）",
                                 "from": {
                                     "key_code": "open_bracket",
                                     "modifiers": { "mandatory": ["left_option"] }
@@ -91,7 +87,7 @@
                                 "to": [{ "key_code": "open_bracket" }],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "英語・丸括弧",
                                 "conditions": [
                                     {
                                         "input_sources": [{ "language": "ja" }],
@@ -115,7 +111,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "日本語・丸括弧",
                                 "conditions": [
                                     {
                                         "input_sources": [{ "language": "ja" }],
@@ -140,7 +136,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "丸括弧（⌥）",
                                 "from": {
                                     "key_code": "9",
                                     "modifiers": { "mandatory": ["left_option", "left_shift"] }
@@ -153,7 +149,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "英語・波括弧",
                                 "conditions": [
                                     {
                                         "input_sources": [{ "language": "ja" }],
@@ -177,7 +173,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "日本語・波括弧",
                                 "conditions": [
                                     {
                                         "input_sources": [{ "language": "ja" }],
@@ -202,7 +198,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "波括弧（⌥）",
                                 "from": {
                                     "key_code": "open_bracket",
                                     "modifiers": { "mandatory": ["left_option", "left_shift"] }
@@ -215,7 +211,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "クォーテーション",
                                 "from": {
                                     "key_code": "quote",
                                     "modifiers": { "mandatory": ["left_shift"] }
@@ -233,7 +229,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "クォーテーション（⌥）",
                                 "from": {
                                     "key_code": "quote",
                                     "modifiers": { "mandatory": ["left_option", "left_shift"] }
@@ -248,10 +244,9 @@
                             }
                         ]
                     },
-                    {
-                        "description": "Align shortcut keys across apps",
+                    {   "description": "Align shortcut keys across apps",
                         "manipulators": [
-                            {
+                            {   "description": "Slack & Notion: 検索 ⌘ L -> ⌘ K",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -261,7 +256,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "Slack & Notion: cmd + L -> cmd + K (search)",
                                 "from": {
                                     "key_code": "l",
                                     "modifiers": {
@@ -277,7 +271,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "Notion: ブロックリンクコピー ⌘⇧^ C -> ⌘^ L",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -286,7 +280,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "Notion: cmd + shift + ctrl + C -> cmd + ctrl + L (copy block link)",
                                 "from": {
                                     "key_code": "c",
                                     "modifiers": {
@@ -302,7 +295,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "Notion: 番号付き箇条書き ⌘⇧ 7 -> ⌘⌥ 6",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -311,7 +304,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "Notion: cmd + shift + 7 -> cmd + opt + 6 (numbered bullets)",
                                 "from": {
                                     "key_code": "7",
                                     "modifiers": {
@@ -327,7 +319,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "Notion: 箇条書き ⌘⇧ 8 -> ⌘⌥ 5",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -336,7 +328,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "Notion: cmd + shift + 8 -> cmd + opt + 5 (bullets)",
                                 "from": {
                                     "key_code": "8",
                                     "modifiers": {
@@ -352,7 +343,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "Notion: チェックリスト ⌘⇧ 9 -> ⌘⌥ 4 (checklist)",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -361,7 +352,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "Notion: cmd + shift + 9 -> cmd + opt + 4 (checklist)",
                                 "from": {
                                     "key_code": "9",
                                     "modifiers": {
@@ -377,7 +367,7 @@
                                 ],
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "Notion: コード ⌘ E -> ⌘⇧ C (code)",
                                 "conditions": [
                                     {
                                         "bundle_identifiers": [
@@ -386,7 +376,6 @@
                                         "type": "frontmost_application_if"
                                     }
                                 ],
-                                "description": "Notion: cmd + E -> cmd + shift + C (code)",
                                 "from": {
                                     "key_code": "e",
                                     "modifiers": {
@@ -404,10 +393,9 @@
                             }
                         ]
                     },
-                    {
-                        "description": "Open favorites in Arc",
+                    {   "description": "Open favorites in Arc",
                         "manipulators": [
-                            {
+                            {   "description": "メール： ⌥ M",
                                 "from": {
                                     "key_code": "m",
                                     "modifiers": { "mandatory": ["left_option"] }
@@ -432,7 +420,7 @@
                                 },
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "Google Drive： ⌥ D",
                                 "from": {
                                     "key_code": "d",
                                     "modifiers": { "mandatory": ["left_option"] }
@@ -457,7 +445,7 @@
                                 },
                                 "type": "basic"
                             },
-                            {
+                            {   "description": "NotebookLM： ⌥ O",
                                 "from": {
                                     "key_code": "o",
                                     "modifiers": { "mandatory": ["left_option"] }
@@ -484,10 +472,9 @@
                             }
                         ]
                     },
-                    {
+                    {   "description": "Change caps_lock to command+control+option+shift.",
                         "manipulators": [
                             {
-                                "description": "Change caps_lock to command+control+option+shift.",
                                 "from": {
                                     "key_code": "caps_lock",
                                     "modifiers": { "optional": ["any"] }
@@ -502,11 +489,9 @@
                             }
                         ]
                     },
-                    {
-                        "description": "［ US ］左右のコマンドキー（⌘）を、単独で押したときは 英数・かな キー として扱う（左⌘は 英数、右⌘は かな）",
+                    {   "description": "［ US ］左右のコマンドキー（⌘）を、単独で押したときは 英数・かな キー として扱う（左⌘は 英数、右⌘は かな）",
                         "manipulators": [
-                            {
-                                "description": " LEFT COMMAND → EISUU ",
+                            {   "description": " LEFT COMMAND → EISUU ",
                                 "from": {
                                     "key_code": "left_command",
                                     "modifiers": { "optional": ["any"] }
@@ -515,8 +500,7 @@
                                 "to_if_alone": [{ "key_code": "japanese_eisuu" }],
                                 "type": "basic"
                             },
-                            {
-                                "description": " RIGHT COMMAND → KANA ",
+                            {   "description": " RIGHT COMMAND → KANA ",
                                 "from": {
                                     "key_code": "right_command",
                                     "modifiers": { "optional": ["any"] }
