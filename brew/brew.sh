@@ -119,10 +119,11 @@ install_mas_packages() {
 
 	echo "--- Checking and installing ${package_label}s ---"
 
-	# yqでアプリリストを取得。リストが存在しない/空の場合は何もしない
-	local apps
-	apps=$(yq e "$yaml_query" "$PACKAGE_FILE")
-	if [ -z "$apps" ] || [ "$apps" = "null" ]; then
+	# yqでアプリリストをTSV形式（ID, Name）で取得。リストが存在しない/空の場合は何もしない
+	# 各要素からidとnameをタブ区切りで出力
+	local apps_tsv
+	apps_tsv=$(yq e "($yaml_query) | [.id, .name] | @tsv" "$PACKAGE_FILE")
+	if [ -z "$apps_tsv" ] || [ "$apps_tsv" = "null" ]; then
 		echo "No ${package_label}s to install."
 		return
 	fi
@@ -131,18 +132,10 @@ install_mas_packages() {
 	local installed_apps
 	installed_apps=$(mas list)
 
-	# yqから受け取ったリストをループ処理
-	echo "$apps" | while IFS= read -r app_line; do
+	# yqから受け取ったTSVリストをループ処理
+	echo "$apps_tsv" | while IFS=$'\t' read -r app_id app_name; do
 		# Skip empty lines
-		if [ -z "$app_line" ]; then continue; fi
-
-		# コメントを除いたID部分だけを抽出
-		local app_id
-		app_id=$(echo "$app_line" | awk '{print $1}')
-
-		# アプリ名（コメント部分）をログ表示用に抽出
-		local app_name
-		app_name=$(echo "$app_line" | cut -d'#' -f2- | sed 's/^ *//')
+		if [ -z "$app_id" ]; then continue; fi
 
 		if echo "$installed_apps" | grep -q "^$app_id "; then
 			echo "${package_label} '$app_name' (ID: $app_id) is already installed. Skipping."

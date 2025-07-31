@@ -49,11 +49,16 @@ casks:
 
 mas:
   common:
-    - "1448916662 # Step two"
-    - "1380563956 # 辞書 by 物書堂"
-    - "1339041727 # Logovista 電子辞典閲覧用統合ブラウザ"
+    - name: "Step two"
+      id: 1448916662
+    - name: "辞書 by 物書堂"
+      id: 1380563956
+    - name: "Logovista 電子辞典閲覧用統合ブラウザ"
+      id: 1339041727
   personal:
-    - "302584613 # Amazon Kindle"
-    - "1611405865 # bunkoOCR"
+    - name: "Amazon Kindle"
+      id: 302584613
+    - name: "bunkoOCR"
+      id: 1611405865
   business:
     # Add business-specific Mac App Store apps here if any
