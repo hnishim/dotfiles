@@ -21,7 +21,6 @@ ICLOUD_KEYBINDINGS_JSON="$ICLOUD_USER_DIR/keybindings.json"
 BACKUP_DATE=$(date +%Y%m%d)
 
 echo "=== Cursor設定ファイル同期スクリプト ==="
-echo "開始時刻: $(date)"
 
 # 関数定義
 log_info() {
@@ -113,13 +112,9 @@ else
     exit 1
 fi
 
-echo ""
 log_success "=== 同期完了 ==="
-echo "終了時刻: $(date)"
-echo ""
 echo "作成されたシンボリックリンク:"
 echo "  settings.json: $LOCAL_SETTINGS_JSON -> $ICLOUD_SETTINGS_JSON"
 echo "  keybindings.json: $LOCAL_KEYBINDINGS_JSON -> $ICLOUD_KEYBINDINGS_JSON"
-echo ""
 echo "バックアップファイル:"
 echo "  $LOCAL_BACKUP_DIR/"
