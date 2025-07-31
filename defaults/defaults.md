@@ -32,7 +32,7 @@ ZoomやMeetでカメラをオンにするたび表示される「リアクショ
 ## IME（かわせみ）
 
 IME切替候補にMac標準IMEを消す。
-参考：[https://leica-q2.com/2021/03/04thood-things/kawasemi3-kankyou/](キジトラ猫とカメラが好き「かわせみ3」だけ環境設定に残したい | キジトラ猫とカメラが好き)
+参考：[https://leica-q2.com/2021/03/04/good-things/kawasemi3-kankyou/](キジトラ猫とカメラが好き「かわせみ3」だけ環境設定に残したい | キジトラ猫とカメラが好き)
 
 - Keyboard → Text Input → Input Sources → Edit
   - `+` ボタンからかわせみを追加
