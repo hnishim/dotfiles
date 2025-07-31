@@ -1,0 +1,24 @@
+# macOS specific
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+.VolumeIcon.icns
+.fseventsd
+
+# Temporary files and logs
+*~
+*.swp
+*.swo
+*.tmp
+*.log
+
+# Build artifacts (example - adjust as needed for your projects)
+# build/
+# dist/
+# *.out # Common executable output
+
+# Editor/IDE specific (common, includes patterns often used by VS Code/Cursor)
+.vscode/
+.idea/
+
