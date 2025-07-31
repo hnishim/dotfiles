@@ -1,0 +1,7 @@
+---
+"input:open_completion_suggestions": ctrl-space
+"pane_group:resize_left": none
+"editor_view:insert_autosuggestion": tab
+"workspace:activate_prev_tab": alt-cmd-right
+"pane_group:resize_right": none
+"workspace:activate_next_tab": alt-cmd-left
