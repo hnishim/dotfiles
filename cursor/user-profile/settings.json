@@ -11,5 +11,6 @@
     "editor.wordWrap": "on",
     "editor.fontFamily": "'PlemolJP35'",
     "terminal.integrated.fontFamily": "'PlemolJP Console', 'Hack Nerd Font'",
-    "textlint.run": "onType"
+    "textlint.run": "onType",
+    "diffEditor.codeLens": true
 }
