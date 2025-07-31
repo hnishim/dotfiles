@@ -38,7 +38,7 @@ while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
 # 1. Homebrew & アプリケーションのインストール
 # このスクリプトに渡された引数（--personal, --business）をそのままbrew.shに渡す
 log_header "Step 1: Homebrew & アプリケーションのインストール"
-"$DOTFILES_ROOT/brew/brew.sh" "$@"
+"$DOTFILES_ROOT/brew/brew-setup.sh" "$@"
 log_success "Homebrew & アプリケーションのインストール完了"
 
 # 2. それ以外の設定
@@ -46,7 +46,7 @@ log_success "Homebrew & アプリケーションのインストール完了"
 setup_scripts=(
     "defaults/defaults-setup.sh"
     "duti/duti-setup.sh"
-    "karabiner-elements/karabiner.sh"
+    "karabiner-elements/karabiner-setup.sh"
     "gitignore/global-gitignore-setup.sh"
     "warp/warp-setup.sh"
     "cursor/cursor-setup.sh"
@@ -57,7 +57,6 @@ for script in "${setup_scripts[@]}"; do
     log_info "実行中: $script"
     bash "$script_path"
 done
-
 
 log_header "全てのセットアップが完了しました！"
 echo "一部の設定を反映させるには、システムの再起動が必要な場合があります。"
