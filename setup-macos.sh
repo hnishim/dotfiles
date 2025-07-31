@@ -58,5 +58,6 @@ for script in "${setup_scripts[@]}"; do
     bash "$script_path"
 done
 
+
 log_header "全てのセットアップが完了しました！"
 echo "一部の設定を反映させるには、システムの再起動が必要な場合があります。"
