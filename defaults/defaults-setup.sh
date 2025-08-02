@@ -86,6 +86,10 @@ defaults write -g com.apple.keyboard.fnState -bool true
 # ダブルスペースでピリオドを入力する機能を無効化
 defaults write -g NSAutomaticPeriodSubstitutionEnabled -bool false
 
+# --- Accessibility ---
+# ズーム機能のキーボードショートカットを有効化
+defaults write com.apple.universalaccess closeViewHotkeysEnabled -bool true
+
 # --- 日本語入力（Mac標準） ---
 # かわせみを使用する場合には特に不要な設定
 # Windows風のキー操作を有効化
