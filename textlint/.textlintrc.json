@@ -1,0 +1,121 @@
+{
+  "plugins": {},
+  "filters": {},
+  "rules": {
+    "preset-jtf-style": {
+      "1.1.1.本文": false,
+      "1.1.2.見出し": true,
+      "1.1.3.箇条書き": true,
+      "1.1.5.図表のキャプション": true,
+      "1.2.1.句点(。)と読点(、)": false,
+      "1.2.2.ピリオド(.)とカンマ(,)": false,
+      "2.1.2.漢字": false,
+      "2.1.5.カタカナ": false,
+      "2.1.6.カタカナの長音": false,
+      "2.1.8.算用数字": true,
+      "2.1.9.アルファベット": true,
+      "2.1.10.算用数字の位取りの表記": true,
+      "2.2.1.ひらがなと漢字の使い分け": false,
+      "2.2.2.算用数字と漢数字の使い分け": true,
+      "2.2.3.一部の助数詞の表記": true,
+      "3.1.1.全角文字と半角文字の間": false,
+      "3.1.2.全角文字どうし": false,
+      "3.2.カタカナ語間のスペースの有無": false,
+      "3.3.かっこ類と隣接する文字の間のスペースの有無": false,
+      "4.1.1.句点(。)": false,
+      "4.1.3.ピリオド(.)、カンマ(,)": false,
+      "4.2.1.感嘆符(！)": false,
+      "4.2.2.疑問符(？)": false,
+      "4.2.4.中黒(・)": true,
+      "4.2.5.波線(〜)": false,
+      "4.2.6.ハイフン(-)": false,
+      "4.2.7.コロン(：)": true,
+      "4.2.8.セミコロン(;)": true,
+      "4.2.9.ダッシュ(-)": true,
+      "4.3.1.丸かっこ（）": false,
+      "4.3.2.大かっこ［］": false,
+      "4.3.3.かぎかっこ「」": false,
+      "4.3.4.二重かぎかっこ『』": false,
+      "4.3.5.二重引用符": false,
+      "4.3.6.中かっこ{ }": false,
+      "4.3.7.山かっこ<>": false,
+      "4.3.8.一重引用符": false
+    },
+    "textlint-rule-preset-ja-spacing": {
+      "ja-nakaguro-or-halfwidth-space-between-katakana": true,
+      "ja-no-space-around-parentheses": true,
+      "ja-no-space-between-full-width": false,
+      "ja-space-between-half-and-full-width": {
+        "space": "never",
+        "allows": ["/[a-zA-Z0-9]+[ ]+[a-zA-Z0-9]+[ ]+[\\u3040-\\u309F\\u30A0-\\u30FF\\u4E00-\\u9FFF]/g"]
+      },
+      "ja-space-after-exclamation": false,
+      "ja-space-after-question": false,
+      "ja-space-around-code": {
+        "before": true,
+        "after": true
+      },
+      "ja-space-around-link": true
+    },
+    "textlint-rule-preset-ai-writing": true,
+    "ja-no-successive-word": true,
+    "ja-unnatural-alphabet": true,
+    "ja-no-abusage": true,
+    "ja-no-redundant-expression": true,
+    "ja-no-orthographic-variants": false,
+    "ja-no-inappropriate-words": true,
+    "no-double-negative-ja": true,
+    "no-doubled-conjunctive-particle-ga": true,
+    "no-doubled-conjunction": true,
+    "no-doubled-joshi": true,
+    "no-hankaku-kana": true,
+    "no-mix-dearu-desumasu": true,
+    "no-nfd": true,
+    "no-zero-width-spaces": true,
+    "@textlint-ja/textlint-rule-no-dropping-i": true,
+    "@textlint-ja/textlint-rule-no-insert-dropping-sa": true,
+    "prefer-tari-tari": true,
+    "no-dropping-the-ra": true,
+    "@textlint-ja/no-synonyms": true,
+    "@textlint-ja/textlint-rule-no-insert-re": true,
+    "@textlint-rule/no-unmatched-pair": true,
+    "no-kangxi-radicals": true,
+    "date-weekday-mismatch": true,
+    "sentence-length" : {
+      "max": 200
+    },
+    "en-max-word-count": {
+      "max" : 50
+    },
+    "period-in-list-item": true,
+    "en-capitalization": true,
+    "no-start-duplicated-conjunction": {
+      "interval" : 2
+    },
+    "no-todo": true,
+    "prh": {
+      "rulePaths" :["~/my-prh.yml"]
+    },
+    "no-empty-section": true,
+    "no-empty-element": true,
+    "terminology": true,
+    "period-in-header": true,
+    "doubled-spaces": true,
+    "spelling": {
+      "language": "en",
+      "skipPatterns": ["JavaScript"],
+      "wordDefinitionRegexp": "/[\\w']+/g",
+      "suggestCorrections": true
+    },
+    "abbr-within-parentheses": true,
+    "common-misspellings": {
+      "ignore": []
+    },
+    "ja-hiragana-keishikimeishi": true,
+    "ja-hiragana-fukushi": true,
+    "ja-hiragana-hojodoushi": true,
+    "@textlint-ja/no-filler": true,
+    "ja-overlooked-typo": true,
+    "alive-link": true
+  }
+}
