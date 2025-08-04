@@ -148,6 +148,90 @@
           } ],
           "type" : "basic"
         } ]
+      }, {
+        "description" : "括弧を自動的に閉じてカーソルを中に移動",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "open_bracket",
+            "modifiers" : {
+              "mandatory" : [ "left_option" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "open_bracket"
+          }, {
+            "key_code" : "close_bracket"
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "open_bracket",
+            "modifiers" : {
+              "mandatory" : [ "left_option", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "open_bracket",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "close_bracket",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "9",
+            "modifiers" : {
+              "mandatory" : [ "left_option", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "9",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "0",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "quote",
+            "modifiers" : {
+              "mandatory" : [ "left_option" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "quote"
+          }, {
+            "key_code" : "quote"
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "quote",
+            "modifiers" : {
+              "mandatory" : [ "left_option", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "quote",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "quote",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "type" : "basic"
+        } ]
       } ]
     },
     "devices" : [ {
