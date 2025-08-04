@@ -14,10 +14,12 @@ set -euo pipefail  # エラー時に即座に終了、未定義変数の使用�
 # Local path
 LOCAL_KARABINER_DIR="$HOME/.config/karabiner"
 LOCAL_KARABINER_JSON="$LOCAL_KARABINER_DIR/karabiner.json"
+LOCAL_KARABINER_EDN="$HOME/.config/karabiner.edn"
 LOCAL_BACKUP_DIR="$LOCAL_KARABINER_DIR/_backup"
 
 # iCloud path
 ICLOUD_KARABINER_JSON="$HOME/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/karabiner-elements/karabiner.json"
+ICLOUD_KARABINER_EDN="$HOME/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/karabiner-elements/goku/karabiner.edn"
 
 # バックアップ用の日付（_YYYYMMDD形式）を取得
 BACKUP_DATE=$(date +%Y%m%d)
@@ -47,6 +49,12 @@ if [ ! -f "$ICLOUD_KARABINER_JSON" ]; then
     exit 1
 fi
 
+# goku設定ファイルの存在確認
+if [ ! -f "$ICLOUD_KARABINER_EDN" ]; then
+    log_error "$ICLOUD_KARABINER_EDN が存在しません。パスを確認してください。"
+    exit 1
+fi
+
 # ローカルKarabinerディレクトリの存在確認
 if [ ! -d "$LOCAL_KARABINER_DIR" ]; then
     log_error "$LOCAL_KARABINER_DIR ディレクトリが存在しません。作成してから再実行してください。"
@@ -64,27 +72,47 @@ else
     log_info "バックアップディレクトリは既に存在します: $LOCAL_BACKUP_DIR"
 fi
 
-# 既存ファイルのバックアップ
-log_info "既存ファイルをバックアップ中..."
+echo ""
+log_info "シンボリックリンクの状態を確認・作成します..."
 
-# karabiner.jsonのバックアップ
-if [ -f "$LOCAL_KARABINER_JSON" ]; then
-    mv "$LOCAL_KARABINER_JSON" "$LOCAL_BACKUP_DIR/karabiner_${BACKUP_DATE}.json"
-    log_success "karabiner.jsonをバックアップしました: karabiner_${BACKUP_DATE}.json"
+# --- karabiner.json の同期 ---
+if [ -L "$LOCAL_KARABINER_JSON" ] && [ "$(readlink "$LOCAL_KARABINER_JSON")" = "$ICLOUD_KARABINER_JSON" ]; then
+    log_success "karabiner.json は既に正しくリンクされています。スキップします。"
 else
-    log_info "既存のkarabiner.jsonが見つかりません（新規作成）"
+    log_info "karabiner.json の設定を開始します..."
+    # 既存ファイルのバックアップ (ファイル、ディレクトリ、シンボリックリンクのいずれかが存在する場合)
+    if [ -e "$LOCAL_KARABINER_JSON" ] || [ -L "$LOCAL_KARABINER_JSON" ]; then
+        mv "$LOCAL_KARABINER_JSON" "$LOCAL_BACKUP_DIR/karabiner_${BACKUP_DATE}.json"
+        log_success "既存の karabiner.json をバックアップしました: karabiner_${BACKUP_DATE}.json"
+    fi
+    # シンボリックリンクの作成
+    ln -sf "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON"
+    if [ -L "$LOCAL_KARABINER_JSON" ]; then
+        log_success "karabiner.json のシンボリックリンクを作成しました"
+    else
+        log_error "karabiner.json のシンボリックリンク作成に失敗しました"
+        exit 1
+    fi
 fi
 
-# シンボリックリンクの作成
-log_info "シンボリックリンクを作成中..."
-
-# karabiner.jsonのシンボリックリンク作成
-ln -sf "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON"
-if [ -L "$LOCAL_KARABINER_JSON" ]; then
-    log_success "karabiner.jsonのシンボリックリンクを作成しました"
+# --- karabiner.edn (goku) の同期 ---
+if [ -L "$LOCAL_KARABINER_EDN" ] && [ "$(readlink "$LOCAL_KARABINER_EDN")" = "$ICLOUD_KARABINER_EDN" ]; then
+    log_success "karabiner.edn は既に正しくリンクされています。スキップします。"
 else
-    log_error "karabiner.jsonのシンボリックリンク作成に失敗しました"
-    exit 1
+    log_info "karabiner.edn の設定を開始します..."
+    # 既存ファイルのバックアップ (ファイル、ディレクトリ、シンボリックリンクのいずれかが存在する場合)
+    if [ -e "$LOCAL_KARABINER_EDN" ] || [ -L "$LOCAL_KARABINER_EDN" ]; then
+        mv "$LOCAL_KARABINER_EDN" "$LOCAL_BACKUP_DIR/karabiner_${BACKUP_DATE}.edn"
+        log_success "既存の karabiner.edn をバックアップしました: karabiner_${BACKUP_DATE}.edn"
+    fi
+    # シンボリックリンクの作成
+    ln -sf "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN"
+    if [ -L "$LOCAL_KARABINER_EDN" ]; then
+        log_success "karabiner.edn のシンボリックリンクを作成しました"
+    else
+        log_error "karabiner.edn のシンボリックリンク作成に失敗しました"
+        exit 1
+    fi
 fi
 
 echo ""
@@ -93,6 +121,7 @@ echo "終了時刻: $(date)"
 echo ""
 echo "作成されたシンボリックリンク:"
 echo "  karabiner.json: $LOCAL_KARABINER_JSON -> $ICLOUD_KARABINER_JSON"
+echo "  karabiner.edn:  $LOCAL_KARABINER_EDN -> $ICLOUD_KARABINER_EDN"
 echo ""
 echo "バックアップファイル:"
 echo "  $LOCAL_BACKUP_DIR/"

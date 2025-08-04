@@ -5,7 +5,8 @@ formulae:
   - cliclick
   - duti
   - gemini-cli
-  - yq # This script requires yq
+  - yq
+  - goku
 
 casks:
   common:
