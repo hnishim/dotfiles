@@ -1,0 +1,34 @@
+{
+  :applications {
+    :slack_notion ["^com\\.tinyspeck\\.slackmacgap$" "^notion\\.id"]
+    :notion ["^notion\\.id"]
+    :slack ["^com\\.tinyspeck\\.slackmacgap$"]
+  }
+  :main [
+    {:des "CAPS✦: Caps_lockをハイパーキー (Shift, Command, Control, Option) に置換する"
+     :rules [
+      [:caps_lock [:left_shift :left_command :left_control :left_option]]
+    ]}
+
+    {:des "［ US ］左右のコマンドキー（⌘）を、単独で押したときは 英数・かな キー として扱う"
+     :rules [
+      [:left_command :left_command nil {:alone :japanese_eisuu}]
+      [:right_command :right_command nil {:alone :japanese_kana}]
+    ]}
+
+    {:des "アプリ横断でショートカットキーを統一"
+     :rules [
+      ;; Slack & Notion
+      [:!Cl :!Ck :slack_notion] ;; 検索 ⌘ L -> ⌘ K
+
+      ;; Notion
+      [:!CSTc :!CTl :notion] ;; ブロックリンクコピー ⌘⇧^ C -> ⌘^ L
+      [:!CS7 :!CO6 :notion]  ;; 番号付き箇条書き ⌘⇧ 7 -> ⌘⌥ 6
+      [:!CS8 :!CO5 :notion]  ;; 箇条書き ⌘⇧ 8 -> ⌘⌥ 5
+      [:!CS9 :!CO4 :notion]  ;; チェックリスト ⌘⇧ 9 -> ⌘⌥ 4
+
+      ;; Slack
+      [:!Ce :!CSc :slack];; コード ⌘ E -> ⌘⇧ C (Notion's shortcut)
+    ]}
+  ]
+}

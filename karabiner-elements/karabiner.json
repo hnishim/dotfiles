@@ -1,532 +1,168 @@
 {
-    "profiles": [
-        {
-            "complex_modifications": {
-                "rules": [
-                    {   "description": "Avoid send with return",
-                        "manipulators": [
-                            {   "description": "Enter → ⇧ Enter",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^com\\.openai\\.chat",
-                                            "^com\\.anthropic\\.claudefordesktop",
-                                            "^ai\\.perplexity\\.mac",
-                                            "^com\\.grammarly\\.ProjectLlama"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": { "key_code": "return_or_enter" },
-                                "to": [
-                                    {
-                                        "key_code": "return_or_enter",
-                                        "modifiers": ["left_shift"]
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "⌘ Enter → Enter",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^com\\.openai\\.chat",
-                                            "^ai\\.perplexity\\.mac",
-                                            "^com\\.grammarly\\.ProjectLlama"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "return_or_enter",
-                                    "modifiers": { "mandatory": ["left_command"] }
-                                },
-                                "to": [{ "key_code": "return_or_enter" }],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {   "description": "括弧を自動的に閉じてカーソルを中に移動",
-                        "manipulators": [
-                            {   "description": "英語・角括弧",
-                                "conditions": [
-                                    {
-                                        "input_sources": [{ "language": "ja" }],
-                                        "type": "input_source_unless"
-                                    }
-                                ],
-                                "from": { "key_code": "open_bracket" },
-                                "to": [
-                                    { "key_code": "open_bracket" },
-                                    { "key_code": "close_bracket" },
-                                    { "key_code": "left_arrow" }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "日本語・角括弧",
-                                "conditions": [
-                                    {
-                                        "input_sources": [{ "language": "ja" }],
-                                        "type": "input_source_if"
-                                    }
-                                ],
-                                "from": { "key_code": "open_bracket" },
-                                "to": [
-                                    { "key_code": "open_bracket" },
-                                    { "key_code": "close_bracket" },
-                                    { "key_code": "return_or_enter" },
-                                    { "key_code": "left_arrow" }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "角括弧（⌥）",
-                                "from": {
-                                    "key_code": "open_bracket",
-                                    "modifiers": { "mandatory": ["left_option"] }
-                                },
-                                "to": [{ "key_code": "open_bracket" }],
-                                "type": "basic"
-                            },
-                            {   "description": "英語・丸括弧",
-                                "conditions": [
-                                    {
-                                        "input_sources": [{ "language": "ja" }],
-                                        "type": "input_source_unless"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "9",
-                                    "modifiers": { "mandatory": ["left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "9",
-                                        "modifiers": "left_shift"
-                                    },
-                                    {
-                                        "key_code": "0",
-                                        "modifiers": "left_shift"
-                                    },
-                                    { "key_code": "left_arrow" }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "日本語・丸括弧",
-                                "conditions": [
-                                    {
-                                        "input_sources": [{ "language": "ja" }],
-                                        "type": "input_source_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "9",
-                                    "modifiers": { "mandatory": ["left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "9",
-                                        "modifiers": "left_shift"
-                                    },
-                                    {
-                                        "key_code": "0",
-                                        "modifiers": "left_shift"
-                                    },
-                                    { "key_code": "return_or_enter" },
-                                    { "key_code": "left_arrow" }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "丸括弧（⌥）",
-                                "from": {
-                                    "key_code": "9",
-                                    "modifiers": { "mandatory": ["left_option", "left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "9",
-                                        "modifiers": "left_shift"
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "英語・波括弧",
-                                "conditions": [
-                                    {
-                                        "input_sources": [{ "language": "ja" }],
-                                        "type": "input_source_unless"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "open_bracket",
-                                    "modifiers": { "mandatory": ["left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "open_bracket",
-                                        "modifiers": "left_shift"
-                                    },
-                                    {
-                                        "key_code": "close_bracket",
-                                        "modifiers": "left_shift"
-                                    },
-                                    { "key_code": "left_arrow" }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "日本語・波括弧",
-                                "conditions": [
-                                    {
-                                        "input_sources": [{ "language": "ja" }],
-                                        "type": "input_source_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "open_bracket",
-                                    "modifiers": { "mandatory": ["left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "open_bracket",
-                                        "modifiers": "left_shift"
-                                    },
-                                    {
-                                        "key_code": "close_bracket",
-                                        "modifiers": "left_shift"
-                                    },
-                                    { "key_code": "return_or_enter" },
-                                    { "key_code": "left_arrow" }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "波括弧（⌥）",
-                                "from": {
-                                    "key_code": "open_bracket",
-                                    "modifiers": { "mandatory": ["left_option", "left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "open_bracket",
-                                        "modifiers": "left_shift"
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "クォーテーション",
-                                "from": {
-                                    "key_code": "quote",
-                                    "modifiers": { "mandatory": ["left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "quote",
-                                        "modifiers": "left_shift"
-                                    },
-                                    {
-                                        "key_code": "quote",
-                                        "modifiers": "left_shift"
-                                    },
-                                    { "key_code": "left_arrow" }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "クォーテーション（⌥）",
-                                "from": {
-                                    "key_code": "quote",
-                                    "modifiers": { "mandatory": ["left_option", "left_shift"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "quote",
-                                        "modifiers": "left_shift"
-                                    }
-                                ],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {   "description": "Align shortcut keys across apps",
-                        "manipulators": [
-                            {   "description": "Slack & Notion: 検索 ⌘ L -> ⌘ K",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^com\\.tinyspeck\\.slackmacgap$",
-                                            "^notion\\.id"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "l",
-                                    "modifiers": {
-                                        "mandatory": ["left_command"],
-                                        "optional": ["any"]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "k",
-                                        "modifiers": ["left_command"]
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "Notion: ブロックリンクコピー ⌘⇧^ C -> ⌘^ L",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^notion\\.id"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "c",
-                                    "modifiers": {
-                                        "mandatory": ["left_command", "left_shift", "left_control"],
-                                        "optional": ["any"]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "l",
-                                        "modifiers": ["left_command", "left_control"]
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "Notion: 番号付き箇条書き ⌘⇧ 7 -> ⌘⌥ 6",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^notion\\.id"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "7",
-                                    "modifiers": {
-                                        "mandatory": ["left_command", "left_shift"],
-                                        "optional": ["any"]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "6",
-                                        "modifiers": ["left_command", "left_option"]
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "Notion: 箇条書き ⌘⇧ 8 -> ⌘⌥ 5",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^notion\\.id"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "8",
-                                    "modifiers": {
-                                        "mandatory": ["left_command", "left_shift"],
-                                        "optional": ["any"]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "5",
-                                        "modifiers": ["left_command", "left_option"]
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "Notion: チェックリスト ⌘⇧ 9 -> ⌘⌥ 4 (checklist)",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^notion\\.id"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "9",
-                                    "modifiers": {
-                                        "mandatory": ["left_command", "left_shift"],
-                                        "optional": ["any"]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "4",
-                                        "modifiers": ["left_command", "left_option"]
-                                    }
-                                ],
-                                "type": "basic"
-                            },
-                            {   "description": "Notion: コード ⌘ E -> ⌘⇧ C (code)",
-                                "conditions": [
-                                    {
-                                        "bundle_identifiers": [
-                                            "^com\\.tinyspeck\\.slackmacgap$"
-                                        ],
-                                        "type": "frontmost_application_if"
-                                    }
-                                ],
-                                "from": {
-                                    "key_code": "e",
-                                    "modifiers": {
-                                        "mandatory": ["left_command"],
-                                        "optional": ["any"]
-                                    }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "c",
-                                        "modifiers": ["left_command", "left_shift"]
-                                    }
-                                ],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {   "description": "Open favorites in Arc",
-                        "manipulators": [
-                            {   "description": "メール： ⌥ M",
-                                "from": {
-                                    "key_code": "m",
-                                    "modifiers": { "mandatory": ["left_option"] }
-                                },
-                                "parameters": { "basic.to_delayed_action_delay_milliseconds": 200 },
-                                "to": [{ "shell_command": "osascript -e 'tell application \"Arc.app\" to activate'" }],
-                                "to_delayed_action": {
-                                    "to_if_invoked": [
-                                        {
-                                            "key_code": "2",
-                                            "modifiers": "left_control"
-                                        },
-                                        {
-                                            "hold_down_milliseconds": 500,
-                                            "key_code": "vk_none"
-                                        },
-                                        {
-                                            "key_code": "1",
-                                            "modifiers": "left_command"
-                                        }
-                                    ]
-                                },
-                                "type": "basic"
-                            },
-                            {   "description": "Google Drive： ⌥ D",
-                                "from": {
-                                    "key_code": "d",
-                                    "modifiers": { "mandatory": ["left_option"] }
-                                },
-                                "parameters": { "basic.to_delayed_action_delay_milliseconds": 200 },
-                                "to": [{ "shell_command": "osascript -e 'tell application \"Arc.app\" to activate'" }],
-                                "to_delayed_action": {
-                                    "to_if_invoked": [
-                                        {
-                                            "key_code": "2",
-                                            "modifiers": "left_control"
-                                        },
-                                        {
-                                            "hold_down_milliseconds": 500,
-                                            "key_code": "vk_none"
-                                        },
-                                        {
-                                            "key_code": "3",
-                                            "modifiers": "left_command"
-                                        }
-                                    ]
-                                },
-                                "type": "basic"
-                            },
-                            {   "description": "NotebookLM： ⌥ O",
-                                "from": {
-                                    "key_code": "o",
-                                    "modifiers": { "mandatory": ["left_option"] }
-                                },
-                                "parameters": { "basic.to_delayed_action_delay_milliseconds": 200 },
-                                "to": [{ "shell_command": "osascript -e 'tell application \"Arc.app\" to activate'" }],
-                                "to_delayed_action": {
-                                    "to_if_invoked": [
-                                        {
-                                            "key_code": "2",
-                                            "modifiers": "left_control"
-                                        },
-                                        {
-                                            "hold_down_milliseconds": 500,
-                                            "key_code": "vk_none"
-                                        },
-                                        {
-                                            "key_code": "6",
-                                            "modifiers": "left_command"
-                                        }
-                                    ]
-                                },
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {   "description": "Change caps_lock to command+control+option+shift.",
-                        "manipulators": [
-                            {
-                                "from": {
-                                    "key_code": "caps_lock",
-                                    "modifiers": { "optional": ["any"] }
-                                },
-                                "to": [
-                                    {
-                                        "key_code": "left_shift",
-                                        "modifiers": ["left_command", "left_control", "left_option"]
-                                    }
-                                ],
-                                "type": "basic"
-                            }
-                        ]
-                    },
-                    {   "description": "［ US ］左右のコマンドキー（⌘）を、単独で押したときは 英数・かな キー として扱う（左⌘は 英数、右⌘は かな）",
-                        "manipulators": [
-                            {   "description": " LEFT COMMAND → EISUU ",
-                                "from": {
-                                    "key_code": "left_command",
-                                    "modifiers": { "optional": ["any"] }
-                                },
-                                "to": [{ "key_code": "left_command" }],
-                                "to_if_alone": [{ "key_code": "japanese_eisuu" }],
-                                "type": "basic"
-                            },
-                            {   "description": " RIGHT COMMAND → KANA ",
-                                "from": {
-                                    "key_code": "right_command",
-                                    "modifiers": { "optional": ["any"] }
-                                },
-                                "to": [{ "key_code": "right_command" }],
-                                "to_if_alone": [{ "key_code": "japanese_kana" }],
-                                "type": "basic"
-                            }
-                        ]
-                    }
-                ]
-            },
-            "devices": [
-                {
-                    "identifiers": {
-                        "is_keyboard": true,
-                        "is_pointing_device": true,
-                        "product_id": 24926,
-                        "vendor_id": 7504
-                    },
-                    "ignore": false
-                }
-            ],
-            "name": "Default profile",
-            "selected": true,
-            "virtual_hid_keyboard": { "keyboard_type_v2": "ansi" }
-        }
-    ]
+  "profiles" : [ {
+    "complex_modifications" : {
+      "parameters" : {
+        "basic.simultaneous_threshold_milliseconds" : 50,
+        "basic.to_delayed_action_delay_milliseconds" : 500,
+        "basic.to_if_alone_timeout_milliseconds" : 1000,
+        "basic.to_if_held_down_threshold_milliseconds" : 500
+      },
+      "rules" : [ {
+        "description" : "CAPS✦: Caps_lockをハイパーキー (Shift, Command, Control, Option) に置換する",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "caps_lock"
+          },
+          "to" : [ {
+            "key_code" : "left_shift"
+          }, {
+            "key_code" : "left_command"
+          }, {
+            "key_code" : "left_control"
+          }, {
+            "key_code" : "left_option"
+          } ],
+          "type" : "basic"
+        } ]
+      }, {
+        "description" : "［ US ］左右のコマンドキー（⌘）を、単独で押したときは 英数・かな キー として扱う",
+        "manipulators" : [ {
+          "to_if_alone" : [ {
+            "key_code" : "japanese_eisuu"
+          } ],
+          "from" : {
+            "key_code" : "left_command"
+          },
+          "to" : [ {
+            "key_code" : "left_command"
+          } ],
+          "type" : "basic"
+        }, {
+          "to_if_alone" : [ {
+            "key_code" : "japanese_kana"
+          } ],
+          "from" : {
+            "key_code" : "right_command"
+          },
+          "to" : [ {
+            "key_code" : "right_command"
+          } ],
+          "type" : "basic"
+        } ]
+      }, {
+        "description" : "アプリ横断でショートカットキーを統一",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "l",
+            "modifiers" : {
+              "mandatory" : [ "left_command" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "k",
+            "modifiers" : [ "left_command" ]
+          } ],
+          "conditions" : [ {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^com\\.tinyspeck\\.slackmacgap$", "^notion\\.id" ]
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "c",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "l",
+            "modifiers" : [ "left_command", "left_control" ]
+          } ],
+          "conditions" : [ {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^notion\\.id" ]
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "7",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "6",
+            "modifiers" : [ "left_command", "left_option" ]
+          } ],
+          "conditions" : [ {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^notion\\.id" ]
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "8",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "5",
+            "modifiers" : [ "left_command", "left_option" ]
+          } ],
+          "conditions" : [ {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^notion\\.id" ]
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "9",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "4",
+            "modifiers" : [ "left_command", "left_option" ]
+          } ],
+          "conditions" : [ {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^notion\\.id" ]
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "e",
+            "modifiers" : {
+              "mandatory" : [ "left_command" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "c",
+            "modifiers" : [ "left_command", "left_shift" ]
+          } ],
+          "conditions" : [ {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^com\\.tinyspeck\\.slackmacgap$" ]
+          } ],
+          "type" : "basic"
+        } ]
+      } ]
+    },
+    "devices" : [ {
+      "identifiers" : {
+        "is_keyboard" : true,
+        "is_pointing_device" : true,
+        "product_id" : 24926,
+        "vendor_id" : 7504
+      },
+      "ignore" : false
+    } ],
+    "name" : "Default",
+    "selected" : true,
+    "virtual_hid_keyboard" : {
+      "keyboard_type_v2" : "ansi"
+    }
+  } ]
 }
