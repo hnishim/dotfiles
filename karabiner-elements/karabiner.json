@@ -14,18 +14,13 @@
             "key_code" : "caps_lock"
           },
           "to" : [ {
-            "key_code" : "left_shift"
-          }, {
-            "key_code" : "left_command"
-          }, {
-            "key_code" : "left_control"
-          }, {
-            "key_code" : "left_option"
+            "key_code" : "left_shift",
+            "modifiers" : [ "left_command", "left_control", "left_option" ]
           } ],
           "type" : "basic"
         } ]
       }, {
-        "description" : "［ US ］左右のコマンドキー（⌘）を、単独で押したときは 英数・かな キー として扱う",
+        "description" : "英かな：左右⌘キーを単独で押したときは英数・かなキーとして扱う",
         "manipulators" : [ {
           "to_if_alone" : [ {
             "key_code" : "japanese_eisuu"
@@ -226,6 +221,23 @@
             "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "quote",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "comma",
+            "modifiers" : {
+              "mandatory" : [ "left_option", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "comma",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "period",
             "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "left_arrow"

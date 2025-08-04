@@ -8,10 +8,10 @@
   :main [
     {:des "CAPS✦: Caps_lockをハイパーキー (Shift, Command, Control, Option) に置換する"
      :rules [
-      [:caps_lock [:left_shift :left_command :left_control :left_option]]
+      [:caps_lock [:!CTOleft_shift]]
     ]}
 
-    {:des "［ US ］左右のコマンドキー（⌘）を、単独で押したときは 英数・かな キー として扱う"
+    {:des "英かな：左右⌘キーを単独で押したときは英数・かなキーとして扱う"
      :rules [
       [:left_command :left_command nil {:alone :japanese_eisuu}]
       [:right_command :right_command nil {:alone :japanese_kana}]
@@ -39,7 +39,7 @@
       [:!OS9 [:!S9 :!S0 :left_arrow]]                                   ;; 丸括弧
       [:!Oquote [:quote :quote :left_arrow]]                            ;; シングルクォート
       [:!OSquote [:!Squote :!Squote :left_arrow]]                       ;; ダブルクォート
-      [:!OScomma [:!Scomma :!period :left_arrow]]                       ;; 不等号
+      [:!OScomma [:!Scomma :!Speriod :left_arrow]]                       ;; 不等号
     ]}
   ]
 }
