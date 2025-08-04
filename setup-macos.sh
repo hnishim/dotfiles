@@ -50,6 +50,7 @@ setup_scripts=(
     "gitignore/global-gitignore-setup.sh"
     "warp/warp-setup.sh"
     "cursor/cursor-setup.sh"
+    "textlint/textlint-setup.sh"
 )
 
 for script in "${setup_scripts[@]}"; do
