@@ -16,6 +16,9 @@ LOCAL_GIT_CONFIG_DIR="$HOME/.config/git"
 LOCAL_GIT_IGNORE_FILE="$LOCAL_GIT_CONFIG_DIR/ignore"
 LOCAL_BACKUP_DIR="$LOCAL_GIT_CONFIG_DIR/_backup"
 
+# バックアップ用の日付（_YYYYMMDD形式）を取得
+BACKUP_DATE=$(date +%Y%m%d)
+
 echo "=== Git ignore設定ファイル同期スクリプト ==="
 
 # --- 関数定義 ---
@@ -54,25 +57,38 @@ fi
 mkdir -p "$LOCAL_BACKUP_DIR"
 log_info "バックアップディレクトリを確認・作成しました: $LOCAL_BACKUP_DIR"
 
-# 4. 既存ファイルのバックアップ
-log_info "既存のignoreファイルをバックアップ中..."
-if [ -e "$LOCAL_GIT_IGNORE_FILE" ]; then
-    BACKUP_FILENAME="ignore_$(date +%Y%m%d_%H%M%S)"
-    mv "$LOCAL_GIT_IGNORE_FILE" "$LOCAL_BACKUP_DIR/$BACKUP_FILENAME"
-    log_success "既存のignoreファイルをバックアップしました: $LOCAL_BACKUP_DIR/$BACKUP_FILENAME"
+echo ""
+log_info "シンボリックリンクの状態を確認・作成します..."
+
+# 4. シンボリックリンクの確認・作成
+if [ -L "$LOCAL_GIT_IGNORE_FILE" ] && [ "$(readlink "$LOCAL_GIT_IGNORE_FILE")" = "$ICLOUD_IGNORE_FILE" ]; then
+    log_success "ignore ファイルは既に正しくリンクされています。スキップします。"
 else
-    log_info "既存のignoreファイルは見つかりません（新規作成）"
+    log_info "ignore ファイルの設定を開始します..."
+    # 既存ファイルのバックアップ (ファイル、ディレクトリ、シンボリックリンクのいずれかが存在する場合)
+    if [ -e "$LOCAL_GIT_IGNORE_FILE" ] || [ -L "$LOCAL_GIT_IGNORE_FILE" ]; then
+        mv "$LOCAL_GIT_IGNORE_FILE" "$LOCAL_BACKUP_DIR/ignore_${BACKUP_DATE}"
+        log_success "既存の ignore ファイルをバックアップしました: ignore_${BACKUP_DATE}"
+    fi
+    # シンボリックリンクの作成
+    ln -sf "$ICLOUD_IGNORE_FILE" "$LOCAL_GIT_IGNORE_FILE"
+    if [ -L "$LOCAL_GIT_IGNORE_FILE" ]; then
+        log_success "ignore ファイルのシンボリックリンクを作成しました"
+    else
+        log_error "ignore ファイルのシンボリックリンク作成に失敗しました"
+        exit 1
+    fi
 fi
 
-# 5. シンボリックリンクの作成
-log_info "シンボリックリンクを作成中..."
-ln -sf "$ICLOUD_IGNORE_FILE" "$LOCAL_GIT_IGNORE_FILE"
-if [ -L "$LOCAL_GIT_IGNORE_FILE" ]; then
-    log_success "シンボリックリンクを作成しました"
-else
-    log_error "シンボリックリンクの作成に失敗しました"
-    exit 1
-fi
+# 5. Gitグローバル設定の更新
+log_info "Gitのグローバル設定を更新中..."
+git config --global core.excludesfile "$LOCAL_GIT_IGNORE_FILE"
+log_success "Gitのグローバルignore設定を更新しました: core.excludesfile -> $LOCAL_GIT_IGNORE_FILE"
 
+echo ""
 log_success "=== 同期完了 ==="
-echo "作成されたシンボリックリンク: $LOCAL_GIT_IGNORE_FILE -> $ICLOUD_IGNORE_FILE"
+echo "作成されたシンボリックリンク:"
+echo "  ignore: $LOCAL_GIT_IGNORE_FILE -> $ICLOUD_IGNORE_FILE"
+echo ""
+echo "バックアップファイル:"
+echo "  $LOCAL_BACKUP_DIR/"

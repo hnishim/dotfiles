@@ -72,46 +72,50 @@ else
     log_info "バックアップディレクトリは既に存在します: $LOCAL_BACKUP_DIR"
 fi
 
-# 既存ファイルのバックアップ
-log_info "既存ファイルをバックアップ中..."
+echo ""
+log_info "シンボリックリンクの状態を確認・作成します..."
 
-# settings.jsonのバックアップ
-if [ -f "$LOCAL_SETTINGS_JSON" ]; then
-    mv "$LOCAL_SETTINGS_JSON" "$LOCAL_BACKUP_DIR/settings_${BACKUP_DATE}.json"
-    log_success "settings.jsonをバックアップしました: settings_${BACKUP_DATE}.json"
+# --- settings.json の同期 ---
+if [ -L "$LOCAL_SETTINGS_JSON" ] && [ "$(readlink "$LOCAL_SETTINGS_JSON")" = "$ICLOUD_SETTINGS_JSON" ]; then
+    log_success "settings.json は既に正しくリンクされています。スキップします。"
 else
-    log_info "既存のsettings.jsonが見つかりません（新規作成）"
+    log_info "settings.json の設定を開始します..."
+    # 既存ファイルのバックアップ (ファイル、ディレクトリ、シンボリックリンクのいずれかが存在する場合)
+    if [ -e "$LOCAL_SETTINGS_JSON" ] || [ -L "$LOCAL_SETTINGS_JSON" ]; then
+        mv "$LOCAL_SETTINGS_JSON" "$LOCAL_BACKUP_DIR/settings_${BACKUP_DATE}.json"
+        log_success "既存の settings.json をバックアップしました: settings_${BACKUP_DATE}.json"
+    fi
+    # シンボリックリンクの作成
+    ln -sf "$ICLOUD_SETTINGS_JSON" "$LOCAL_SETTINGS_JSON"
+    if [ -L "$LOCAL_SETTINGS_JSON" ]; then
+        log_success "settings.json のシンボリックリンクを作成しました"
+    else
+        log_error "settings.json のシンボリックリンク作成に失敗しました"
+        exit 1
+    fi
 fi
 
-# keybindings.jsonのバックアップ
-if [ -f "$LOCAL_KEYBINDINGS_JSON" ]; then
-    mv "$LOCAL_KEYBINDINGS_JSON" "$LOCAL_BACKUP_DIR/keybindings_${BACKUP_DATE}.json"
-    log_success "keybindings.jsonをバックアップしました: keybindings_${BACKUP_DATE}.json"
+# --- keybindings.json の同期 ---
+if [ -L "$LOCAL_KEYBINDINGS_JSON" ] && [ "$(readlink "$LOCAL_KEYBINDINGS_JSON")" = "$ICLOUD_KEYBINDINGS_JSON" ]; then
+    log_success "keybindings.json は既に正しくリンクされています。スキップします。"
 else
-    log_info "既存のkeybindings.jsonが見つかりません（新規作成）"
+    log_info "keybindings.json の設定を開始します..."
+    # 既存ファイルのバックアップ (ファイル、ディレクトリ、シンボリックリンクのいずれかが存在する場合)
+    if [ -e "$LOCAL_KEYBINDINGS_JSON" ] || [ -L "$LOCAL_KEYBINDINGS_JSON" ]; then
+        mv "$LOCAL_KEYBINDINGS_JSON" "$LOCAL_BACKUP_DIR/keybindings_${BACKUP_DATE}.json"
+        log_success "既存の keybindings.json をバックアップしました: keybindings_${BACKUP_DATE}.json"
+    fi
+    # シンボリックリンクの作成
+    ln -sf "$ICLOUD_KEYBINDINGS_JSON" "$LOCAL_KEYBINDINGS_JSON"
+    if [ -L "$LOCAL_KEYBINDINGS_JSON" ]; then
+        log_success "keybindings.json のシンボリックリンクを作成しました"
+    else
+        log_error "keybindings.json のシンボリックリンク作成に失敗しました"
+        exit 1
+    fi
 fi
 
-# シンボリックリンクの作成
-log_info "シンボリックリンクを作成中..."
-
-# settings.jsonのシンボリックリンク作成
-ln -sf "$ICLOUD_SETTINGS_JSON" "$LOCAL_SETTINGS_JSON"
-if [ -L "$LOCAL_SETTINGS_JSON" ]; then
-    log_success "settings.jsonのシンボリックリンクを作成しました"
-else
-    log_error "settings.jsonのシンボリックリンク作成に失敗しました"
-    exit 1
-fi
-
-# keybindings.jsonのシンボリックリンク作成
-ln -sf "$ICLOUD_KEYBINDINGS_JSON" "$LOCAL_KEYBINDINGS_JSON"
-if [ -L "$LOCAL_KEYBINDINGS_JSON" ]; then
-    log_success "keybindings.jsonのシンボリックリンクを作成しました"
-else
-    log_error "keybindings.jsonのシンボリックリンク作成に失敗しました"
-    exit 1
-fi
-
+echo ""
 log_success "=== 同期完了 ==="
 echo "作成されたシンボリックリンク:"
 echo "  settings.json: $LOCAL_SETTINGS_JSON -> $ICLOUD_SETTINGS_JSON"
