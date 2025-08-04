@@ -5,10 +5,29 @@
     :slack ["^com\\.tinyspeck\\.slackmacgap$"]
   }
 
+  :templates {
+    :launch "osascript -e 'tell application \"%s\" to activate'"
+  }
+
   :main [
-    {:des "CAPS✦: Caps_lockをハイパーキー (Shift, Command, Control, Option) に置換する"
+    {:des "CAPSハイパーキー: Caps_lockを Shift, Command, Control, Option に置換する"
      :rules [
       [:caps_lock [:!CTOleft_shift]]
+    ]}
+
+    {:des "ハイパーキーでアプリ起動"
+     :rules [
+      [:!!a [:launch "Arc"]]
+      [:!!c [:launch "Cursor"]]
+      [:!!d [:launch "Dictionaries"]]
+      [:!!l [:launch "DeepL"]]
+      [:!!f [:launch "Finder"]]
+      [:!!n [:launch "Notion"]]
+      [:!!o [:launch "Obsidian"]]
+      [:!!p [:launch "1Password"]]
+      [:!!r [:launch "Reminders"]]
+      [:!!s [:launch "Slack"]]
+      [:!!w [:launch "Warp"]]
     ]}
 
     {:des "英かな：左右⌘キーを単独で押したときは英数・かなキーとして扱う"
