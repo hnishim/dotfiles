@@ -2,6 +2,7 @@
 
 formulae:
   - mas
+  - node
   - cliclick
   - duti
   - gemini-cli
