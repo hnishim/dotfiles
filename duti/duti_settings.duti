@@ -28,6 +28,8 @@ com.todesktop.230313mzl4w4u92 .ps1 all
 com.todesktop.230313mzl4w4u92 .sql all
 com.todesktop.230313mzl4w4u92 .gitignore all
 com.todesktop.230313mzl4w4u92 .editorconfig all
+com.todesktop.230313mzl4w4u92 .lua all
+com.todesktop.230313mzl4w4u92 .edn all
 
 # Rich Text (TextEdit)
 com.apple.TextEdit .rtf all

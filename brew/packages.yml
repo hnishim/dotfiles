@@ -6,7 +6,7 @@ formulae:
   - duti
   - gemini-cli
   - yq
-  - goku
+  - yqrashawn/goku/goku
 
 casks:
   common:

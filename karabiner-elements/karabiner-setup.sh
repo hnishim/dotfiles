@@ -115,6 +115,27 @@ else
     fi
 fi
 
+# --- goku を実行して karabiner.json を更新 ---
+log_info "goku を実行して karabiner.json の内容を更新します..."
+
+# goku コマンドの存在確認
+if ! command -v goku &> /dev/null; then
+    log_error "goku コマンドが見つかりません。 'brew install yqrashawn/goku/goku' を実行してインストールしてください。"
+    exit 1
+fi
+
+# goku を実行して設定を karabiner.json に反映
+if goku; then
+    log_success "goku を実行し、karabiner.json を正常に更新しました。"
+
+    log_info "Karabiner-Elementsを再起動して設定を反映します..."
+    launchctl kickstart -k "gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server"
+    log_success "Karabiner-Elementsを再起動しました。"
+else
+    log_error "goku の実行に失敗しました。karabiner.edn の内容を確認してください。"
+    exit 1
+fi
+
 echo ""
 log_success "=== 同期完了 ==="
 echo "終了時刻: $(date)"

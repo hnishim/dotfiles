@@ -18,10 +18,7 @@
             "modifiers" : [ "left_command", "left_control", "left_option" ]
           } ],
           "type" : "basic"
-        } ]
-      }, {
-        "description" : "ハイパーキーでアプリ起動",
-        "manipulators" : [ {
+        }, {
           "from" : {
             "key_code" : "a",
             "modifiers" : {

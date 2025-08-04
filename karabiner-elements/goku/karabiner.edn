@@ -13,10 +13,6 @@
     {:des "CAPSハイパーキー: Caps_lockを Shift, Command, Control, Option に置換する"
      :rules [
       [:caps_lock [:!CTOleft_shift]]
-    ]}
-
-    {:des "ハイパーキーでアプリ起動"
-     :rules [
       [:!!a [:launch "Arc"]]
       [:!!c [:launch "Cursor"]]
       [:!!d [:launch "Dictionaries"]]
