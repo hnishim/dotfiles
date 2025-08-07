@@ -1,15 +1,76 @@
-# --- 言語設定 ---
+# --- Language & Region ---
 # システム言語を英語と日本語に設定（英語を優先）
-defaults write -g AppleLanguages -array en ja
+defaults write NSGlobalDomain AppleLanguages -array en ja
+# ロケール：システム言語は英語、地域は日本
+defaults write NSGlobalDomain AppleLocale "en_JP"
+# 月曜日始まり
+defaults write NSGlobalDomain AppleFirstWeekday -int 2
+# 単位系：センチメートル
+defaults write NSGlobalDomain AppleMeasurementUnits "Centimeters"
+# メートル法
+defaults write NSGlobalDomain AppleMetricUnits -bool YES
+# 摂氏
+defaults write NSGlobalDomain AppleTemperatureUnit "Celsius"
+# 日付表示
+defaults write NSGlobalDomain AppleDateFormat -string "yyyy/MM/dd"
 
+# --- System ---
+# 保存時のファイル選択ダイアログパネルをデフォルトで拡げた状態にする
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+
+# --- Software Update ---
+# 注意: 以下のコマンドはsudo権限が必要な場合があります
+# macOSアップデートを自動的にチェック
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
+# アプリケーションアップデートを7日ごとに自動的にチェック
+# ※この設定はユーザー単位でも有効ですが、システム全体に統一することで一貫性を保ちます
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate ScheduleFrequency -string 7
+# アプリケーションアップデートを自動的にダウンロード
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true
+# アプリケーションアップデートを自動的にインストール（セキュリティアップデートなど）
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true
+# macOSアップデートを自動的にインストール
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
+# App Storeからのアプリケーションアップデートを自動的にインストール
+sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool true
+# App StoreからのOSアップデートを自動的に再起動
+sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdateRestartRequired -bool true
+
+# ====== 入力系 ======
+# --- トラックパッド ---
+# トラックパッドのタップでクリックを有効化
+defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true
+defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+
+# --- キーボード ---
+# すべてのコントロールでフルキーボードアクセスを有効化（例: モーダルダイアログでのタブ操作）
+defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
+# Fnキーを標準のファンクションキーとして使用
+defaults write NSGlobalDomain com.apple.keyboard.fnState -bool true
+# ダブルスペースでピリオドを入力する機能を無効化
+defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
+
+# ====== 出力系 ======
+# --- 画面 ---
+# フォントの表示がLCD向けに最適化された、中程度のアンチエイリアスに変更（Retinaの場合は削除推奨）
+defaults write NSGlobalDomain AppleFontSmoothing -int 2
+
+# --- Bluetooth Audio ---
+# Bluetoothヘッドフォン・ヘッドセットの音質を向上
+defaults write com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int 40
+
+# ====== UI ======
 # --- Dock ---
 # Dockの自動表示/非表示機能を有効化
 defaults write com.apple.dock autohide -bool true
 # ホットコーナーを無効化
-defaults write com.apple.dock wvous-tl-corner -int 1 && defaults write com.apple.dock wvous-tl-modifier -int 0
-defaults write com.apple.dock wvous-tr-corner -int 1 && defaults write com.apple.dock wvous-tr-modifier -int 0
-defaults write com.apple.dock wvous-bl-corner -int 1 && defaults write com.apple.dock wvous-bl-modifier -int 0
-defaults write com.apple.dock wvous-br-corner -int 1 && defaults write com.apple.dock wvous-br-modifier -int 0
+defaults write com.apple.dock wvous-tl-corner -int 0
+defaults write com.apple.dock wvous-tr-corner -int 0
+defaults write com.apple.dock wvous-bl-corner -int 0
+defaults write com.apple.dock wvous-br-corner -int 0
 
 # --- Finder ---
 # ファイルの拡張子を常に表示
@@ -60,31 +121,13 @@ defaults write com.apple.controlcenter "Weather" -int 24
 
 # --- Desktop & Window ---
 # 書類を開くときにタブで開くようにする
-defaults write -g AppleWindowTabbingMode -string "always"
+defaults write NSGlobalDomain AppleWindowTabbingMode -string "always"
 # ウインドウを画面上部にドラッグしてフルスクリーンにする機能を無効化
 defaults write com.apple.WindowManager dragToFullScreenEnabled -bool false
-
-# --- トラックパッド ---
-# トラックパッドのタップでクリックを有効化
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
-defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
-defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
 
 # --- Quicklook ---
 # QuickLookでテキストを選択可能にする
 defaults write com.apple.finder QLEnableTextSelection -bool true
-
-# --- Bluetooth Audio ---
-# Bluetoothヘッドフォン・ヘッドセットの音質を向上
-defaults write com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int 40
-
-# --- Keyboard ---
-# すべてのコントロールでフルキーボードアクセスを有効化（例: モーダルダイアログでのタブ操作）
-defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
-# Fnキーを標準のファンクションキーとして使用
-defaults write -g com.apple.keyboard.fnState -bool true
-# ダブルスペースでピリオドを入力する機能を無効化
-defaults write -g NSAutomaticPeriodSubstitutionEnabled -bool false
 
 # --- Accessibility ---
 # ズーム機能のキーボードショートカットを有効化
@@ -128,13 +171,6 @@ defaults write com.apple.Preview NSUserKeyEquivalents -dict-add "Show Previous T
 
 # Notionで「現在のページへのリンクをコピー」のショートカットを設定 (⌘⇧C)
 defaults write notion.id NSUserKeyEquivalents -dict-add "Copy Link to Current Page" "@\$c"
-
-# --- Software Update ---
-# 注意: 以下のコマンドはsudo権限が必要な場合があります
-# macOSアップデートを自動的にインストール
-sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
-# App Storeからのアプリケーションアップデートを自動的にインストール
-sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool true
 
 # --- 変更の反映 ---
 killall Dock
