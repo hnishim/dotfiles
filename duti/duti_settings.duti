@@ -30,6 +30,8 @@ com.todesktop.230313mzl4w4u92 .gitignore all
 com.todesktop.230313mzl4w4u92 .editorconfig all
 com.todesktop.230313mzl4w4u92 .lua all
 com.todesktop.230313mzl4w4u92 .edn all
+com.todesktop.230313mzl4w4u92 com.adobe.edn all
+com.todesktop.230313mzl4w4u92 .duti all
 
 # Rich Text (TextEdit)
 com.apple.TextEdit .rtf all
@@ -88,4 +90,3 @@ com.apple.installer .pkg all
 company.thebrowser.Browser .webloc all
 company.thebrowser.Browser .url all
 company.thebrowser.Browser http
-company.thebrowser.Browser https
