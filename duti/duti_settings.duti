@@ -90,3 +90,4 @@ com.apple.installer .pkg all
 company.thebrowser.Browser .webloc all
 company.thebrowser.Browser .url all
 company.thebrowser.Browser http
+company.thebrowser.Browser mailto
