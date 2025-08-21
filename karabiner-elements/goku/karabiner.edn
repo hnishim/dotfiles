@@ -49,12 +49,12 @@
 
     {:des "括弧を自動的に閉じてカーソルを中に移動"
      :rules [
-      [:!Oopen_bracket [:open_bracket :close_bracket :left_arrow]]      ;; 角括弧
-      [:!OSopen_bracket [:!Sopen_bracket :!Sclose_bracket :left_arrow]] ;; 波括弧
-      [:!OS9 [:!S9 :!S0 :left_arrow]]                                   ;; 丸括弧
-      [:!Oquote [:quote :quote :left_arrow]]                            ;; シングルクォート
-      [:!OSquote [:!Squote :!Squote :left_arrow]]                       ;; ダブルクォート
-      [:!OScomma [:!Scomma :!Speriod :left_arrow]]                       ;; 不等号
+      [:!Oopen_bracket [:open_bracket :close_bracket :left_arrow]]      ;; 角括弧 []
+      [:!OSopen_bracket [:!Sopen_bracket :!Sclose_bracket :left_arrow]] ;; 波括弧 {}
+      [:!OS9 [:!S9 :!S0 :left_arrow]]                                   ;; 丸括弧 ()
+      [:!Oquote [:quote :quote :left_arrow]]                            ;; シングルクォート ''
+      [:!OSquote [:!Squote :!Squote :left_arrow]]                       ;; ダブルクォート ""
+      [:!OScomma [:!Scomma :!Speriod :left_arrow]]                       ;; 不等号 <>
     ]}
   ]
 }
