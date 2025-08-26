@@ -8,6 +8,7 @@ formulae:
   - gemini-cli
   - yq
   - yqrashawn/goku/goku
+  - nextdns
 
 casks:
   common:
