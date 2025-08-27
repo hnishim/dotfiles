@@ -1,10 +1,11 @@
 #!/bin/bash
 
 # Exit immediately if a command exits with a non-zero status.
-set -euo pipefail
-
 # Sets default applications using duti.
 # It processes a settings file in the format recommended by the official duti documentation.
+
+# 共通ライブラリを読み込み
+source "$(dirname "$0")/../lib/common.sh"
 
 # --- Configuration ---
 # Point to the settings file in the same directory as the script.
@@ -14,25 +15,13 @@ SETTINGS_FILE="$SCRIPT_DIR/duti_settings.duti"
 # --- 事前チェック ---
 
 # Homebrewの存在チェック
-if ! command -v brew &> /dev/null; then
-  echo "エラー: Homebrewがインストールされていません。先にHomebrewをインストールしてください。"
-  exit 1
-fi
+check_homebrew || exit 1
 
 # dutiの存在チェックとインストール
-if ! command -v duti &> /dev/null; then
-  echo "duti not found. Attempting to install via Homebrew..."
-  if ! brew install duti; then
-      echo "Failed to install duti. Please install it manually and run this script again."
-      exit 1
-  fi
-fi
+check_and_install_brew_package "duti" "duti" || exit 1
 
 # 設定ファイルの存在チェック
-if [ ! -f "$SETTINGS_FILE" ]; then
-    echo "Error: Settings file not found: $SETTINGS_FILE"
-    exit 1
-fi
+check_file "$SETTINGS_FILE" "duti設定ファイル" || exit 1
 
 # --- メイン処理 ---
 
@@ -41,4 +30,6 @@ echo "Processing settings from: $SETTINGS_FILE"
 
 duti "$SETTINGS_FILE"
 
+# 完了メッセージの表示
+show_completion_message "duti設定" "" ""
 echo "--- Default application settings have been successfully applied! ---"

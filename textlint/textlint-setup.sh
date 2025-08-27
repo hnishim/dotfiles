@@ -2,7 +2,8 @@
 
 # textlintと関連ルールのセットアップ、設定ファイルの同期を行うスクリプト
 
-set -euo pipefail # エラー時に即座に終了、未定義変数の使用を禁止
+# 共通ライブラリを読み込み
+source "$(dirname "$0")/../lib/common.sh"
 
 # --- 変数定義 ---
 # このスクリプトが存在するディレクトリ
@@ -17,54 +18,22 @@ HOME_PRH_CONFIG="$HOME/my-prh.yml"
 BACKUP_DIR="$HOME/.config_backup/textlint"
 BACKUP_DATE=$(date +%Y%m%d)
 
-# --- ログ出力関数 ---
-log_info() {
-    echo "[INFO] $1"
-}
-
-log_error() {
-    echo "[ERROR] $1" >&2
-}
-
-log_success() {
-    echo "[SUCCESS] $1"
-}
-
 # --- 前提条件チェック ---
 log_info "前提条件をチェックしています..."
 
 # Node.jsのチェック (ご指定の `brew list | grep node` よりも確実な `command -v` を使用)
-if ! command -v node &> /dev/null; then
-    log_error "Node.jsがインストールされていません。'brew install node' またはリポジトリの 'brew-setup.sh' を実行してインストールしてください。"
-    exit 1
-fi
-log_success "Node.js はインストール済みです。"
+check_command "node" "'brew install node' またはリポジトリの 'brew-setup.sh' を実行してインストールしてください。" || exit 1
 
 # npmのチェック
-if ! command -v npm &> /dev/null; then
-    log_error "npmがインストールされていません。Node.jsのインストール状況を確認してください。"
-    exit 1
-fi
-log_success "npm はインストール済みです。"
+check_command "npm" "Node.jsのインストール状況を確認してください。" || exit 1
 
 # jqのチェック (ルールのパースに必要)
-if ! command -v jq &> /dev/null; then
-    log_error "jqがインストールされていません。'brew install jq' を実行してインストールしてください。"
-    exit 1
-fi
-log_success "jq はインストール済みです。"
+check_command "jq" "'brew install jq' を実行してインストールしてください。" || exit 1
 
 # 設定ファイルの存在チェック
-if [ ! -f "$ICLOUD_TEXTLINT_CONFIG" ]; then
-    log_error "textlint設定ファイルが見つかりません: $ICLOUD_TEXTLINT_CONFIG"
-    exit 1
-fi
+check_file "$ICLOUD_TEXTLINT_CONFIG" "textlint設定ファイル" || exit 1
 # .textlintrc.json で prh が有効になっているため、辞書ファイルもチェック
-if [ ! -f "$ICLOUD_PRH_CONFIG" ]; then
-    log_error "prh辞書ファイルが見つかりません: $ICLOUD_PRH_CONFIG"
-    exit 1
-fi
-log_success "設定ファイルが見つかりました。"
+check_file "$ICLOUD_PRH_CONFIG" "prh辞書ファイル" || exit 1
 
 echo ""
 log_info "--- textlint本体のインストールを開始します ---"
@@ -87,7 +56,7 @@ log_info "--- textlintルールのインストールを開始します ---"
 log_info "設定ファイル (.textlintrc.json) を解析しています..."
 
 # .textlintrc.jsonからルールキーを抽出 (値がfalseのものは除外)
-rule_keys=$(jq -r '.rules | to_entries[] | select(.value != false) | .key' "$ICLOUD_TEXTLINT_CONFIG")
+rule_keys=$(get_json_value "$ICLOUD_TEXTLINT_CONFIG" '.rules | to_entries[] | select(.value != false) | .key')
 
 if [ -z "$rule_keys" ]; then
     log_info "インストール対象のルールが見つかりませんでした。"
@@ -138,7 +107,7 @@ echo ""
 log_info "--- 設定ファイルのシンボリックリンクを作成します ---"
 
 # バックアップディレクトリの作成
-mkdir -p "$BACKUP_DIR"
+create_backup_dir "$BACKUP_DIR"
 
 # シンボリックリンク作成用の汎用関数
 create_symlink() {
@@ -162,6 +131,9 @@ create_symlink() {
 create_symlink "$ICLOUD_TEXTLINT_CONFIG" "$HOME_TEXTLINT_CONFIG" ".textlintrc.json"
 create_symlink "$ICLOUD_PRH_CONFIG" "$HOME_PRH_CONFIG" "my-prh.yml"
 
-echo ""
-log_success "=== textlintのセットアップが完了しました ==="
+# 完了メッセージの表示
+symlinks_info="  .textlintrc.json: $HOME_TEXTLINT_CONFIG -> $ICLOUD_TEXTLINT_CONFIG
+  my-prh.yml: $HOME_PRH_CONFIG -> $ICLOUD_PRH_CONFIG"
+
+show_completion_message "textlintのセットアップ" "$symlinks_info" "$BACKUP_DIR"
 log_info "VSCodeやCursorで 'textlint' 拡張機能をインストールすると、エディタ上でリアルタイムに校正が実行されます。"

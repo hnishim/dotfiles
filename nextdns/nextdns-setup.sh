@@ -3,7 +3,8 @@
 # NextDNSセットアップスクリプト
 # HomebrewでNextDNSをインストールし、構成IDを設定して起動する
 
-set -euo pipefail # エラー時に即座に終了、未定義変数の使用を禁止
+# 共通ライブラリを読み込み
+source "$(dirname "$0")/../lib/common.sh"
 
 # --- 変数定義 ---
 
@@ -15,30 +16,9 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
 echo "=== NextDNSセットアップスクリプト ==="
 
-# --- 関数定義 ---
-log_info() {
-    echo "[INFO] $1"
-}
-
-log_error() {
-    echo "[ERROR] $1" >&2
-}
-
-log_success() {
-    echo "[SUCCESS] $1"
-}
-
-log_warning() {
-    echo "[WARNING] $1"
-}
-
 # Homebrewがインストールされているかチェック
 check_homebrew() {
-    if ! command -v brew &> /dev/null; then
-        log_error "Homebrewがインストールされていません。先にHomebrewをインストールしてください。"
-        exit 1
-    fi
-    log_success "Homebrewが利用可能です"
+    check_homebrew || exit 1
 }
 
 # NextDNSがインストールされているかチェックし、なければインストール
@@ -129,7 +109,7 @@ restart_nextdns
 # 5. ステータス確認
 check_nextdns_status
 
-echo ""
-log_success "=== NextDNSセットアップ完了 ==="
+# 完了メッセージの表示
+show_completion_message "NextDNSセットアップ" "" ""
 echo "設定ID: $NEXTDNS_CONFIG_ID"
 echo "NextDNSが正常に動作しています"

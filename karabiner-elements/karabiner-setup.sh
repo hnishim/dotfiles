@@ -3,12 +3,13 @@
 # Karabiner-Elements設定ファイル同期スクリプト
 # iCloud上の設定ファイルをローカルのKarabiner-Elements設定にシンボリックリンクで同期する
 
-set -euo pipefail  # エラー時に即座に終了、未定義変数の使用を禁止
-
 # 前提
 # 以下パスにある `karabiner_grabber` を、以下の設定箇所に追加
 # パス：`/Library/Application Support/org.pqrs/Karabiner-Elements/bin/`
 # 設定箇所：`System settings` → `Privacy & Security` → `Full Disk Access`
+
+# 共通ライブラリを読み込み
+source "$(dirname "$0")/../lib/common.sh"
 
 # 変数定義
 # Local path
@@ -21,128 +22,53 @@ LOCAL_BACKUP_DIR="$LOCAL_KARABINER_DIR/_backup"
 ICLOUD_KARABINER_JSON="$HOME/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/karabiner-elements/karabiner.json"
 ICLOUD_KARABINER_EDN="$HOME/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/karabiner-elements/goku/karabiner.edn"
 
-# バックアップ用の日付（_YYYYMMDD形式）を取得
-BACKUP_DATE=$(date +%Y%m%d)
-
 echo "=== Karabiner-Elements設定ファイル同期スクリプト ==="
 echo "開始時刻: $(date)"
-
-# 関数定義
-log_info() {
-    echo "[INFO] $1"
-}
-
-log_error() {
-    echo "[ERROR] $1" >&2
-}
-
-log_success() {
-    echo "[SUCCESS] $1"
-}
 
 # 前提条件チェック
 log_info "前提条件をチェック中..."
 
 # iCloud設定ファイルの存在確認
-if [ ! -f "$ICLOUD_KARABINER_JSON" ]; then
-    log_error "$ICLOUD_KARABINER_JSON が存在しません。パスを確認してください。"
-    exit 1
-fi
-
-# goku設定ファイルの存在確認
-if [ ! -f "$ICLOUD_KARABINER_EDN" ]; then
-    log_error "$ICLOUD_KARABINER_EDN が存在しません。パスを確認してください。"
-    exit 1
-fi
+check_file "$ICLOUD_KARABINER_JSON" "iCloud karabiner.json" || exit 1
+check_file "$ICLOUD_KARABINER_EDN" "iCloud karabiner.edn" || exit 1
 
 # ローカルKarabinerディレクトリの存在確認
-if [ ! -d "$LOCAL_KARABINER_DIR" ]; then
-    log_error "$LOCAL_KARABINER_DIR ディレクトリが存在しません。作成してから再実行してください。"
-    exit 1
-fi
+check_directory "$LOCAL_KARABINER_DIR" "ローカルKarabinerディレクトリ" || exit 1
 
 log_success "前提条件チェック完了"
 
 # バックアップディレクトリの作成
-log_info "バックアップディレクトリを作成中..."
-if [ ! -d "$LOCAL_BACKUP_DIR" ]; then
-    mkdir -p "$LOCAL_BACKUP_DIR"
-    log_success "バックアップディレクトリを作成しました: $LOCAL_BACKUP_DIR"
-else
-    log_info "バックアップディレクトリは既に存在します: $LOCAL_BACKUP_DIR"
-fi
+create_backup_dir "$LOCAL_BACKUP_DIR"
 
 echo ""
 log_info "シンボリックリンクの状態を確認・作成します..."
 
 # --- karabiner.json の同期 ---
-if [ -L "$LOCAL_KARABINER_JSON" ] && [ "$(readlink "$LOCAL_KARABINER_JSON")" = "$ICLOUD_KARABINER_JSON" ]; then
-    log_success "karabiner.json は既に正しくリンクされています。スキップします。"
-else
-    log_info "karabiner.json の設定を開始します..."
-    # 既存ファイルのバックアップ (ファイル、ディレクトリ、シンボリックリンクのいずれかが存在する場合)
-    if [ -e "$LOCAL_KARABINER_JSON" ] || [ -L "$LOCAL_KARABINER_JSON" ]; then
-        mv "$LOCAL_KARABINER_JSON" "$LOCAL_BACKUP_DIR/karabiner_${BACKUP_DATE}.json"
-        log_success "既存の karabiner.json をバックアップしました: karabiner_${BACKUP_DATE}.json"
-    fi
-    # シンボリックリンクの作成
-    ln -sf "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON"
-    if [ -L "$LOCAL_KARABINER_JSON" ]; then
-        log_success "karabiner.json のシンボリックリンクを作成しました"
-    else
-        log_error "karabiner.json のシンボリックリンク作成に失敗しました"
-        exit 1
-    fi
-fi
+create_symlink "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON" "$LOCAL_BACKUP_DIR" "karabiner" "karabiner.json" || exit 1
 
 # --- karabiner.edn (goku) の同期 ---
-if [ -L "$LOCAL_KARABINER_EDN" ] && [ "$(readlink "$LOCAL_KARABINER_EDN")" = "$ICLOUD_KARABINER_EDN" ]; then
-    log_success "karabiner.edn は既に正しくリンクされています。スキップします。"
-else
-    log_info "karabiner.edn の設定を開始します..."
-    # 既存ファイルのバックアップ (ファイル、ディレクトリ、シンボリックリンクのいずれかが存在する場合)
-    if [ -e "$LOCAL_KARABINER_EDN" ] || [ -L "$LOCAL_KARABINER_EDN" ]; then
-        mv "$LOCAL_KARABINER_EDN" "$LOCAL_BACKUP_DIR/karabiner_${BACKUP_DATE}.edn"
-        log_success "既存の karabiner.edn をバックアップしました: karabiner_${BACKUP_DATE}.edn"
-    fi
-    # シンボリックリンクの作成
-    ln -sf "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN"
-    if [ -L "$LOCAL_KARABINER_EDN" ]; then
-        log_success "karabiner.edn のシンボリックリンクを作成しました"
-    else
-        log_error "karabiner.edn のシンボリックリンク作成に失敗しました"
-        exit 1
-    fi
-fi
+create_symlink "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN" "$LOCAL_BACKUP_DIR" "karabiner" "karabiner.edn" || exit 1
 
 # --- goku を実行して karabiner.json を更新 ---
 log_info "goku を実行して karabiner.json の内容を更新します..."
 
 # goku コマンドの存在確認
-if ! command -v goku &> /dev/null; then
-    log_error "goku コマンドが見つかりません。 'brew install yqrashawn/goku/goku' を実行してインストールしてください。"
-    exit 1
-fi
+check_command "goku" "'brew install yqrashawn/goku/goku' を実行してインストールしてください。" || exit 1
 
 # goku を実行して設定を karabiner.json に反映
 if goku; then
     log_success "goku を実行し、karabiner.json を正常に更新しました。"
 
     log_info "Karabiner-Elementsを再起動して設定を反映します..."
-    launchctl kickstart -k "gui/$(id -u)/org.pqrs.service.agent.karabiner_console_user_server"
-    log_success "Karabiner-Elementsを再起動しました。"
+    restart_process "Karabiner-Elements" "org.pqrs.service.agent.karabiner_console_user_server" || exit 1
 else
     log_error "goku の実行に失敗しました。karabiner.edn の内容を確認してください。"
     exit 1
 fi
 
-echo ""
-log_success "=== 同期完了 ==="
+# 完了メッセージの表示
+symlinks_info="  karabiner.json: $LOCAL_KARABINER_JSON -> $ICLOUD_KARABINER_JSON
+  karabiner.edn:  $LOCAL_KARABINER_EDN -> $ICLOUD_KARABINER_EDN"
+
+show_completion_message "Karabiner-Elements設定ファイル同期" "$symlinks_info" "$LOCAL_BACKUP_DIR"
 echo "終了時刻: $(date)"
-echo ""
-echo "作成されたシンボリックリンク:"
-echo "  karabiner.json: $LOCAL_KARABINER_JSON -> $ICLOUD_KARABINER_JSON"
-echo "  karabiner.edn:  $LOCAL_KARABINER_EDN -> $ICLOUD_KARABINER_EDN"
-echo ""
-echo "バックアップファイル:"
-echo "  $LOCAL_BACKUP_DIR/"
