@@ -14,23 +14,11 @@ NEXTDNS_CONFIG_ID="993725"
 # スクリプト自身の場所を基準にパスを決定
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
-echo "=== NextDNSセットアップスクリプト ==="
+log_header "=== NextDNSセットアップスクリプト ==="
 
 # NextDNSがインストールされているかチェックし、なければインストール
 check_and_install_nextdns() {
-    log_info "NextDNSのインストール状態を確認中..."
-    
-    if brew list nextdns &> /dev/null; then
-        log_success "NextDNSは既にインストールされています"
-    else
-        log_info "NextDNSをインストール中..."
-        if brew install nextdns; then
-            log_success "NextDNSのインストールが完了しました"
-        else
-            log_error "NextDNSのインストールに失敗しました"
-            exit 1
-        fi
-    fi
+    check_and_install_brew_package "nextdns" "NextDNS"
 }
 
 # NextDNSの設定をインストール
@@ -123,7 +111,7 @@ check_nextdns_status() {
 
 # 1. Homebrewの確認
 log_info "前提条件をチェック中..."
-check_command "brew" "先にHomebrewをインストールしてください。"
+check_command "brew" "先にHomebrewをインストールしてください。" || exit 1
 
 # 2. NextDNSのインストール確認・インストール
 check_and_install_nextdns
