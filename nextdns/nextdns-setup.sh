@@ -85,9 +85,6 @@ check_nextdns_status() {
 
 # --- メイン処理 ---
 
-echo "NextDNS設定ID: $NEXTDNS_CONFIG_ID"
-echo ""
-
 # 1. Homebrewの確認
 log_info "前提条件をチェック中..."
 check_homebrew
@@ -106,5 +103,4 @@ check_nextdns_status
 
 # 完了メッセージの表示
 show_completion_message "NextDNSセットアップ" "" ""
-echo "設定ID: $NEXTDNS_CONFIG_ID"
 echo "NextDNSが正常に動作しています"
