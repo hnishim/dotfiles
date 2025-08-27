@@ -16,6 +16,58 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
 log_header "=== NextDNSセットアップスクリプト ==="
 
+# sudoers に NextDNS の NOPASSWD 設定を追加
+add_nextdns_sudoers_rule() {
+    local target_user
+    target_user="${SUDO_USER:-$(whoami)}"
+    local sudoers_dir="/private/etc/sudoers.d"
+    local sudoers_file="$sudoers_dir/nextdns"
+    local nextdns_path="/opt/homebrew/bin/nextdns"
+
+    log_info "sudoers に NextDNS の NOPASSWD 設定を追加中..."
+
+    # ディレクトリ作成（存在しない場合）
+    if [ ! -d "$sudoers_dir" ]; then
+        if sudo mkdir -p "$sudoers_dir"; then
+            log_success "sudoers ディレクトリを作成しました: $sudoers_dir"
+        else
+            log_error "sudoers ディレクトリの作成に失敗しました"
+            exit 1
+        fi
+    fi
+
+    # 一時ファイル作成
+    local tmpfile
+    tmpfile=$(mktemp "/tmp/nextdns_sudoers.XXXXXX")
+    echo "$target_user ALL=(root) NOPASSWD: $nextdns_path" > "$tmpfile"
+
+    # visudo で検証
+    if sudo visudo -cf "$tmpfile"; then
+        # 既存ファイルのバックアップ
+        if sudo test -f "$sudoers_file"; then
+            sudo cp "$sudoers_file" "${sudoers_file}.bak_${BACKUP_DATE}"
+            log_info "既存の sudoers エントリをバックアップしました: ${sudoers_file}.bak_${BACKUP_DATE}"
+        fi
+
+        # 権限・所有権を設定して配置
+        if sudo install -m 0440 -o root -g wheel "$tmpfile" "$sudoers_file"; then
+            log_success "sudoers エントリを配置しました: $sudoers_file"
+        else
+            log_error "sudoers エントリの配置に失敗しました"
+            rm -f "$tmpfile"
+            exit 1
+        fi
+    else
+        log_error "sudoers エントリの検証に失敗しました"
+        echo "内容:" >&2
+        cat "$tmpfile" >&2
+        rm -f "$tmpfile"
+        exit 1
+    fi
+
+    rm -f "$tmpfile"
+}
+
 # NextDNSがインストールされているかチェックし、なければインストール
 check_and_install_nextdns() {
     check_and_install_brew_package "nextdns" "NextDNS"
@@ -115,6 +167,9 @@ check_command "brew" "先にHomebrewをインストールしてください。" 
 
 # 2. NextDNSのインストール確認・インストール
 check_and_install_nextdns
+
+# 2.5 sudoers 設定追加（ノンインタラクティブで nextdns コマンドを許可）
+add_nextdns_sudoers_rule
 
 # 3. NextDNSの設定インストール
 install_nextdns_config
