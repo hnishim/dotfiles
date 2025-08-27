@@ -71,4 +71,3 @@ symlinks_info="  karabiner.json: $LOCAL_KARABINER_JSON -> $ICLOUD_KARABINER_JSON
   karabiner.edn:  $LOCAL_KARABINER_EDN -> $ICLOUD_KARABINER_EDN"
 
 show_completion_message "Karabiner-Elements設定ファイル同期" "$symlinks_info" "$LOCAL_BACKUP_DIR"
-echo "終了時刻: $(date)"
