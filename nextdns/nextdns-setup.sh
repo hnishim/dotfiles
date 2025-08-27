@@ -43,12 +43,6 @@ add_nextdns_sudoers_rule() {
 
     # visudo で検証
     if sudo visudo -cf "$tmpfile"; then
-        # 既存ファイルのバックアップ
-        if sudo test -f "$sudoers_file"; then
-            sudo cp "$sudoers_file" "${sudoers_file}.bak_${BACKUP_DATE}"
-            log_info "既存の sudoers エントリをバックアップしました: ${sudoers_file}.bak_${BACKUP_DATE}"
-        fi
-
         # 権限・所有権を設定して配置
         if sudo install -m 0440 -o root -g wheel "$tmpfile" "$sudoers_file"; then
             log_success "sudoers エントリを配置しました: $sudoers_file"
