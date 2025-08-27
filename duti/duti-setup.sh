@@ -15,7 +15,7 @@ SETTINGS_FILE="$SCRIPT_DIR/duti_settings.duti"
 # --- 事前チェック ---
 
 # Homebrewの存在チェック
-check_homebrew || exit 1
+check_command "brew" "先にHomebrewをインストールしてください。" || exit 1
 
 # dutiの存在チェックとインストール
 check_and_install_brew_package "duti" "duti" || exit 1

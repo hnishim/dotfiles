@@ -87,7 +87,7 @@ check_nextdns_status() {
 
 # 1. Homebrewの確認
 log_info "前提条件をチェック中..."
-check_homebrew
+check_command "brew" "先にHomebrewをインストールしてください。"
 
 # 2. NextDNSのインストール確認・インストール
 check_and_install_nextdns

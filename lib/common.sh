@@ -169,18 +169,6 @@ check_path() {
     return 0
 }
 
-
-
-# Homebrewの存在確認
-check_homebrew() {
-    if ! command -v brew &> /dev/null; then
-        log_error "Homebrewがインストールされていません。先にHomebrewをインストールしてください。"
-        return 1
-    fi
-    log_success "Homebrewが利用可能です"
-    return 0
-}
-
 # --- パッケージ管理関数 ---
 
 # Homebrewパッケージのインストール確認・インストール
