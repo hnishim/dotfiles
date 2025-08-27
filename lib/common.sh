@@ -200,10 +200,7 @@ get_yaml_value() {
     local yaml_file="$1"
     local yq_query="$2"
     
-    if ! command -v yq &> /dev/null; then
-        log_error "yq コマンドが見つかりません。'brew install yq' を実行してインストールしてください。"
-        return 1
-    fi
+    check_command "yq" "'brew install yq' を実行してインストールしてください。" || return 1
     
     yq e "$yq_query" "$yaml_file" 2>/dev/null
 }
@@ -213,10 +210,7 @@ get_json_value() {
     local json_file="$1"
     local jq_query="$2"
     
-    if ! command -v jq &> /dev/null; then
-        log_error "jq コマンドが見つかりません。'brew install jq' を実行してインストールしてください。"
-        return 1
-    fi
+    check_command "jq" "'brew install jq' を実行してインストールしてください。" || return 1
     
     jq -r "$jq_query" "$json_file" 2>/dev/null
 }
