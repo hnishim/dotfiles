@@ -176,4 +176,3 @@ check_nextdns_status
 
 # 完了メッセージの表示
 show_completion_message "NextDNSセットアップ" "" ""
-echo "NextDNSが正常に動作しています"
