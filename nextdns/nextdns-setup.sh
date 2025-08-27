@@ -46,39 +46,75 @@ install_nextdns_config() {
     fi
 }
 
+# NextDNSのステータスを取得
+get_nextdns_status() {
+    local status_output
+    if ! status_output=$(sudo nextdns status 2>&1); then
+        log_error "NextDNSのステータス確認に失敗しました"
+        exit 1
+    fi
+    echo "$status_output"
+}
+
+# NextDNSのステータスを確認（runningかどうかチェック）
+check_nextdns_running() {
+    local status_output="$1"
+    if echo "$status_output" | grep -q "running"; then
+        return 0  # running
+    else
+        return 1  # not running
+    fi
+}
+
 # NextDNSを再起動
 restart_nextdns() {
-    log_info "NextDNSを再起動中..."
+    log_info "NextDNSのステータスを確認中..."
     
-    if sudo nextdns restart; then
-        log_success "NextDNSの再起動が完了しました"
+    # まずステータスを確認
+    local status_output
+    status_output=$(get_nextdns_status)
+    
+    # ステータスに応じて処理を分岐
+    if check_nextdns_running "$status_output"; then
+        log_info "NextDNSが動作中です。再起動を実行します..."
+        if sudo nextdns restart; then
+            log_success "NextDNSの再起動が完了しました"
+        else
+            log_error "NextDNSの再起動に失敗しました"
+            exit 1
+        fi
+    elif echo "$status_output" | grep -q "stopped"; then
+        log_info "NextDNSが停止中です。起動を実行します..."
+        if sudo nextdns start; then
+            log_success "NextDNSの起動が完了しました"
+        else
+            log_error "NextDNSの起動に失敗しました"
+            exit 1
+        fi
     else
-        log_error "NextDNSの再起動に失敗しました"
+        log_error "予期しないステータスです: $status_output"
         exit 1
     fi
 }
 
 # NextDNSのステータスを確認
 check_nextdns_status() {
-    log_info "NextDNSのステータスを確認中..."
+    log_info "NextDNSのステータスを再確認中..."
     
     # 少し待機してからステータスを確認
     sleep 3
     
     local status_output
-    if status_output=$(sudo nextdns status 2>&1); then
-        if echo "$status_output" | grep -q "running"; then
-            log_success "NextDNSが正常に動作しています"
-            echo "ステータス詳細:"
-            echo "$status_output"
-        else
-            log_error "NextDNSが正常に動作していません"
-            echo "ステータス出力:"
-            echo "$status_output"
-            exit 1
-        fi
+    status_output=$(get_nextdns_status)
+    
+    if check_nextdns_running "$status_output"; then
+        log_success "NextDNSが正常に動作しています"
+        echo "ステータス詳細:"
+        echo "$status_output"
     else
-        log_error "NextDNSのステータス確認に失敗しました"
+        log_error "NextDNSが正常に動作していません"
+        echo "ステータス出力:"
+        echo "$status_output"
         exit 1
     fi
 }
