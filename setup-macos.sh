@@ -51,6 +51,7 @@ setup_scripts=(
     "warp/warp-setup.sh"
     "cursor/cursor-setup.sh"
     "textlint/textlint-setup.sh"
+    "nextdns/nextdns-setup.sh"
 )
 
 for script in "${setup_scripts[@]}"; do
