@@ -16,11 +16,6 @@ SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 
 echo "=== NextDNSセットアップスクリプト ==="
 
-# Homebrewがインストールされているかチェック
-check_homebrew() {
-    check_homebrew || exit 1
-}
-
 # NextDNSがインストールされているかチェックし、なければインストール
 check_and_install_nextdns() {
     log_info "NextDNSのインストール状態を確認中..."
