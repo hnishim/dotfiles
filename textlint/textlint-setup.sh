@@ -31,9 +31,9 @@ check_command "npm" "Node.jsのインストール状況を確認してくださ�
 check_command "jq" "'brew install jq' を実行してインストールしてください。" || exit 1
 
 # 設定ファイルの存在チェック
-check_file "$ICLOUD_TEXTLINT_CONFIG" "textlint設定ファイル" || exit 1
+check_path "$ICLOUD_TEXTLINT_CONFIG" "textlint設定ファイル" "file" || exit 1
 # .textlintrc.json で prh が有効になっているため、辞書ファイルもチェック
-check_file "$ICLOUD_PRH_CONFIG" "prh辞書ファイル" || exit 1
+check_path "$ICLOUD_PRH_CONFIG" "prh辞書ファイル" "file" || exit 1
 
 echo ""
 log_info "--- textlint本体のインストールを開始します ---"

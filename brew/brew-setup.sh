@@ -74,7 +74,7 @@ else
 fi
 
 # パッケージ定義ファイルの存在確認
-check_file "$PACKAGE_FILE" "パッケージ定義ファイル" || exit 1
+check_path "$PACKAGE_FILE" "パッケージ定義ファイル" "file" || exit 1
 
 # --- Function Definitions ---
 

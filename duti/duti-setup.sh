@@ -21,7 +21,7 @@ check_homebrew || exit 1
 check_and_install_brew_package "duti" "duti" || exit 1
 
 # 設定ファイルの存在チェック
-check_file "$SETTINGS_FILE" "duti設定ファイル" || exit 1
+check_path "$SETTINGS_FILE" "duti設定ファイル" "file" || exit 1
 
 # --- メイン処理 ---
 

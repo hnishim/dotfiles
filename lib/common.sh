@@ -138,31 +138,38 @@ check_command() {
     return 0
 }
 
-# ファイルの存在確認
-check_file() {
-    local file_path="$1"
+# パス（ファイルまたはディレクトリ）の存在確認
+check_path() {
+    local path="$1"
     local description="$2"
+    local path_type="${3:-auto}"  # auto, file, directory
     
-    if [ ! -f "$file_path" ]; then
-        log_error "$description が見つかりません: $file_path"
-        return 1
-    fi
-    log_success "$description が見つかりました: $file_path"
+    case "$path_type" in
+        "file")
+            if [ ! -f "$path" ]; then
+                log_error "$description が見つかりません: $path"
+                return 1
+            fi
+            ;;
+        "directory")
+            if [ ! -d "$path" ]; then
+                log_error "$description が存在しません: $path"
+                return 1
+            fi
+            ;;
+        "auto"|*)
+            if [ ! -e "$path" ]; then
+                log_error "$description が存在しません: $path"
+                return 1
+            fi
+            ;;
+    esac
+    
+    log_success "$description が存在します: $path"
     return 0
 }
 
-# ディレクトリの存在確認
-check_directory() {
-    local dir_path="$1"
-    local description="$2"
-    
-    if [ ! -d "$dir_path" ]; then
-        log_error "$description が存在しません: $dir_path"
-        return 1
-    fi
-    log_success "$description が存在します: $dir_path"
-    return 0
-}
+
 
 # Homebrewの存在確認
 check_homebrew() {

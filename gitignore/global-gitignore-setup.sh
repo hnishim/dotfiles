@@ -23,7 +23,7 @@ echo "=== Git ignore設定ファイル同期スクリプト ==="
 
 # 1. 前提条件チェック
 log_info "前提条件をチェック中..."
-check_file "$ICLOUD_IGNORE_FILE" "実体ファイル" || exit 1
+check_path "$ICLOUD_IGNORE_FILE" "実体ファイル" "file" || exit 1
 log_success "前提条件チェック完了"
 
 # 2. ローカルGit設定ディレクトリの作成

@@ -29,11 +29,11 @@ echo "開始時刻: $(date)"
 log_info "前提条件をチェック中..."
 
 # iCloud設定ファイルの存在確認
-check_file "$ICLOUD_KARABINER_JSON" "iCloud karabiner.json" || exit 1
-check_file "$ICLOUD_KARABINER_EDN" "iCloud karabiner.edn" || exit 1
+check_path "$ICLOUD_KARABINER_JSON" "iCloud karabiner.json" "file" || exit 1
+check_path "$ICLOUD_KARABINER_EDN" "iCloud karabiner.edn" "file" || exit 1
 
 # ローカルKarabinerディレクトリの存在確認
-check_directory "$LOCAL_KARABINER_DIR" "ローカルKarabinerディレクトリ" || exit 1
+check_path "$LOCAL_KARABINER_DIR" "ローカルKarabinerディレクトリ" "directory" || exit 1
 
 log_success "前提条件チェック完了"
 

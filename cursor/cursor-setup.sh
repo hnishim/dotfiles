@@ -25,19 +25,19 @@ echo "=== Cursor設定ファイル同期スクリプト ==="
 log_info "前提条件をチェック中..."
 
 # iCloudディレクトリの存在確認
-check_directory "$ICLOUD_CURSOR_DIR" "iCloud Cursorディレクトリ" || exit 1
+check_path "$ICLOUD_CURSOR_DIR" "iCloud Cursorディレクトリ" "directory" || exit 1
 
 # iCloud設定ファイルの存在確認
-check_file "$ICLOUD_SETTINGS_JSON" "iCloud settings.json" || exit 1
-check_file "$ICLOUD_KEYBINDINGS_JSON" "iCloud keybindings.json" || exit 1
-check_file "$ICLOUD_EXTENSIONS_YML" "iCloud extensions.yml" || exit 1
+check_path "$ICLOUD_SETTINGS_JSON" "iCloud settings.json" "file" || exit 1
+check_path "$ICLOUD_KEYBINDINGS_JSON" "iCloud keybindings.json" "file" || exit 1
+check_path "$ICLOUD_EXTENSIONS_YML" "iCloud extensions.yml" "file" || exit 1
 
 # コマンドの存在確認
 check_command "cursor" "CursorのコマンドラインツールがPATH上にあることを確認してください。" || exit 1
 check_command "yq" "'brew install yq' を実行してインストールしてください。" || exit 1
 
 # ローカルユーザーディレクトリの存在確認
-check_directory "$LOCAL_USER_DIR" "ローカルCursorユーザーディレクトリ" || exit 1
+check_path "$LOCAL_USER_DIR" "ローカルCursorユーザーディレクトリ" "directory" || exit 1
 
 log_success "前提条件チェック完了"
 
