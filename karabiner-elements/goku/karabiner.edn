@@ -53,37 +53,31 @@
 
     {:des "括弧を自動的に閉じてカーソルを中に移動"
      :rules [
-      ;; ^⌥⇧\ は日本語の確定動作。'"`は半角直接入力設定なので確定不要。
-      [:!Oopen_bracket [:open_bracket :close_bracket :!TOSbackslash :left_arrow]]               ;; 角括弧 []
-      [:!OSopen_bracket [:!Sopen_bracket :!Sclose_bracket :!TOSbackslash :left_arrow]]          ;; 波括弧 {}
-      [:!OS9 [:!S9 :!S0 :!TOSbackslash :left_arrow]]                                            ;; 丸括弧 ()
-      [:!Oquote [:quote :quote :left_arrow]]                                                    ;; シングルクォート ''
-      [:!OSquote [:!Squote :!Squote :left_arrow]]                                               ;; ダブルクォート ""
-      [:!OScomma [:!Scomma :!Speriod :!TOSbackslash :left_arrow]]                               ;; 不等号 <>
-      [:!Ograve_accent_and_tilde [:grave_accent_and_tilde :grave_accent_and_tilde :left_arrow]] ;; バッククォート ``
+      ;; ^⌥⇧\ は日本語の確定動作（かわせみで定義必要）
+      ;; '"`は半角直接入力設定なので確定不要。
       
       ;; 同時押し（ビルドインキーボード用）
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSbackslash :left_arrow]]                                             ;; [] → 角括弧 []
+      [[:open_bracket :close_bracket]                                         [:open_bracket :close_bracket :!TOSbackslash :left_arrow]]     ;; [] → 角括弧 []
       [{:sim [:open_bracket :close_bracket] :modi {:mandatory [:left_shift]}} [:!Sopen_bracket :!Sclose_bracket :!TOSbackslash :left_arrow]] ;; {} → 波括弧 {}
-      [[:9 :0] [:!S9 :!S0 :!TOSbackslash :left_arrow]]                                                                                       ;; 90 → 丸括弧 ()
-      [[:semicolon :quote] [:quote :quote :left_arrow]]                                                                                      ;; ;' → シングルクォート ''
-      [{:sim [:semicolon :quote] :modi {:mandatory [:left_shift]}} [:!Squote :!Squote :left_arrow]]                                          ;; :_ → ダブルクォート ""
-      [[:comma :period] [:!Scomma :!Speriod :!TOSbackslash :left_arrow]]                                                                     ;; ,. → 不等号 <>
-      [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde :left_arrow]]                                           ;; `1 → バッククォート ``
+      [[:9 :0]                                                                [:!S9 :!S0 :!TOSbackslash :left_arrow]]                        ;; 90 → 丸括弧 ()
+      [[:semicolon :quote]                                                    [:quote :quote :left_arrow]]                                   ;; ;' → シングルクォート ''
+      [{:sim [:semicolon :quote] :modi {:mandatory [:left_shift]}}            [:!Squote :!Squote :left_arrow]]                               ;; :_ → ダブルクォート ""
+      [[:comma :period]                                                       [:!Scomma :!Speriod :!TOSbackslash :left_arrow]]               ;; ,. → 不等号 <>
+      [[:grave_accent_and_tilde :1]                                           [:grave_accent_and_tilde :grave_accent_and_tilde :left_arrow]] ;; `1 → バッククォート ``
 
       ;; 同時押し（Corne用）
-      ;; [[  ]] ;; ;- → 角括弧 []
-      ;; [[  ]] ;; l; → 波括弧 {}
-      ;; [[  ]] ;; ./ → 丸括弧 ()
-      ;; [[  ]] ;; /' → シングルクォート ''
-      ;; [[  ]] ;; p= → ダブルクォート ""
-      ;; [[  ]] ;; 
-
+      [[:semicolon :hyphen]         [:open_bracket :close_bracket :!TOSbackslash :left_arrow]]     ;; ;- → 角括弧 []
+      [[:l :semicolon]              [:!Sopen_bracket :!Sclose_bracket :!TOSbackslash :left_arrow]] ;; l; → 波括弧 {}
+      [[:period :slash]             [:!S9 :!S0 :!TOSbackslash :left_arrow]]                        ;; ./ → 丸括弧 ()
+      [[:slash :quote]              [:quote :quote :left_arrow]]                                   ;; /' → シングルクォート ''
+      [[:p :equal_sign]             [:!Squote :!Squote :left_arrow]]                               ;; p= → ダブルクォート ""
+      ;;                                                                                              不等号 <> は↑で定義済
+      [[:grave_accent_and_tilde :a] [:grave_accent_and_tilde :grave_accent_and_tilde :left_arrow]] ;; `a → バッククォート ``
     ]}
 
     {:des "通常のリターンを変換確定キーとして扱う"
      :rules [
-      ;; ^⌥⇧\ は日本語の確定動作。
+      ;; ^⌥⇧\ は日本語の確定動作（かわせみで定義必要）
       [:return_or_enter :!TOSbackslash :no_return_apps] ;; 通常の⏎のみでは、変換確定しかしない
       [:!!return_or_enter :return_or_enter]             ;; ✦⏎で通常の⏎
     ]}
