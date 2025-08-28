@@ -3,6 +3,10 @@
     :slack_notion ["^com\\.tinyspeck\\.slackmacgap$" "^notion\\.id"]
     :notion ["^notion\\.id"]
     :slack ["^com\\.tinyspeck\\.slackmacgap$"]
+    :no_return_apps [
+      "^com\\.todesktop\\.230313mzl4w4u92" ;; Cursor
+      "^company\\.thebrowser\\.Browser"    ;; Arc
+    ]
   }
 
   :templates {
@@ -66,13 +70,22 @@
       [{:sim [:semicolon :quote] :modi {:mandatory [:left_shift]}} [:!Squote :!Squote :left_arrow]]                                          ;; :_ → ダブルクォート ""
       [[:comma :period] [:!Scomma :!Speriod :!TOSbackslash :left_arrow]]                                                                     ;; ,. → 不等号 <>
       [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde :left_arrow]]                                           ;; `1 → バッククォート ``
+
+      ;; 同時押し（Corne用）
+      ;; [[  ]] ;; ;- → 角括弧 []
+      ;; [[  ]] ;; l; → 波括弧 {}
+      ;; [[  ]] ;; ./ → 丸括弧 ()
+      ;; [[  ]] ;; /' → シングルクォート ''
+      ;; [[  ]] ;; p= → ダブルクォート ""
+      ;; [[  ]] ;; 
+
     ]}
 
     {:des "通常のリターンを変換確定キーとして扱う"
      :rules [
       ;; ^⌥⇧\ は日本語の確定動作。
-      [:return_or_enter :!TOSbackslash]     ;; 通常の⏎のみでは、変換確定しかしない
-      [:!!return_or_enter :return_or_enter] ;; ✦⏎で通常の⏎
+      [:return_or_enter :!TOSbackslash :no_return_apps] ;; 通常の⏎のみでは、変換確定しかしない
+      [:!!return_or_enter :return_or_enter]             ;; ✦⏎で通常の⏎
     ]}
   ]
 }

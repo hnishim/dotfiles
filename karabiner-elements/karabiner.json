@@ -582,6 +582,10 @@
             "key_code" : "backslash",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
           } ],
+          "conditions" : [ {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^com\\.todesktop\\.230313mzl4w4u92", "^company\\.thebrowser\\.Browser" ]
+          } ],
           "type" : "basic"
         }, {
           "from" : {
