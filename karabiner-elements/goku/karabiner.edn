@@ -67,5 +67,12 @@
       [[:comma :period] [:!Scomma :!Speriod :!TOSbackslash :left_arrow]]                                                                     ;; ,. → 不等号 <>
       [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde :left_arrow]]                                           ;; `1 → バッククォート ``
     ]}
+
+    {:des "通常のリターンを変換確定キーとして扱う"
+     :rules [
+      ;; ^⌥⇧\ は日本語の確定動作。
+      [:return_or_enter :!TOSbackslash]     ;; 通常の⏎のみでは、変換確定しかしない
+      [:!!return_or_enter :return_or_enter] ;; ✦⏎で通常の⏎
+    ]}
   ]
 }
