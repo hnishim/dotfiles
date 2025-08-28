@@ -278,6 +278,9 @@
           }, {
             "key_code" : "close_bracket"
           }, {
+            "key_code" : "backslash",
+            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
             "key_code" : "left_arrow"
           } ],
           "type" : "basic"
@@ -295,6 +298,9 @@
             "key_code" : "close_bracket",
             "modifiers" : [ "left_shift" ]
           }, {
+            "key_code" : "backslash",
+            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
             "key_code" : "left_arrow"
           } ],
           "type" : "basic"
@@ -311,6 +317,9 @@
           }, {
             "key_code" : "0",
             "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "backslash",
+            "modifiers" : [ "left_control", "left_option", "left_shift" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -360,6 +369,9 @@
           }, {
             "key_code" : "period",
             "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "backslash",
+            "modifiers" : [ "left_control", "left_option", "left_shift" ]
           }, {
             "key_code" : "left_arrow"
           } ],
