@@ -12,5 +12,7 @@
     "editor.fontFamily": "'PlemolJP35'",
     "terminal.integrated.fontFamily": "'PlemolJP Console', 'Hack Nerd Font'",
     "textlint.run": "onType",
-    "diffEditor.codeLens": true
+    "diffEditor.codeLens": true,
+    "cursor.diffs.useCharacterLevelDiffs": true,
+    "cursor.composer.shouldChimeAfterChatFinishes": true
 }
