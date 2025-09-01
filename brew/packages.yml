@@ -22,6 +22,7 @@ casks:
     - font-plemol-jp
     - google-drive
     - grammarly-desktop
+    - homerow
     - iina
     - jordanbaird-ice
     - karabiner-elements
@@ -38,9 +39,10 @@ casks:
     - raycast
     - shottr
     - slack
-    - swift-quit
     - warp
     - zoom
+    # 外したもの
+    # - swift-quit
   personal:
     - evernote
     - fujitsu-scansnap-home
