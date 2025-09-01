@@ -2011,7 +2011,7 @@
           } ],
           "conditions" : [ {
             "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.todesktop\\.230313mzl4w4u92", "^company\\.thebrowser\\.Browser" ]
+            "bundle_identifiers" : [ "^com\\.todesktop\\.230313mzl4w4u92" ]
           } ],
           "type" : "basic"
         }, {

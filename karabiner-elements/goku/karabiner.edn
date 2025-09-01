@@ -6,7 +6,6 @@
     :excel ["^com\\.microsoft\\.Excel"]
     :no_return_apps [
       "^com\\.todesktop\\.230313mzl4w4u92" ;; Cursor
-      "^company\\.thebrowser\\.Browser"    ;; Arc
     ]
   }
 
