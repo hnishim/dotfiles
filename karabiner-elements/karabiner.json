@@ -317,9 +317,6 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "comma",
             "modifiers" : [ "left_shift" ]
           }, {
@@ -328,6 +325,9 @@
           }, {
             "key_code" : "return_or_enter",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -389,15 +389,15 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "comma",
             "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "period",
             "modifiers" : [ "left_shift" ]
           }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
+          }, {
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
@@ -465,15 +465,15 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket"
           }, {
             "key_code" : "close_bracket"
           }, {
             "key_code" : "return_or_enter",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -545,12 +545,12 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket"
           }, {
             "key_code" : "close_bracket"
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -633,9 +633,6 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket",
             "modifiers" : [ "left_shift" ]
           }, {
@@ -644,6 +641,9 @@
           }, {
             "key_code" : "return_or_enter",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -723,15 +723,15 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket",
             "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "close_bracket",
             "modifiers" : [ "left_shift" ]
           }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
+          }, {
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
@@ -813,9 +813,6 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "9",
             "modifiers" : [ "left_shift" ]
           }, {
@@ -824,6 +821,9 @@
           }, {
             "key_code" : "return_or_enter",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -909,14 +909,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "9",
             "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "0",
             "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -995,12 +995,12 @@
             }
           },
           "to" : [ {
+            "key_code" : "quote"
+          }, {
+            "key_code" : "quote"
+          }, {
             "key_code" : "u",
             "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "quote"
-          }, {
-            "key_code" : "quote"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1082,14 +1082,14 @@
             }
           },
           "to" : [ {
+            "key_code" : "quote",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "quote",
+            "modifiers" : [ "left_shift" ]
+          }, {
             "key_code" : "u",
             "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1163,12 +1163,12 @@
             }
           },
           "to" : [ {
+            "key_code" : "grave_accent_and_tilde"
+          }, {
+            "key_code" : "grave_accent_and_tilde"
+          }, {
             "key_code" : "u",
             "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "grave_accent_and_tilde"
-          }, {
-            "key_code" : "grave_accent_and_tilde"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1250,15 +1250,15 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket"
           }, {
             "key_code" : "close_bracket"
           }, {
             "key_code" : "return_or_enter",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1342,13 +1342,13 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket"
           }, {
             "key_code" : "close_bracket"
           }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
+          }, {
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
@@ -1436,9 +1436,6 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket",
             "modifiers" : [ "left_shift" ]
           }, {
@@ -1447,6 +1444,9 @@
           }, {
             "key_code" : "return_or_enter",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1532,14 +1532,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "open_bracket",
             "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "close_bracket",
             "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1628,9 +1628,6 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "9",
             "modifiers" : [ "left_shift" ]
           }, {
@@ -1639,6 +1636,9 @@
           }, {
             "key_code" : "return_or_enter",
             "modifiers" : [ "left_control", "left_option", "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1724,14 +1724,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
             "key_code" : "9",
             "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "0",
             "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "u",
+            "modifiers" : [ "left_control" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1810,12 +1810,12 @@
             }
           },
           "to" : [ {
+            "key_code" : "quote"
+          }, {
+            "key_code" : "quote"
+          }, {
             "key_code" : "u",
             "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "quote"
-          }, {
-            "key_code" : "quote"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1891,14 +1891,14 @@
             }
           },
           "to" : [ {
+            "key_code" : "quote",
+            "modifiers" : [ "left_shift" ]
+          }, {
+            "key_code" : "quote",
+            "modifiers" : [ "left_shift" ]
+          }, {
             "key_code" : "u",
             "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1972,12 +1972,12 @@
             }
           },
           "to" : [ {
+            "key_code" : "grave_accent_and_tilde"
+          }, {
+            "key_code" : "grave_accent_and_tilde"
+          }, {
             "key_code" : "u",
             "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "grave_accent_and_tilde"
-          }, {
-            "key_code" : "grave_accent_and_tilde"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -2068,6 +2068,7 @@
       } ]
     },
     "devices" : [ {
+      "disable_built_in_keyboard_if_exists" : true,
       "identifiers" : {
         "is_keyboard" : true,
         "is_pointing_device" : true,
@@ -2076,6 +2077,7 @@
       },
       "ignore" : false
     }, {
+      "disable_built_in_keyboard_if_exists" : true,
       "identifiers" : {
         "is_keyboard" : true,
         "is_pointing_device" : true,
@@ -2084,6 +2086,7 @@
       },
       "ignore" : false
     }, {
+      "disable_built_in_keyboard_if_exists" : true,
       "identifiers" : {
         "is_keyboard" : true,
         "is_pointing_device" : true,
