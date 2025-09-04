@@ -14,5 +14,6 @@
     "textlint.run": "onType",
     "diffEditor.codeLens": true,
     "cursor.diffs.useCharacterLevelDiffs": true,
-    "cursor.composer.shouldChimeAfterChatFinishes": true
+    "cursor.composer.shouldChimeAfterChatFinishes": true,
+    "files.autoSave": "afterDelay"
 }
