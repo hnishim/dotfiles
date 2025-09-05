@@ -34,6 +34,7 @@ com.todesktop.230313mzl4w4u92 com.adobe.edn all
 com.todesktop.230313mzl4w4u92 .duti all
 com.todesktop.230313mzl4w4u92 .plist all
 com.todesktop.230313mzl4w4u92 com.apple.property-list all
+com.todesktop.230313mzl4w4u92 .mk all
 
 # Rich Text (TextEdit)
 com.apple.TextEdit .rtf all
