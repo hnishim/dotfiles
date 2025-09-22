@@ -176,11 +176,17 @@
       [:!!return_or_enter :return_or_enter]                   ;; ✦リターンで通常のリターン
     ]}
 
-    {:des "Geonixの日本語変換"
+    {:des "Geonixの英かな"
      :rules [
       ;; GeonixをBluetooth接続すると英かなキーが認識しないので、別キーを割り当て、Karabinerで変換する
       [:f19 :japanese_eisuu :geonix]
       [:f20 :japanese_kana  :geonix]
+    ]}
+
+    {:des "Home row keys コンボで英かな"
+     :rules [
+      [[:d :f] :japanese_eisuu]
+      [[:j :k] :japanese_kana]
     ]}
   ]
 }
