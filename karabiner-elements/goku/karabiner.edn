@@ -188,5 +188,11 @@
       [[:d :f] :japanese_eisuu]
       [[:j :k] :japanese_kana]
     ]}
+
+    {:des "⌥- → Markdownの箇条書き"
+     :rules [
+      [:!Ohyphen [:japanese_eisuu :hyphen :spacebar :japanese_kana] :ja]
+      [:!Ohyphen [:japanese_eisuu :hyphen :spacebar]                :!ja]
+    ]}
   ]
 }
