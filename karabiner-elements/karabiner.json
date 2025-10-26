@@ -2741,90 +2741,6 @@
           "type" : "basic"
         } ]
       }, {
-        "description" : "Geonixの英かな",
-        "manipulators" : [ {
-          "from" : {
-            "key_code" : "f19"
-          },
-          "to" : [ {
-            "key_code" : "japanese_eisuu"
-          } ],
-          "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "f20"
-          },
-          "to" : [ {
-            "key_code" : "japanese_kana"
-          } ],
-          "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        } ]
-      }, {
-        "description" : "Home row keys コンボで英かな",
-        "manipulators" : [ {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "d"
-            }, {
-              "key_code" : "f"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "japanese_eisuu"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "j"
-            }, {
-              "key_code" : "k"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "japanese_kana"
-          } ],
-          "type" : "basic"
-        } ]
-      }, {
         "description" : "⌥- → Markdownの箇条書き",
         "manipulators" : [ {
           "from" : {
@@ -2868,6 +2784,106 @@
               "language" : "ja"
             } ],
             "type" : "input_source_unless"
+          } ],
+          "type" : "basic"
+        } ]
+      }, {
+        "description" : "Geonix用ルール",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "f19"
+          },
+          "to" : [ {
+            "key_code" : "japanese_eisuu"
+          } ],
+          "conditions" : [ {
+            "identifiers" : [ {
+              "vendor_id" : 14000,
+              "product_id" : 12292
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12386
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12290
+            } ],
+            "type" : "device_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "f20"
+          },
+          "to" : [ {
+            "key_code" : "japanese_kana"
+          } ],
+          "conditions" : [ {
+            "identifiers" : [ {
+              "vendor_id" : 14000,
+              "product_id" : 12292
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12386
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12290
+            } ],
+            "type" : "device_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "slash"
+          },
+          "to" : [ {
+            "key_code" : "semicolon"
+          } ],
+          "conditions" : [ {
+            "input_sources" : [ {
+              "language" : "ja"
+            } ],
+            "type" : "input_source_if"
+          }, {
+            "identifiers" : [ {
+              "vendor_id" : 14000,
+              "product_id" : 12292
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12386
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12290
+            } ],
+            "type" : "device_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "slash",
+            "modifiers" : {
+              "mandatory" : [ "left_option" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "slash"
+          } ],
+          "conditions" : [ {
+            "input_sources" : [ {
+              "language" : "ja"
+            } ],
+            "type" : "input_source_if"
+          }, {
+            "identifiers" : [ {
+              "vendor_id" : 14000,
+              "product_id" : 12292
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12386
+            }, {
+              "vendor_id" : 14000,
+              "product_id" : 12290
+            } ],
+            "type" : "device_if"
           } ],
           "type" : "basic"
         } ]
