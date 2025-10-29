@@ -187,10 +187,6 @@
       ;; 英かな：GeonixをBluetooth接続すると英かなキーが認識しないので、別キーを割り当て、Karabinerで変換する
       [:f19 :japanese_eisuu :geonix]
       [:f20 :japanese_kana  :geonix]
-
-      ;; AZIKでの促音（っ）を;でなく/にする
-      [:slash :semicolon [:geonix :ja]] ;; TODO: かわせみのローマ字マップとどっちで設定すべきかは要検討
-      [:!Oslash :slash [:geonix :ja]] ;; そのため、⌥/で普通の/（・）が出るようにする
     ]}
   ]
 }

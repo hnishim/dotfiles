@@ -2831,61 +2831,6 @@
             "type" : "device_if"
           } ],
           "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "slash"
-          },
-          "to" : [ {
-            "key_code" : "semicolon"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "slash",
-            "modifiers" : {
-              "mandatory" : [ "left_option" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "slash"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
         } ]
       } ]
     },
