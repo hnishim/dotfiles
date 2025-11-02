@@ -179,7 +179,7 @@
     {:des "⌥- → Markdownの箇条書き"
      :rules [
       [:!Ohyphen [:japanese_eisuu :hyphen :spacebar :japanese_kana] :ja]
-      [:!Ohyphen [:japanese_eisuu :hyphen :spacebar]                :!ja]
+      [:!Ohyphen [                :hyphen :spacebar]                :!ja]
     ]}
 
     {:des "Geonix用ルール"
@@ -187,6 +187,11 @@
       ;; 英かな：GeonixをBluetooth接続すると英かなキーが認識しないので、別キーを割り当て、Karabinerで変換する
       [:f19 :japanese_eisuu :geonix]
       [:f20 :japanese_kana  :geonix]
+
+      ;; かな時 ' 単押しで、「」閉じ＆カーソル移動
+      [:quote [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]] ;; 日本語、Excel以外
+      [:quote [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]] ;; 日本語、Excel
+      [:!Oquote [:quote] [:geonix :ja]] ;; ⌥ ' で、通常入力
     ]}
   ]
 }
