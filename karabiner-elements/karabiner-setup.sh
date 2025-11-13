@@ -4,8 +4,7 @@
 # iCloud上の設定ファイルをローカルのKarabiner-Elements設定にシンボリックリンクで同期する
 
 # 前提
-# 以下パスにある `karabiner_grabber` を、以下の設定箇所に追加
-# パス：`/Library/Application Support/org.pqrs/Karabiner-Elements/bin/`
+# `Karabiner-Core-Service` を、以下の設定箇所に追加
 # 設定箇所：`System settings` → `Privacy & Security` → `Full Disk Access`
 
 # 共通ライブラリを読み込み
