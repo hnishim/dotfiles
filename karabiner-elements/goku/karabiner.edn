@@ -188,7 +188,7 @@
       [:!Ohyphen [                :hyphen :spacebar]                :!ja]
     ]}
 
-    {:des "⌥9 → 丸括弧閉じ"
+    {:des "⌥9 → （）閉じ＆カーソル移動"
      :rules [
       [:!O9 :to_parentheses_jp_non-xls [:ja :!excel]]
       [:!O9 :to_parentheses_jp_xls     [:ja :excel]]
