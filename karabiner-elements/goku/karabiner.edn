@@ -18,8 +18,18 @@
   }
   
   :froms {
+    ;; 波括弧 {}
     :sim_curved_brackets {:sim [:open_bracket :close_bracket] :modi {:mandatory [:left_shift]}}
+    ;; ダブルクォート ""
     :sim_colon_double-quote {:sim [:semicolon :quote] :modi {:mandatory [:left_shift]}}
+  }
+
+  :tos {
+    ;; 角括弧 []
+    :to_square_brackets_jp_non-xls {:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow}
+    ;;:to_squzare_brackets_jp_xls    {:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow}
+    ;;:to_square_brackets_en_non-xls {:open_bracket :close_bracket                           :left_arrow}
+    ;;:to_square_brackets_en_xls     {:open_bracket :close_bracket                      :!Tu :left_arrow}
   }
   
   :input-sources {
@@ -86,11 +96,11 @@
       [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
       [[:open_bracket :close_bracket] [:open_bracket :close_bracket                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
       [[:open_bracket :close_bracket] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
-      ;; vb → 角括弧 []（Geonix）
-      [[:v :b] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:v :b] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:v :b] [:open_bracket :close_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:v :b] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; fg → 角括弧 []（Geonix）
+      [[:f :g] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:f :g] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:f :g] [:open_bracket :close_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:f :g] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 波括弧 {}
       ;; {} → 波括弧 {}
@@ -98,11 +108,11 @@
       [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
       [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
       [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
-      ;; fg → 波括弧 {}（Geonix）
-      [[:f :g] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:f :g] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:f :g] [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:f :g] [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; vb → 波括弧 {}（Geonix）
+      [[:v :b] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:v :b] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:v :b] [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:v :b] [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 丸括弧 ()
       ;; 90 → 丸括弧 ()

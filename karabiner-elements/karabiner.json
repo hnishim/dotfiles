@@ -549,9 +549,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "f"
             }, {
-              "key_code" : "b"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -595,9 +595,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "f"
             }, {
-              "key_code" : "b"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -644,9 +644,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "f"
             }, {
-              "key_code" : "b"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -687,9 +687,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "f"
             }, {
-              "key_code" : "b"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -889,9 +889,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "v"
             }, {
-              "key_code" : "g"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -937,9 +937,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "v"
             }, {
-              "key_code" : "g"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -988,9 +988,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "v"
             }, {
-              "key_code" : "g"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1033,9 +1033,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "v"
             }, {
-              "key_code" : "g"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
