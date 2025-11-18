@@ -40,13 +40,22 @@
     :to_curly_brackets_en_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                                                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; 丸括弧 ()
+    :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
+    :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:command :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
+    :to_parentheses_en_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                                                  {:key :left_arrow}]
+    :to_parentheses_en_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; シングルクォート ''
+    :to_quotes_non-xls [{:key :quote} {:key :quote}                          {:key :left_arrow}]
+    :to_quotes_xls     [{:key :quote} {:key :quote} {:key :u :modi :control} {:key :left_arrow}]
 
     ;; ダブルクォート ""
+    :to_double_quotes_non-xls [{:key :quote :modi :shift} {:key :quote :modi :shift}                          {:key :left_arrow}]
+    :to_double_quotes_xls     [{:key :quote :modi :shift} {:key :quote :modi :shift} {:key :u :modi :control} {:key :left_arrow}]
 
     ;; バッククォート ``
-    
+    :to_graves_non-xls [{:key :grave_accent_and_tilde} {:key :grave_accent_and_tilde}                          {:key :left_arrow}]
+    :to_graves_xls     [{:key :grave_accent_and_tilde} {:key :grave_accent_and_tilde} {:key :u :modi :control} {:key :left_arrow}]
   }
   
   :input-sources {
@@ -133,39 +142,39 @@
 
       ;; 丸括弧 ()
       ;; 90 → 丸括弧 ()
-      [[:9 :0] [:!S9 :!S0 :!TOSreturn_or_enter      :left_arrow] [:ja :!excel]]  ;; 日本語、Excel以外
-      [[:9 :0] [:!S9 :!S0 :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
-      [[:9 :0] [:!S9 :!S0                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:9 :0] [:!S9 :!S0                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
+      [[:9 :0] :to_parentheses_jp_non-xls [:ja :!excel]]  ;; 日本語、Excel以外
+      [[:9 :0] :to_parentheses_jp_xls     [:ja :excel]]   ;; 日本語、Excel
+      [[:9 :0] :to_parentheses_en_non-xls [:!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:9 :0] :to_parentheses_en_xls     [:!ja :excel]]  ;; 日本語以外、Excel
       ;; nm → 丸括弧 (Geonix)
-      [[:n :m] [:!S9 :!S0 :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:n :m] [:!S9 :!S0 :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:n :m] [:!S9 :!S0                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:n :m] [:!S9 :!S0                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      [[:n :m] :to_parentheses_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:n :m] :to_parentheses_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:n :m] :to_parentheses_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:n :m] :to_parentheses_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; シングルクォート ''
       ;; ;' → シングルクォート ''
-      [[:semicolon :quote] [:quote :quote      :left_arrow] [:!excel]] ;; 言語非依存、Excel以外
-      [[:semicolon :quote] [:quote :quote :!Tu :left_arrow] [:excel]]  ;; 言語非依存、Excel
+      [[:semicolon :quote] :to_quotes_non-xls [:!excel]] ;; 言語非依存、Excel以外
+      [[:semicolon :quote] :to_quotes_xls     [:excel]]  ;; 言語非依存、Excel
       ;; .; → シングルクォート ''（Geonix）
-      [[:period :semicolon] [:quote :quote      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:period :semicolon] [:quote :quote :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
+      [[:period :semicolon] :to_quotes_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:period :semicolon] :to_quotes_xls     [:geonix :excel]]  ;; 言語非依存、Excel
 
       ;; ダブルクォート ""
       ;; :" → ダブルクォート ""
-      [:sim_colon_double-quote [:!Squote :!Squote      :left_arrow] [:!excel]] ;; 言語非依存、Excel以外
-      [:sim_colon_double-quote [:!Squote :!Squote :!Tu :left_arrow] [:excel]]  ;; 言語非依存、Excel
+      [:sim_colon_double-quote :to_double_quotes_non-xls [:!excel]] ;; 言語非依存、Excel以外
+      [:sim_colon_double-quote :to_double_quotes_xls     [:excel]]  ;; 言語非依存、Excel
       ;; lp → ダブルクォート ""（Geonix）
-      [[:l :p] [:!Squote :!Squote      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:l :p] [:!Squote :!Squote :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
+      [[:l :p] :to_double_quotes_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:l :p] :to_double_quotes_xls     [:geonix :excel]]  ;; 言語非依存、Excel
 
       ;; バッククォート ``
       ;; `1 → バッククォート ``
-      [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde      :left_arrow] [:!excel]] ;; 言語非依存、Excel以外
-      [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde :!Tu :left_arrow] [:excel]]  ;; 言語非依存、Excel
+      [[:grave_accent_and_tilde :1] :to_graves_non-xls [:!excel]] ;; 言語非依存、Excel以外
+      [[:grave_accent_and_tilde :1] :to_graves_xls     [:excel]]  ;; 言語非依存、Excel
       ;; ESC w → バッククォート ``（Geonix）
-      [[:escape :w] [:grave_accent_and_tilde :grave_accent_and_tilde      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:escape :w] [:grave_accent_and_tilde :grave_accent_and_tilde :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
+      [[:escape :w] :to_graves_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:escape :w] :to_graves_xls     [:geonix :excel]]  ;; 言語非依存、Excel
     ]}
 
     {:des "通常のリターンを変換確定キーとして扱う"
@@ -181,16 +190,18 @@
       [:!Ohyphen [                :hyphen :spacebar]                :!ja]
     ]}
 
+    {:des "かな時 ' 単押しで、「」閉じ＆カーソル移動"
+     :rules [
+      [:quote :to_square_brackets_jp_non-xls [:ja :!excel]] ;; 日本語、Excel以外
+      [:quote :to_square_brackets_jp_xls [:ja :excel]]      ;; 日本語、Excel
+      [:!Oquote [:quote] [:ja]]                             ;; ⌥ ' で、通常入力
+    ]}
+
     {:des "Geonix用ルール"
      :rules [
       ;; 英かな：GeonixをBluetooth接続すると英かなキーが認識しないので、別キーを割り当て、Karabinerで変換する
       [:f19 :japanese_eisuu :geonix]
       [:f20 :japanese_kana  :geonix]
-
-      ;; かな時 ' 単押しで、「」閉じ＆カーソル移動
-      [:quote [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]] ;; 日本語、Excel以外
-      [:quote [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]] ;; 日本語、Excel
-      [:!Oquote [:quote] [:geonix :ja]] ;; ⌥ ' で、通常入力
     ]}
   ]
 }

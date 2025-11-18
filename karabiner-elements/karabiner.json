@@ -1093,14 +1093,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1129,17 +1129,17 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1168,11 +1168,11 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1201,14 +1201,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1237,14 +1237,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1285,17 +1285,17 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1336,11 +1336,11 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1381,14 +1381,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "9"
           }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "0"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1459,8 +1459,8 @@
           }, {
             "key_code" : "quote"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1526,8 +1526,8 @@
           }, {
             "key_code" : "quote"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1566,11 +1566,11 @@
             }
           },
           "to" : [ {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1597,14 +1597,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1628,11 +1628,11 @@
             }
           },
           "to" : [ {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1668,14 +1668,14 @@
             }
           },
           "to" : [ {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
+            "modifiers" : [ "shift" ],
+            "key_code" : "quote"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1741,8 +1741,8 @@
           }, {
             "key_code" : "grave_accent_and_tilde"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1808,8 +1808,8 @@
           }, {
             "key_code" : "grave_accent_and_tilde"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1904,6 +1904,77 @@
           "type" : "basic"
         } ]
       }, {
+        "description" : "かな時 ' 単押しで、「」閉じ＆カーソル移動",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "quote"
+          },
+          "to" : [ {
+            "key_code" : "open_bracket"
+          }, {
+            "key_code" : "close_bracket"
+          }, {
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "conditions" : [ {
+            "input_sources" : [ {
+              "language" : "ja"
+            } ],
+            "type" : "input_source_if"
+          }, {
+            "type" : "frontmost_application_unless",
+            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "quote"
+          },
+          "to" : [ {
+            "key_code" : "open_bracket"
+          }, {
+            "key_code" : "close_bracket"
+          }, {
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
+          }, {
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
+          }, {
+            "key_code" : "left_arrow"
+          } ],
+          "conditions" : [ {
+            "input_sources" : [ {
+              "language" : "ja"
+            } ],
+            "type" : "input_source_if"
+          }, {
+            "type" : "frontmost_application_if",
+            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "quote",
+            "modifiers" : {
+              "mandatory" : [ "left_option" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "quote"
+          } ],
+          "conditions" : [ {
+            "input_sources" : [ {
+              "language" : "ja"
+            } ],
+            "type" : "input_source_if"
+          } ],
+          "type" : "basic"
+        } ]
+      }, {
         "description" : "Geonix用ルール",
         "manipulators" : [ {
           "from" : {
@@ -1934,110 +2005,6 @@
             "key_code" : "japanese_kana"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "quote"
-          },
-          "to" : [ {
-            "key_code" : "open_bracket"
-          }, {
-            "key_code" : "close_bracket"
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "quote"
-          },
-          "to" : [ {
-            "key_code" : "open_bracket"
-          }, {
-            "key_code" : "close_bracket"
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "quote",
-            "modifiers" : {
-              "mandatory" : [ "left_option" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "quote"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
             "identifiers" : [ {
               "vendor_id" : 14000,
               "product_id" : 12292
