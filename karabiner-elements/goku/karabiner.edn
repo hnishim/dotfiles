@@ -26,10 +26,10 @@
 
   :tos {
     ;; 角括弧 []
-    :to_square_brackets_jp_non-xls {:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow}
-    ;;:to_squzare_brackets_jp_xls    {:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow}
-    ;;:to_square_brackets_en_non-xls {:open_bracket :close_bracket                           :left_arrow}
-    ;;:to_square_brackets_en_xls     {:open_bracket :close_bracket                      :!Tu :left_arrow}
+    :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
+    :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
+    :to_square_brackets_en_non-xls [{:key :open_bracket} {:key :close_bracket}                                                                                  {:key :left_arrow}]
+    :to_square_brackets_en_xls     [{:key :open_bracket} {:key :close_bracket}                                                         {:key :u :modi :control} {:key :left_arrow}]
   }
   
   :input-sources {
@@ -92,15 +92,15 @@
 
       ;; 角括弧 []
       ;; [] → 角括弧 []（ビルドインキーボード）
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:ja :!excel]]  ;; 日本語、Excel以外
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
+      [[:open_bracket :close_bracket] :to_square_brackets_jp_non-xls [:ja :!excel]]  ;; 日本語、Excel以外
+      [[:open_bracket :close_bracket] :to_square_brackets_jp_xls     [:ja :excel]]   ;; 日本語、Excel
+      [[:open_bracket :close_bracket] :to_square_brackets_en_non-xls [:!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:open_bracket :close_bracket] :to_square_brackets_en_xls     [:!ja :excel]]  ;; 日本語以外、Excel
       ;; fg → 角括弧 []（Geonix）
-      [[:f :g] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:f :g] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:f :g] [:open_bracket :close_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:f :g] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      [[:f :g] :to_square_brackets_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:f :g] :to_square_brackets_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:f :g] :to_square_brackets_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:f :g] :to_square_brackets_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 波括弧 {}
       ;; {} → 波括弧 {}

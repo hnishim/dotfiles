@@ -429,8 +429,8 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -463,11 +463,11 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -531,8 +531,8 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -565,8 +565,8 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -611,11 +611,11 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
+            "modifiers" : [ "command", "option", "shift" ],
+            "key_code" : "return_or_enter"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -703,8 +703,8 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
+            "modifiers" : [ "control" ],
+            "key_code" : "u"
           }, {
             "key_code" : "left_arrow"
           } ],
