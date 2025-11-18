@@ -25,10 +25,8 @@
   }
 
   :tos {
-    ;; ⌘⌥⇧リターン
-    :cms_return {:key :return_or_enter :modi [:command :option :shift]}
     ;; 角括弧 []
-    :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
+    :to_square_brackets_jp_non-xls [:open_bracket {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
     :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
     :to_square_brackets_en_non-xls [{:key :open_bracket} {:key :close_bracket}                                                                                  {:key :left_arrow}]
     :to_square_brackets_en_xls     [{:key :open_bracket} {:key :close_bracket}                                                         {:key :u :modi :control} {:key :left_arrow}]
@@ -197,7 +195,7 @@
       [:!Oquote [:quote] [:ja]]                             ;; ⌥ ' で、通常入力
     ]}
 
-    {:des "Geonix用ルール"
+    {:des "Geonix用：F19とF20を英かなキーに"
      :rules [
       ;; 英かな：GeonixをBluetooth接続すると英かなキーが認識しないので、別キーを割り当て、Karabinerで変換する
       [:f19 :japanese_eisuu :geonix]
