@@ -26,20 +26,20 @@
 
   :tos {
     ;; 角括弧 []
-    :to_square_brackets_jp_non-xls [:open_bracket {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
-    :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
+    :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:control :option :shift]}                          {:key :left_arrow}]
+    :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:control :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
     :to_square_brackets_en_non-xls [{:key :open_bracket} {:key :close_bracket}                                                                                  {:key :left_arrow}]
     :to_square_brackets_en_xls     [{:key :open_bracket} {:key :close_bracket}                                                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; 波括弧 {}
-    :to_curly_brackets_jp_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
-    :to_curly_brackets_jp_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter :modi [:command :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
+    :to_curly_brackets_jp_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter :modi [:control :option :shift]}                          {:key :left_arrow}]
+    :to_curly_brackets_jp_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter :modi [:control :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
     :to_curly_brackets_en_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                                                                                  {:key :left_arrow}]
     :to_curly_brackets_en_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                                                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; 丸括弧 ()
-    :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
-    :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:command :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
+    :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:control :option :shift]}                          {:key :left_arrow}]
+    :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:control :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
     :to_parentheses_en_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                                                  {:key :left_arrow}]
     :to_parentheses_en_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                         {:key :u :modi :control} {:key :left_arrow}]
 
@@ -186,6 +186,14 @@
      :rules [
       [:!Ohyphen [:japanese_eisuu :hyphen :spacebar :japanese_kana] :ja]
       [:!Ohyphen [                :hyphen :spacebar]                :!ja]
+    ]}
+
+    {:des "⌥9 → 丸括弧閉じ"
+     :rules [
+      [:!O9 :to_parentheses_jp_non-xls [:ja :!excel]]
+      [:!O9 :to_parentheses_jp_xls     [:ja :excel]]
+      [:!O9 :to_parentheses_en_non-xls [:!ja :!excel]]
+      [:!O9 :to_parentheses_en_xls     [:!ja :excel]]
     ]}
 
     {:des "かな時 ' 単押しで、「」閉じ＆カーソル移動"
