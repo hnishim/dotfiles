@@ -10,17 +10,10 @@
   }
 
   :devices {
-      :corne [{:vendor_id 7504 :product_id 24926}]
       :geonix [
         {:vendor_id 14000 :product_id 12292} ;; Bluetooth
         {:vendor_id 14000 :product_id 12386} ;; USB
         {:vendor_id 14000 :product_id 12290} ;; 2.4GHz
-      ]
-      :corne_or_geonix [
-        {:vendor_id 7504 :product_id 24926}  ;; Corne
-        {:vendor_id 14000 :product_id 12292} ;; Geonix Bluetooth
-        {:vendor_id 14000 :product_id 12386} ;; Geonix USB
-        {:vendor_id 14000 :product_id 12290} ;; Geonix 2.4GHz
       ]
   }
   
@@ -88,85 +81,64 @@
       [[:comma :period] [:!Scomma :!Speriod                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 角括弧 []
-      ;; [] → 角括弧 []（ビルドインキーボード、Geonix）
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:!corne :ja :!excel]]  ;; 日本語、Excel以外
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:!corne :ja :excel]]   ;; 日本語、Excel
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket                           :left_arrow] [:!corne :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:open_bracket :close_bracket] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:!corne :!ja :excel]]  ;; 日本語以外、Excel
-      ;; ;- → 角括弧 []（Corne、Geonix）
-      [[:semicolon :hyphen] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:corne_or_geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:semicolon :hyphen] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:corne_or_geonix :ja :excel]]   ;; 日本語、Excel
-      [[:semicolon :hyphen] [:open_bracket :close_bracket                           :left_arrow] [:corne_or_geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:semicolon :hyphen] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:corne_or_geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; [] → 角括弧 []（ビルドインキーボード）
+      [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:ja :!excel]]  ;; 日本語、Excel以外
+      [[:open_bracket :close_bracket] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
+      [[:open_bracket :close_bracket] [:open_bracket :close_bracket                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:open_bracket :close_bracket] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
+      ;; vb → 角括弧 []（Geonix）
+      [[:v :b] [:open_bracket :close_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:v :b] [:open_bracket :close_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:v :b] [:open_bracket :close_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:v :b] [:open_bracket :close_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 波括弧 {}
-      ;; {} → 波括弧 {}（ビルドインキーボード、Geonix）
-      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:!corne :ja :!excel]]  ;; 日本語、Excel以外
-      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:!corne :ja :excel]]   ;; 日本語、Excel
-      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:!corne :!ja :!excel]] ;; 日本語以外、Excel以外
-      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:!corne :!ja :excel]]  ;; 日本語以外、Excel
-      ;; l; → 波括弧 {}（Corne）
-      [[:l :semicolon] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:corne :ja :!excel]]  ;; 日本語、Excel以外
-      [[:l :semicolon] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:corne :ja :excel]]   ;; 日本語、Excel
-      [[:l :semicolon] [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:corne :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:l :semicolon] [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:corne :!ja :excel]]  ;; 日本語以外、Excel
-      ;; p= → 波括弧 {}（Geonix）
-      [[:p :equal_sign] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:p :equal_sign] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:p :equal_sign] [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:p :equal_sign] [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
-      ;; o[ → 波括弧 {}（Geonix）
-      [[:o :open_bracket] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:o :open_bracket] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:o :open_bracket] [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:o :open_bracket] [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; {} → 波括弧 {}
+      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:ja :!excel]]  ;; 日本語、Excel以外
+      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
+      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
+      [:sim_curved_brackets [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
+      ;; fg → 波括弧 {}（Geonix）
+      [[:f :g] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:f :g] [:!Sopen_bracket :!Sclose_bracket :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:f :g] [:!Sopen_bracket :!Sclose_bracket                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:f :g] [:!Sopen_bracket :!Sclose_bracket                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 丸括弧 ()
-      ;; 90 → 丸括弧 ()（ビルドインキーボード）
-      [[:9 :0] [:!S9 :!S0 :!TOSreturn_or_enter      :left_arrow] [:!corne_or_geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:9 :0] [:!S9 :!S0 :!TOSreturn_or_enter :!Tu :left_arrow] [:!corne_or_geonix :ja :excel]]   ;; 日本語、Excel
-      [[:9 :0] [:!S9 :!S0                           :left_arrow] [:!corne_or_geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:9 :0] [:!S9 :!S0                      :!Tu :left_arrow] [:!corne_or_geonix :!ja :excel]]  ;; 日本語以外、Excel
-      ;; ./ → 丸括弧 ()（Corne）
-      [[:period :slash] [:!S9 :!S0 :!TOSreturn_or_enter      :left_arrow] [:corne :ja :!excel]]  ;; 日本語、Excel以外
-      [[:period :slash] [:!S9 :!S0 :!TOSreturn_or_enter :!Tu :left_arrow] [:corne :ja :excel]]   ;; 日本語、Excel
-      [[:period :slash] [:!S9 :!S0                           :left_arrow] [:corne :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:period :slash] [:!S9 :!S0                      :!Tu :left_arrow] [:corne :!ja :excel]]  ;; 日本語以外、Excel
-      ;; .; → 丸括弧 (Geonix)
-      [[:period :semicolon] [:!S9 :!S0 :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:period :semicolon] [:!S9 :!S0 :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:period :semicolon] [:!S9 :!S0                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:period :semicolon] [:!S9 :!S0                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; 90 → 丸括弧 ()
+      [[:9 :0] [:!S9 :!S0 :!TOSreturn_or_enter      :left_arrow] [:ja :!excel]]  ;; 日本語、Excel以外
+      [[:9 :0] [:!S9 :!S0 :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
+      [[:9 :0] [:!S9 :!S0                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:9 :0] [:!S9 :!S0                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
+      ;; nm → 丸括弧 (Geonix)
+      [[:n :m] [:!S9 :!S0 :!TOSreturn_or_enter      :left_arrow] [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:n :m] [:!S9 :!S0 :!TOSreturn_or_enter :!Tu :left_arrow] [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:n :m] [:!S9 :!S0                           :left_arrow] [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:n :m] [:!S9 :!S0                      :!Tu :left_arrow] [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; シングルクォート ''
-      ;; ;' → シングルクォート ''（ビルドインキーボード）
-      [[:semicolon :quote] [:quote :quote      :left_arrow] [:!corne_or_geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:semicolon :quote] [:quote :quote :!Tu :left_arrow] [:!corne_or_geonix :excel]]  ;; 言語非依存、Excel
-      ;; /' → シングルクォート ''（Corne、Geonix）
-      [[:slash :quote] [:quote :quote      :left_arrow] [:corne_or_geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:slash :quote] [:quote :quote :!Tu :left_arrow] [:corne_or_geonix :excel]]  ;; 言語非依存、Excel
+      ;; ;' → シングルクォート ''
+      [[:semicolon :quote] [:quote :quote      :left_arrow] [:!excel]] ;; 言語非依存、Excel以外
+      [[:semicolon :quote] [:quote :quote :!Tu :left_arrow] [:excel]]  ;; 言語非依存、Excel
+      ;; .; → シングルクォート ''（Geonix）
+      [[:period :semicolon] [:quote :quote      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:period :semicolon] [:quote :quote :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
 
       ;; ダブルクォート ""
-      ;; :" → ダブルクォート ""（ビルドインキーボード）
-      [:sim_colon_double-quote [:!Squote :!Squote      :left_arrow] [:!corne_or_geonix :!excel]] ;; 言語非依存、Excel以外
-      [:sim_colon_double-quote [:!Squote :!Squote :!Tu :left_arrow] [:!corne_or_geonix :excel]]  ;; 言語非依存、Excel
-      ;; p= → ダブルクォート ""（Corne）
-      [[:p :equal_sign] [:!Squote :!Squote      :left_arrow] [:corne :!excel]] ;; 言語非依存、Excel以外
-      [[:p :equal_sign] [:!Squote :!Squote :!Tu :left_arrow] [:corne :excel]]  ;; 言語非依存、Excel
-      ;; \/ → ダブルクォート ""（Geonix）
-      [[:backslash :slash] [:!Squote :!Squote      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:backslash :slash] [:!Squote :!Squote :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
+      ;; :" → ダブルクォート ""
+      [:sim_colon_double-quote [:!Squote :!Squote      :left_arrow] [:!excel]] ;; 言語非依存、Excel以外
+      [:sim_colon_double-quote [:!Squote :!Squote :!Tu :left_arrow] [:excel]]  ;; 言語非依存、Excel
+      ;; lp → ダブルクォート ""（Geonix）
+      [[:l :p] [:!Squote :!Squote      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:l :p] [:!Squote :!Squote :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
 
       ;; バッククォート ``
-      ;; `1 → バッククォート ``（ビルドインキーボード）
-      [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde      :left_arrow] [:!corne_or_geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde :!Tu :left_arrow] [:!corne_or_geonix :excel]]  ;; 言語非依存、Excel
-      ;; `a → バッククォート ``（Corne）
-      [[:grave_accent_and_tilde :a] [:grave_accent_and_tilde :grave_accent_and_tilde      :left_arrow] [:corne :!excel]] ;; 言語非依存、Excel以外
-      [[:grave_accent_and_tilde :a] [:grave_accent_and_tilde :grave_accent_and_tilde :!Tu :left_arrow] [:corne :excel]]  ;; 言語非依存、Excel
-      ;; `q → バッククォート ``（Geonix）
-      [[:grave_accent_and_tilde :q] [:grave_accent_and_tilde :grave_accent_and_tilde      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:grave_accent_and_tilde :q] [:grave_accent_and_tilde :grave_accent_and_tilde :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
+      ;; `1 → バッククォート ``
+      [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde      :left_arrow] [:!excel]] ;; 言語非依存、Excel以外
+      [[:grave_accent_and_tilde :1] [:grave_accent_and_tilde :grave_accent_and_tilde :!Tu :left_arrow] [:excel]]  ;; 言語非依存、Excel
+      ;; ESC w → バッククォート ``（Geonix）
+      [[:escape :w] [:grave_accent_and_tilde :grave_accent_and_tilde      :left_arrow] [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:escape :w] [:grave_accent_and_tilde :grave_accent_and_tilde :!Tu :left_arrow] [:geonix :excel]]  ;; 言語非依存、Excel
     ]}
 
     {:des "通常のリターンを変換確定キーとして扱う"

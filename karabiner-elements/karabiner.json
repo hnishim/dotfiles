@@ -435,12 +435,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -478,12 +472,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -515,12 +503,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -555,12 +537,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -573,9 +549,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "semicolon"
+              "key_code" : "v"
             }, {
-              "key_code" : "hyphen"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -604,9 +580,6 @@
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           }, {
             "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
               "vendor_id" : 14000,
               "product_id" : 12292
             }, {
@@ -622,9 +595,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "semicolon"
+              "key_code" : "v"
             }, {
-              "key_code" : "hyphen"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -656,9 +629,6 @@
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           }, {
             "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
               "vendor_id" : 14000,
               "product_id" : 12292
             }, {
@@ -674,9 +644,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "semicolon"
+              "key_code" : "v"
             }, {
-              "key_code" : "hyphen"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -702,9 +672,6 @@
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           }, {
             "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
               "vendor_id" : 14000,
               "product_id" : 12292
             }, {
@@ -720,9 +687,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "semicolon"
+              "key_code" : "v"
             }, {
-              "key_code" : "hyphen"
+              "key_code" : "b"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -751,9 +718,6 @@
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           }, {
             "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
               "vendor_id" : 14000,
               "product_id" : 12292
             }, {
@@ -796,12 +760,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -844,12 +802,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -886,12 +838,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -931,12 +877,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -949,177 +889,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "l"
+              "key_code" : "f"
             }, {
-              "key_code" : "semicolon"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "l"
-            }, {
-              "key_code" : "semicolon"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "l"
-            }, {
-              "key_code" : "semicolon"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "l"
-            }, {
-              "key_code" : "semicolon"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "p"
-            }, {
-              "key_code" : "equal_sign"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1165,9 +937,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "p"
+              "key_code" : "f"
             }, {
-              "key_code" : "equal_sign"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1216,9 +988,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "p"
+              "key_code" : "f"
             }, {
-              "key_code" : "equal_sign"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1261,201 +1033,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "p"
+              "key_code" : "f"
             }, {
-              "key_code" : "equal_sign"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "o"
-            }, {
-              "key_code" : "open_bracket"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "o"
-            }, {
-              "key_code" : "open_bracket"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "o"
-            }, {
-              "key_code" : "open_bracket"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "open_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "close_bracket",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "o"
-            }, {
-              "key_code" : "open_bracket"
+              "key_code" : "g"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1525,21 +1105,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -1579,21 +1144,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -1627,21 +1177,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -1678,21 +1213,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "input_sources" : [ {
               "language" : "ja"
             } ],
@@ -1705,177 +1225,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "period"
+              "key_code" : "n"
             }, {
-              "key_code" : "slash"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "period"
-            }, {
-              "key_code" : "slash"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_control", "left_option", "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "period"
-            }, {
-              "key_code" : "slash"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "period"
-            }, {
-              "key_code" : "slash"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "9",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "0",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "period"
-            }, {
-              "key_code" : "semicolon"
+              "key_code" : "m"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1921,9 +1273,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "period"
+              "key_code" : "n"
             }, {
-              "key_code" : "semicolon"
+              "key_code" : "m"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1972,9 +1324,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "period"
+              "key_code" : "n"
             }, {
-              "key_code" : "semicolon"
+              "key_code" : "m"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -2017,9 +1369,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "period"
+              "key_code" : "n"
             }, {
-              "key_code" : "semicolon"
+              "key_code" : "m"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -2084,21 +1436,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "type" : "frontmost_application_unless",
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           } ],
@@ -2128,21 +1465,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "type" : "frontmost_application_if",
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           } ],
@@ -2150,9 +1472,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "slash"
+              "key_code" : "period"
             }, {
-              "key_code" : "quote"
+              "key_code" : "semicolon"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -2173,9 +1495,6 @@
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           }, {
             "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
               "vendor_id" : 14000,
               "product_id" : 12292
             }, {
@@ -2191,9 +1510,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "slash"
+              "key_code" : "period"
             }, {
-              "key_code" : "quote"
+              "key_code" : "semicolon"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -2217,9 +1536,6 @@
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           }, {
             "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
               "vendor_id" : 14000,
               "product_id" : 12292
             }, {
@@ -2259,21 +1575,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "type" : "frontmost_application_unless",
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           } ],
@@ -2308,21 +1609,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "type" : "frontmost_application_if",
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           } ],
@@ -2330,80 +1616,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
+              "key_code" : "l"
+            }, {
               "key_code" : "p"
-            }, {
-              "key_code" : "equal_sign"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "p"
-            }, {
-              "key_code" : "equal_sign"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "quote",
-            "modifiers" : [ "left_shift" ]
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "backslash"
-            }, {
-              "key_code" : "slash"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -2441,9 +1656,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "backslash"
+              "key_code" : "l"
             }, {
-              "key_code" : "slash"
+              "key_code" : "p"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -2503,21 +1718,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "type" : "frontmost_application_unless",
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           } ],
@@ -2547,21 +1747,6 @@
             "key_code" : "left_arrow"
           } ],
           "conditions" : [ {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12292
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12386
-            }, {
-              "vendor_id" : 14000,
-              "product_id" : 12290
-            } ],
-            "type" : "device_unless"
-          }, {
             "type" : "frontmost_application_if",
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
           } ],
@@ -2569,76 +1754,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "grave_accent_and_tilde"
+              "key_code" : "escape"
             }, {
-              "key_code" : "a"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "grave_accent_and_tilde"
-          }, {
-            "key_code" : "grave_accent_and_tilde"
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "grave_accent_and_tilde"
-            }, {
-              "key_code" : "a"
-            } ],
-            "simultaneous_options" : {
-              "detect_key_down_uninterruptedly" : false,
-              "key_down_order" : "insensitive",
-              "key_up_order" : "insensitive",
-              "key_up_when" : "any"
-            }
-          },
-          "to" : [ {
-            "key_code" : "grave_accent_and_tilde"
-          }, {
-            "key_code" : "grave_accent_and_tilde"
-          }, {
-            "key_code" : "u",
-            "modifiers" : [ "left_control" ]
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          }, {
-            "identifiers" : [ {
-              "vendor_id" : 7504,
-              "product_id" : 24926
-            } ],
-            "type" : "device_if"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "simultaneous" : [ {
-              "key_code" : "grave_accent_and_tilde"
-            }, {
-              "key_code" : "q"
+              "key_code" : "w"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -2674,9 +1792,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "grave_accent_and_tilde"
+              "key_code" : "escape"
             }, {
-              "key_code" : "q"
+              "key_code" : "w"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
