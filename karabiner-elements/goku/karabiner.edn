@@ -25,6 +25,8 @@
   }
 
   :tos {
+    ;; ⌘⌥⇧リターン
+    :cms_return {:key :return_or_enter :modi [:command :option :shift]}
     ;; 角括弧 []
     :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]}                          {:key :left_arrow}]
     :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:command :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
