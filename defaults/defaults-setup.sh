@@ -103,6 +103,9 @@ defaults write com.apple.frameworks.diskimages skip-verify-remote -bool true
 defaults write com.apple.finder FXPreferredViewStyle -string "Clmv"
 # Finderのデフォルト検索範囲を現在のフォルダに設定
 defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+# 新規Finderウィンドウの表示先をDownloadsフォルダに設定
+defaults write com.apple.finder NewWindowTarget -string "PfLo"
+defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/Downloads"
 
 # --- メニューバー ---
 # メニューバーにバッテリー残量をパーセンテージで表示 (macOS 11 Big Sur以降)
