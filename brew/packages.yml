@@ -41,6 +41,7 @@ casks:
     - slack
     - warp
     - zoom
+    - default-folder-x
     # 外したもの
     # - swift-quit
   personal:
