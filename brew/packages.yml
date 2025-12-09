@@ -17,6 +17,7 @@ casks:
     - battery
     - cursor
     - deepl
+    - default-folder-x
     - deskpad
     - font-ibm-plex-sans-jp
     - font-plemol-jp
@@ -41,7 +42,6 @@ casks:
     - slack
     - warp
     - zoom
-    - default-folder-x
     # 外したもの
     # - swift-quit
   personal:
