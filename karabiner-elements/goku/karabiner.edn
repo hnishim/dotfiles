@@ -196,13 +196,6 @@
       [:!O9 :to_parentheses_en_xls     [:!ja :excel]]
     ]}
 
-    {:des "かな時 ' 単押しで、「」閉じ＆カーソル移動"
-     :rules [
-      [:quote :to_square_brackets_jp_non-xls [:ja :!excel]] ;; 日本語、Excel以外
-      [:quote :to_square_brackets_jp_xls [:ja :excel]]      ;; 日本語、Excel
-      [:!Oquote [:quote] [:ja]]                             ;; ⌥ ' で、通常入力
-    ]}
-
     {:des "Geonix用：F19とF20を英かなキーに"
      :rules [
       ;; 英かな：GeonixをBluetooth接続すると英かなキーが認識しないので、別キーを割り当て、Karabinerで変換する

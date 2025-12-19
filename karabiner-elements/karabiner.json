@@ -1904,7 +1904,7 @@
           "type" : "basic"
         } ]
       }, {
-        "description" : "⌥9 → 丸括弧閉じ",
+        "description" : "⌥9 → （）閉じ＆カーソル移動",
         "manipulators" : [ {
           "from" : {
             "key_code" : "9",
@@ -2019,77 +2019,6 @@
           }, {
             "type" : "frontmost_application_if",
             "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          } ],
-          "type" : "basic"
-        } ]
-      }, {
-        "description" : "かな時 ' 単押しで、「」閉じ＆カーソル移動",
-        "manipulators" : [ {
-          "from" : {
-            "key_code" : "quote"
-          },
-          "to" : [ {
-            "key_code" : "open_bracket"
-          }, {
-            "key_code" : "close_bracket"
-          }, {
-            "modifiers" : [ "control", "option", "shift" ],
-            "key_code" : "return_or_enter"
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_unless",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "quote"
-          },
-          "to" : [ {
-            "key_code" : "open_bracket"
-          }, {
-            "key_code" : "close_bracket"
-          }, {
-            "modifiers" : [ "control", "option", "shift" ],
-            "key_code" : "return_or_enter"
-          }, {
-            "modifiers" : [ "control" ],
-            "key_code" : "u"
-          }, {
-            "key_code" : "left_arrow"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
-          }, {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.microsoft\\.Excel" ]
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "quote",
-            "modifiers" : {
-              "mandatory" : [ "left_option" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "quote"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_if"
           } ],
           "type" : "basic"
         } ]
