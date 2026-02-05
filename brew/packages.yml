@@ -57,8 +57,8 @@ mas:
       id: 1448916662
     - name: "辞書 by 物書堂"
       id: 1380563956
-    - name: "Logovista 電子辞典閲覧用統合ブラウザ"
-      id: 1339041727
+    # - name: "Logovista 電子辞典閲覧用統合ブラウザ"
+    #  id: 1339041727
   personal:
     - name: "Amazon Kindle"
       id: 302584613
