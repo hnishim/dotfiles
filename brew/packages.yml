@@ -26,12 +26,10 @@ casks:
     - iina
     - jordanbaird-ice
     - karabiner-elements
-    - languagetool-desktop
     - logi-options-plus
     - microsoft-auto-update
     - microsoft-teams
     - monitorcontrol
-    - muteme
     - notion
     - obsidian
     - pearcleaner
@@ -42,6 +40,8 @@ casks:
     - zoom
     # 外したもの
     # - swift-quit
+    # - languagetool-desktop
+    # - muteme
   personal:
     - evernote
     - fujitsu-scansnap-home
