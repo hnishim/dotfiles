@@ -3,12 +3,13 @@
 formulae:
   - mas
   - node
-  - cliclick
   - duti
   - gemini-cli
   - yq
   - yqrashawn/goku/goku
   - nextdns
+
+  # - cliclick
 
 casks:
   common:
