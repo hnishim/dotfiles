@@ -4,11 +4,11 @@ formulae:
   - mas
   - node
   - duti
-  - gemini-cli
   - yq
   - yqrashawn/goku/goku
   - nextdns
 
+  # - gemini-cli
   # - cliclick
 
 casks:
