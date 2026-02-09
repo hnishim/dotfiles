@@ -120,11 +120,11 @@
       [[:open_bracket :close_bracket] :to_square_brackets_jp_xls     [:ja :excel]]   ;; 日本語、Excel
       [[:open_bracket :close_bracket] :to_square_brackets_en_non-xls [:!ja :!excel]] ;; 日本語以外、Excel以外
       [[:open_bracket :close_bracket] :to_square_brackets_en_xls     [:!ja :excel]]  ;; 日本語以外、Excel
-      ;; fg → 角括弧 []（Geonix）
-      [[:f :g] :to_square_brackets_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:f :g] :to_square_brackets_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:f :g] :to_square_brackets_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:f :g] :to_square_brackets_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; eo → 角括弧 []（Geonix）
+      [[:e :o] :to_square_brackets_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:e :o] :to_square_brackets_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:e :o] :to_square_brackets_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:e :o] :to_square_brackets_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 波括弧 {}
       ;; {} → 波括弧 {}
@@ -132,11 +132,11 @@
       [:sim_curved_brackets :to_curly_brackets_jp_xls     [:ja :excel]]   ;; 日本語、Excel
       [:sim_curved_brackets :to_curly_brackets_en_non-xls [:!ja :!excel]] ;; 日本語以外、Excel以外
       [:sim_curved_brackets :to_curly_brackets_en_xls     [:!ja :excel]]  ;; 日本語以外、Excel
-      ;; vb → 波括弧 {}（Geonix）
-      [[:v :b] :to_curly_brackets_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:v :b] :to_curly_brackets_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:v :b] :to_curly_brackets_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:v :b] :to_curly_brackets_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; jq → 波括弧 {}（Geonix）
+      [[:j :q] :to_curly_brackets_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:j :q] :to_curly_brackets_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:j :q] :to_curly_brackets_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:j :q] :to_curly_brackets_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 丸括弧 ()
       ;; 90 → 丸括弧 ()
@@ -144,35 +144,35 @@
       [[:9 :0] :to_parentheses_jp_xls     [:ja :excel]]   ;; 日本語、Excel
       [[:9 :0] :to_parentheses_en_non-xls [:!ja :!excel]] ;; 日本語以外、Excel以外
       [[:9 :0] :to_parentheses_en_xls     [:!ja :excel]]  ;; 日本語以外、Excel
-      ;; nm → 丸括弧 (Geonix)
-      [[:n :m] :to_parentheses_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
-      [[:n :m] :to_parentheses_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
-      [[:n :m] :to_parentheses_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:n :m] :to_parentheses_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
+      ;; pd → 丸括弧 (Geonix)
+      [[:p :d] :to_parentheses_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
+      [[:p :d] :to_parentheses_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
+      [[:p :d] :to_parentheses_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:p :d] :to_parentheses_en_xls     [:geonix :!ja :excel]]  ;; 日本語以外、Excel
 
       ;; シングルクォート ''
       ;; ;' → シングルクォート ''
       [[:semicolon :quote] :to_quotes_non-xls [:!excel]] ;; 言語非依存、Excel以外
       [[:semicolon :quote] :to_quotes_xls     [:excel]]  ;; 言語非依存、Excel
-      ;; .; → シングルクォート ''（Geonix）
-      [[:period :semicolon] :to_quotes_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:period :semicolon] :to_quotes_xls     [:geonix :excel]]  ;; 言語非依存、Excel
+      ;; .' → シングルクォート ''（Geonix）
+      [[:period :quote] :to_quotes_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:period :quote] :to_quotes_xls     [:geonix :excel]]  ;; 言語非依存、Excel
 
       ;; ダブルクォート ""
       ;; :" → ダブルクォート ""
       [:sim_colon_double-quote :to_double_quotes_non-xls [:!excel]] ;; 言語非依存、Excel以外
       [:sim_colon_double-quote :to_double_quotes_xls     [:excel]]  ;; 言語非依存、Excel
-      ;; lp → ダブルクォート ""（Geonix）
-      [[:l :p] :to_double_quotes_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:l :p] :to_double_quotes_xls     [:geonix :excel]]  ;; 言語非依存、Excel
+      ;; space tab → ダブルクォート ""（Geonix）
+      [[:spacebar :tab] :to_double_quotes_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:spacebar :tab] :to_double_quotes_xls     [:geonix :excel]]  ;; 言語非依存、Excel
 
       ;; バッククォート ``
       ;; `1 → バッククォート ``
       [[:grave_accent_and_tilde :1] :to_graves_non-xls [:!excel]] ;; 言語非依存、Excel以外
       [[:grave_accent_and_tilde :1] :to_graves_xls     [:excel]]  ;; 言語非依存、Excel
-      ;; ESC w → バッククォート ``（Geonix）
-      [[:escape :w] :to_graves_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
-      [[:escape :w] :to_graves_xls     [:geonix :excel]]  ;; 言語非依存、Excel
+      ;; ESC x → バッククォート ``（Geonix）
+      [[:escape :x] :to_graves_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
+      [[:escape :x] :to_graves_xls     [:geonix :excel]]  ;; 言語非依存、Excel
     ]}
 
     {:des "通常のリターンを変換確定キーとして扱う"

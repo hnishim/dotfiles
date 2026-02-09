@@ -549,9 +549,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "e"
             }, {
-              "key_code" : "g"
+              "key_code" : "o"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -595,9 +595,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "e"
             }, {
-              "key_code" : "g"
+              "key_code" : "o"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -644,9 +644,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "e"
             }, {
-              "key_code" : "g"
+              "key_code" : "o"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -687,9 +687,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "f"
+              "key_code" : "e"
             }, {
-              "key_code" : "g"
+              "key_code" : "o"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -889,9 +889,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "j"
             }, {
-              "key_code" : "b"
+              "key_code" : "q"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -937,9 +937,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "j"
             }, {
-              "key_code" : "b"
+              "key_code" : "q"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -988,9 +988,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "j"
             }, {
-              "key_code" : "b"
+              "key_code" : "q"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1033,9 +1033,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "v"
+              "key_code" : "j"
             }, {
-              "key_code" : "b"
+              "key_code" : "q"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1225,9 +1225,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "n"
+              "key_code" : "p"
             }, {
-              "key_code" : "m"
+              "key_code" : "d"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1273,9 +1273,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "n"
+              "key_code" : "p"
             }, {
-              "key_code" : "m"
+              "key_code" : "d"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1324,9 +1324,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "n"
+              "key_code" : "p"
             }, {
-              "key_code" : "m"
+              "key_code" : "d"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1369,9 +1369,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "n"
+              "key_code" : "p"
             }, {
-              "key_code" : "m"
+              "key_code" : "d"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1474,7 +1474,7 @@
             "simultaneous" : [ {
               "key_code" : "period"
             }, {
-              "key_code" : "semicolon"
+              "key_code" : "quote"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1512,7 +1512,7 @@
             "simultaneous" : [ {
               "key_code" : "period"
             }, {
-              "key_code" : "semicolon"
+              "key_code" : "quote"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1616,9 +1616,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "l"
+              "key_code" : "spacebar"
             }, {
-              "key_code" : "p"
+              "key_code" : "tab"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1656,9 +1656,9 @@
         }, {
           "from" : {
             "simultaneous" : [ {
-              "key_code" : "l"
+              "key_code" : "spacebar"
             }, {
-              "key_code" : "p"
+              "key_code" : "tab"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1756,7 +1756,7 @@
             "simultaneous" : [ {
               "key_code" : "escape"
             }, {
-              "key_code" : "w"
+              "key_code" : "x"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
@@ -1794,7 +1794,7 @@
             "simultaneous" : [ {
               "key_code" : "escape"
             }, {
-              "key_code" : "w"
+              "key_code" : "x"
             } ],
             "simultaneous_options" : {
               "detect_key_down_uninterruptedly" : false,
