@@ -37,7 +37,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Cursor\" to activate'"
+            "shell_command" : "osascript -e 'tell application \"Ferdium\" to activate'"
           } ],
           "type" : "basic"
         }, {
@@ -53,17 +53,6 @@
           "type" : "basic"
         }, {
           "from" : {
-            "key_code" : "l",
-            "modifiers" : {
-              "mandatory" : [ "left_command", "left_control", "left_option", "left_shift" ]
-            }
-          },
-          "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"DeepL\" to activate'"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
             "key_code" : "f",
             "modifiers" : {
               "mandatory" : [ "left_command", "left_control", "left_option", "left_shift" ]
@@ -71,6 +60,17 @@
           },
           "to" : [ {
             "shell_command" : "osascript -e 'tell application \"Finder\" to activate'"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "m",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control", "left_option", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "osascript -e 'tell application \"Meru\" to activate'"
           } ],
           "type" : "basic"
         }, {

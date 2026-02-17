@@ -69,10 +69,10 @@
      :rules [
       [:caps_lock [:!CTOleft_shift]]
       [:!!a [:launch "Arc"]]
-      [:!!c [:launch "Cursor"]]
+      [:!!c [:launch "Ferdium"]]
       [:!!d [:launch "Dictionaries"]]
-      [:!!l [:launch "DeepL"]]
       [:!!f [:launch "Finder"]]
+      [:!!m [:launch "Meru"]]
       [:!!n [:launch "Notion"]]
       [:!!o [:launch "Obsidian"]]
       [:!!p [:launch "1Password"]]
