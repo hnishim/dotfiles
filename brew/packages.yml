@@ -17,17 +17,16 @@ casks:
     - arc
     - battery
     - cursor
-    - default-folder-x
     - deskpad
+    - ferdium
     - font-ibm-plex-sans-jp
     - font-plemol-jp
     - google-drive
     - grammarly-desktop
-    - homerow
     - iina
-    - jordanbaird-ice
     - karabiner-elements
     - logi-options-plus
+    - meru
     - microsoft-auto-update
     - microsoft-teams
     - monitorcontrol
@@ -37,9 +36,13 @@ casks:
     - raycast
     - shottr
     - slack
+    - thaw
     - warp
     - zoom
     # 外したもの
+    # - jordanbaird-ice
+    # - homerow
+    # - default-folder-x
     # - swift-quit
     # - languagetool-desktop
     # - muteme
