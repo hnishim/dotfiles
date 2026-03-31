@@ -15,7 +15,6 @@ casks:
   common:
     - 1password
     - arc
-    - battery
     - cursor
     - deskpad
     - ferdium
@@ -46,6 +45,7 @@ casks:
     # - swift-quit
     # - languagetool-desktop
     # - muteme
+    # - battery
   personal:
     - evernote
     - fujitsu-scansnap-home
