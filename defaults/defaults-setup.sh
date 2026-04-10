@@ -1,3 +1,27 @@
+#!/usr/bin/env bash
+
+set -u
+
+HAS_SUDO=0
+if command -v sudo >/dev/null 2>&1; then
+  if sudo -n true >/dev/null 2>&1; then
+    HAS_SUDO=1
+  elif [ -t 0 ]; then
+    echo "[INFO] sudo authentication is required for system-wide defaults."
+    if sudo -v; then
+      HAS_SUDO=1
+    fi
+  fi
+fi
+
+sudo_defaults_write() {
+  if [ "$HAS_SUDO" -eq 1 ]; then
+    sudo defaults write "$@"
+  else
+    echo "[WARN] Skipped (sudo unavailable): defaults write $*"
+  fi
+}
+
 # --- Language & Region ---
 # システム言語を英語と日本語に設定（英語を優先）
 defaults write NSGlobalDomain AppleLanguages -array en ja
@@ -22,20 +46,20 @@ defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
 # --- Software Update ---
 # 注意: 以下のコマンドはsudo権限が必要な場合があります
 # macOSアップデートを自動的にチェック
-sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
+sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
 # アプリケーションアップデートを7日ごとに自動的にチェック
 # ※この設定はユーザー単位でも有効ですが、システム全体に統一することで一貫性を保ちます
-sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate ScheduleFrequency -string 7
+sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate ScheduleFrequency -string 7
 # アプリケーションアップデートを自動的にダウンロード
-sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true
+sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true
 # アプリケーションアップデートを自動的にインストール（セキュリティアップデートなど）
-sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true
+sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true
 # macOSアップデートを自動的にインストール
-sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
+sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
 # App Storeからのアプリケーションアップデートを自動的にインストール
-sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool true
+sudo_defaults_write /Library/Preferences/com.apple.commerce AutoUpdate -bool true
 # App StoreからのOSアップデートを自動的に再起動
-sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdateRestartRequired -bool true
+sudo_defaults_write /Library/Preferences/com.apple.commerce AutoUpdateRestartRequired -bool true
 
 # ====== 入力系 ======
 # --- トラックパッド ---
@@ -66,6 +90,9 @@ defaults write com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int
 # --- Dock ---
 # Dockの自動表示/非表示機能を有効化
 defaults write com.apple.dock autohide -bool true
+# Dockを自動表示するまでの遅延と表示/非表示アニメーション速度を設定し、実質的にDockを非表示にする
+defaults write com.apple.dock autohide-delay -float 1000
+defaults write com.apple.dock autohide-time-modifier -float 0
 # ホットコーナーを無効化
 defaults write com.apple.dock wvous-tl-corner -int 0
 defaults write com.apple.dock wvous-tr-corner -int 0
@@ -108,7 +135,10 @@ defaults write com.apple.finder NewWindowTarget -string "PfLo"
 defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/Downloads"
 
 # --- メニューバー ---
+macos_major_version="$(sw_vers -productVersion | awk -F. '{print $1}')"
+
 # メニューバーにバッテリー残量をパーセンテージで表示 (macOS 11 Big Sur以降)
+if [ "$macos_major_version" -ge 11 ]; then
 defaults write com.apple.controlcenter "BatteryShowPercentage" -bool true
 # メニューバーの時計のフォーマットを設定 (24時間表示、曜日、日付)
 defaults write com.apple.menuextra.clock Show24Hour -bool true
@@ -121,6 +151,9 @@ defaults write com.apple.controlcenter "Spotlight" -int 24
 defaults write com.apple.controlcenter "Siri" -int 24
 defaults write com.apple.controlcenter "TimeMachine" -int 24
 defaults write com.apple.controlcenter "Weather" -int 24
+else
+  echo "[INFO] Skipped Control Center settings on macOS < 11."
+fi
 
 # --- Desktop & Window ---
 # 書類を開くときにタブで開くようにする
@@ -175,9 +208,58 @@ defaults write com.apple.Preview NSUserKeyEquivalents -dict-add "Show Previous T
 # Notionで「現在のページへのリンクをコピー」のショートカットを設定 (⌘⇧C)
 defaults write notion.id NSUserKeyEquivalents -dict-add "Copy Link to Current Page" "@\$c"
 
+# PowerPointでオブジェクト整列メニューのショートカットを設定
+# 対象: Arrange → Align or Distribute
+# - Align Left:              ⌃⌥L
+# - Align Center:            ⌃⌥C
+# - Align Right:             ⌃⌥R
+# - Align Top:               ⌃⌥T
+# - Align Middle:            ⌃⌥M
+# - Align Bottom:            ⌃⌥B
+# - Distribute Horizontally: ⌃⌥H
+# - Distribute Vertically:   ⌃⌥V
+# 参考: メニュー階層を含めて指定することで、他の「Align Left」「Align Right」等との競合を防ぐ
+python3 - <<'PY'
+import plistlib
+from pathlib import Path
+
+domain = "com.microsoft.Powerpoint"
+plist_path = Path.home() / "Library" / "Containers" / domain / "Data" / "Library" / "Preferences" / f"{domain}.plist"
+try:
+    plist_path.parent.mkdir(parents=True, exist_ok=True)
+
+    data = {}
+    if plist_path.exists():
+        with plist_path.open("rb") as f:
+            data = plistlib.load(f)
+
+    equivs = data.get("NSUserKeyEquivalents")
+    if not isinstance(equivs, dict):
+        equivs = {}
+
+    equivs.update(
+        {
+            "Arrange->Align or Distribute->Align Left": "^~l",
+            "Arrange->Align or Distribute->Align Center": "^~c",
+            "Arrange->Align or Distribute->Align Right": "^~r",
+            "Arrange->Align or Distribute->Align Top": "^~t",
+            "Arrange->Align or Distribute->Align Middle": "^~m",
+            "Arrange->Align or Distribute->Align Bottom": "^~b",
+            "Arrange->Align or Distribute->Distribute Horizontally": "^~h",
+            "Arrange->Align or Distribute->Distribute Vertically": "^~v",
+        }
+    )
+
+    data["NSUserKeyEquivalents"] = equivs
+    with plist_path.open("wb") as f:
+        plistlib.dump(data, f)
+except PermissionError:
+    print(f"[WARN] Skipped PowerPoint shortcut settings (permission denied): {plist_path}")
+PY
+
 # --- 変更の反映 ---
-killall Dock
-killall Finder
-killall SystemUIServer
+killall Dock >/dev/null 2>&1 || true
+killall Finder >/dev/null 2>&1 || true
+killall SystemUIServer >/dev/null 2>&1 || true
 
 echo "macOS defaults have been set. Some changes may require a restart to take effect."
