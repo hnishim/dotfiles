@@ -38,6 +38,8 @@ casks:
     - thaw
     - warp
     - zoom
+    - alt-tab
+
     # 外したもの
     # - jordanbaird-ice
     # - homerow
