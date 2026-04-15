@@ -61,7 +61,7 @@
   }
 
   :templates {
-    :launch "osascript -e 'tell application \"%s\" to activate'"
+    :launch "open 'raycast://script-commands/launch-apps?arguments=%s'"
   }
 
   :main [

@@ -26,7 +26,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Arc\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Arc'"
           } ],
           "type" : "basic"
         }, {
@@ -37,7 +37,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Ferdium\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Ferdium'"
           } ],
           "type" : "basic"
         }, {
@@ -48,7 +48,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Dictionaries\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Dictionaries'"
           } ],
           "type" : "basic"
         }, {
@@ -59,7 +59,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Finder\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Finder'"
           } ],
           "type" : "basic"
         }, {
@@ -70,7 +70,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Meru\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Meru'"
           } ],
           "type" : "basic"
         }, {
@@ -81,7 +81,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Notion\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Notion'"
           } ],
           "type" : "basic"
         }, {
@@ -92,7 +92,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Obsidian\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Obsidian'"
           } ],
           "type" : "basic"
         }, {
@@ -103,7 +103,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"1Password\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=1Password'"
           } ],
           "type" : "basic"
         }, {
@@ -114,7 +114,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Reminders\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Reminders'"
           } ],
           "type" : "basic"
         }, {
@@ -125,7 +125,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Slack\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Slack'"
           } ],
           "type" : "basic"
         }, {
@@ -136,7 +136,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "osascript -e 'tell application \"Warp\" to activate'"
+            "shell_command" : "open 'raycast://script-commands/launch-apps?arguments=Warp'"
           } ],
           "type" : "basic"
         } ]
