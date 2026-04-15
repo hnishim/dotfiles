@@ -202,5 +202,12 @@
       [:f19 :japanese_eisuu :geonix]
       [:f20 :japanese_kana  :geonix]
     ]}
+
+    {:des "ウィンドウを隠すショートカットキーを無効化"
+     :rules [
+      ;; 
+      [:!Ch  :vk_none] ;; Cmd + H
+      [:!COh :vk_none] ;; Cmd + Option + H
+    ]}
   ]
 }
