@@ -2091,6 +2091,17 @@
             "key_code" : "vk_none"
           } ],
           "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "m",
+            "modifiers" : {
+              "mandatory" : [ "left_command" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "vk_none"
+          } ],
+          "type" : "basic"
         } ]
       } ]
     },

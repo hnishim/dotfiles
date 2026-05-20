@@ -205,9 +205,11 @@
 
     {:des "ウィンドウを隠すショートカットキーを無効化"
      :rules [
-      ;; 
+      ;; ウィンドウを隠す
       [:!Ch  :vk_none] ;; Cmd + H
       [:!COh :vk_none] ;; Cmd + Option + H
+      ;; ウィンドウを最小化
+      [:!Cm  :vk_none] ;; Cmd + M
     ]}
   ]
 }
