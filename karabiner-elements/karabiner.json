@@ -2093,9 +2093,42 @@
           "type" : "basic"
         }, {
           "from" : {
+            "key_code" : "h",
+            "modifiers" : {
+              "mandatory" : [ "right_command" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "vk_none"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "h",
+            "modifiers" : {
+              "mandatory" : [ "right_command", "right_option" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "vk_none"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
             "key_code" : "m",
             "modifiers" : {
               "mandatory" : [ "left_command" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "vk_none"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "m",
+            "modifiers" : {
+              "mandatory" : [ "right_command" ]
             }
           },
           "to" : [ {

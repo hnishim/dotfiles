@@ -208,8 +208,12 @@
       ;; ウィンドウを隠す
       [:!Ch  :vk_none] ;; Cmd + H
       [:!COh :vk_none] ;; Cmd + Option + H
+      [:!Qh  :vk_none] ;; Cmd (right) + H
+      [:!QEh :vk_none] ;; Cmd (right) + Option (r) + H
+      
       ;; ウィンドウを最小化
       [:!Cm  :vk_none] ;; Cmd + M
+      [:!Qm  :vk_none] ;; Cmd (right) + M
     ]}
   ]
 }
