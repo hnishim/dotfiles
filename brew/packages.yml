@@ -39,6 +39,7 @@ casks:
     - warp
     - zoom
     - bettercmdtab
+    - nani
 
     # 外したもの
     # - alt-tab
