@@ -38,9 +38,10 @@ casks:
     - thaw
     - warp
     - zoom
-    - alt-tab
+    - bettercmdtab
 
     # 外したもの
+    # - alt-tab
     # - jordanbaird-ice
     # - homerow
     # - default-folder-x
