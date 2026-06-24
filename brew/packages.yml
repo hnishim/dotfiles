@@ -14,6 +14,7 @@ formulae:
 casks:
   common:
     - 1password
+    - alt-tab
     - arc
     - cursor
     - deskpad
@@ -29,6 +30,7 @@ casks:
     - microsoft-auto-update
     - microsoft-teams
     - monitorcontrol
+    - nani
     - notion
     - obsidian
     - pearcleaner
@@ -38,11 +40,9 @@ casks:
     - thaw
     - warp
     - zoom
-    - bettercmdtab
-    - nani
 
     # 外したもの
-    # - alt-tab
+    # - bettercmdtab
     # - jordanbaird-ice
     # - homerow
     # - default-folder-x
