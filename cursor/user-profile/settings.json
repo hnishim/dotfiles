@@ -15,5 +15,6 @@
     "diffEditor.codeLens": true,
     "cursor.diffs.useCharacterLevelDiffs": true,
     "cursor.composer.shouldChimeAfterChatFinishes": true,
-    "files.autoSave": "afterDelay"
+    "files.autoSave": "afterDelay",
+    "window.autoDetectColorScheme": false
 }
