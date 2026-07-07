@@ -51,8 +51,10 @@ casks:
     # - muteme
     # - battery
   personal:
-    - evernote
     - fujitsu-scansnap-home
+
+    # 外したもの
+    - evernote
   business:
     - microsoft-powerpoint
     - microsoft-excel
