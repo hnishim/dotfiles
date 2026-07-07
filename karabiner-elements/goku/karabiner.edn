@@ -61,24 +61,29 @@
   }
 
   :templates {
-    :launch "open 'raycast://script-commands/launch-apps?arguments=%s'"
+    :launch "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=%s'"
   }
 
   :main [
     {:des "CAPSハイパーキー: Caps_lockを Shift, Command, Control, Option に置換する"
      :rules [
       [:caps_lock [:!CTOleft_shift]]
-      [:!!a [:launch "Arc"]]
-      [:!!c [:launch "Ferdium"]]
+      [:!!a [:launch "Microsoft Teams"]] ;; teAms
+      [:!!b [:launch "Arc"]] ;; Browser
+      [:!!c [:launch "Ferdium"]] ;; Calendar
       [:!!d [:launch "Dictionaries"]]
-      [:!!f [:launch "Finder"]]
-      [:!!m [:launch "Meru"]]
+      [:!!e [:launch "Cursor"]] ;; Editor
+      [:!!f [:launch "Finder"]] ;; Files
+      [:!!m [:launch "Meru"]] ;; Mail
       [:!!n [:launch "Notion"]]
       [:!!o [:launch "Obsidian"]]
-      [:!!p [:launch "1Password"]]
-      [:!!r [:launch "Reminders"]]
-      [:!!s [:launch "Slack"]]
-      [:!!w [:launch "Warp"]]
+      [:!!p [:launch "Microsoft PowerPoint"]] ;; Password
+      [:!!r [:launch "Reminders"]] ;; Reminders
+      [:!!s [:launch "Slack"]] ;; Slack
+      [:!!t [:launch "Warp"]] ;; Terminal
+      [:!!w [:launch "1Password"]] ;; passWord
+      [:!!x [:launch "Microsoft Excel"]] ;; eXcel
+      [:!!z [:launch "zoom.us"]] ;; Zoom
     ]}
 
     {:des "英かな：左右⌘キーを単独で押したときは英数・かなキーとして扱う"
