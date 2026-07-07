@@ -34,6 +34,7 @@ setup_scripts=(
     "gitignore/global-gitignore-setup.sh"
     "warp/warp-setup.sh"
     "cursor/cursor-setup.sh"
+    "ferdium/ferdium-setup.sh"
     "textlint/textlint-setup.sh"
     "nextdns/nextdns-setup.sh"
 )
