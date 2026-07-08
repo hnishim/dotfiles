@@ -81,7 +81,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=Finder'"
+            "shell_command" : "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=Commander One'"
           } ],
           "type" : "basic"
         }, {
