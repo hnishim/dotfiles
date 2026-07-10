@@ -1,12 +1,13 @@
 # Homebrew formulae, casks, and Mac App Store apps to install.
 
 formulae:
-  - mas
-  - node
   - duti
+  - mas
+  - nextdns
+  - node
+  - rclone # Google Drive 同期用
   - yq
   - yqrashawn/goku/goku
-  - nextdns
 
   # - gemini-cli
   # - cliclick
