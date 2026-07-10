@@ -73,7 +73,7 @@
       [:!!c [:launch "Ferdium"]] ;; Calendar
       [:!!d [:launch "Dictionaries"]]
       [:!!e [:launch "Cursor"]] ;; Editor
-      [:!!f [:launch "Commander One"]] ;; Files
+      [:!!f [:launch "ForkLift"]] ;; Files
       [:!!m [:launch "Meru"]] ;; Mail
       [:!!n [:launch "Notion"]]
       [:!!o [:launch "Obsidian"]]
