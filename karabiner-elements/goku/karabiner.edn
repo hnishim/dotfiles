@@ -4,9 +4,6 @@
     :notion ["^notion\\.id"]
     :slack ["^com\\.tinyspeck\\.slackmacgap$"]
     :excel ["^com\\.microsoft\\.Excel"]
-    :no_return_apps [
-      "^com\\.todesktop\\.230313mzl4w4u92" ;; Cursor
-    ]
   }
 
   :devices {
@@ -178,13 +175,6 @@
       ;; ESC x → バッククォート ``（Geonix）
       [[:escape :x] :to_graves_non-xls [:geonix :!excel]] ;; 言語非依存、Excel以外
       [[:escape :x] :to_graves_xls     [:geonix :excel]]  ;; 言語非依存、Excel
-    ]}
-
-    {:des "通常のリターンを変換確定キーとして扱う"
-     :rules [
-      ;; ⇧リターンは日本語の確定動作（かわせみで定義必要：「変換と確定」→「全文節確定」、「候補操作」→「候補決定」）＋改行（アプリに依る）
-      [:return_or_enter   :!Sreturn_or_enter :no_return_apps] ;; リターン単打を⇧リターンに置き換え、変換確定しかしない
-      [:!!return_or_enter :return_or_enter]                   ;; ✦リターンで通常のリターン
     ]}
 
     {:des "⌥- → Markdownの箇条書き"

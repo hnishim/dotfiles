@@ -81,7 +81,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=Commander One'"
+            "shell_command" : "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=ForkLift'"
           } ],
           "type" : "basic"
         }, {
@@ -1883,33 +1883,6 @@
               "product_id" : 12290
             } ],
             "type" : "device_if"
-          } ],
-          "type" : "basic"
-        } ]
-      }, {
-        "description" : "通常のリターンを変換確定キーとして扱う",
-        "manipulators" : [ {
-          "from" : {
-            "key_code" : "return_or_enter"
-          },
-          "to" : [ {
-            "key_code" : "return_or_enter",
-            "modifiers" : [ "left_shift" ]
-          } ],
-          "conditions" : [ {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.todesktop\\.230313mzl4w4u92" ]
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "return_or_enter",
-            "modifiers" : {
-              "mandatory" : [ "left_command", "left_control", "left_option", "left_shift" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "return_or_enter"
           } ],
           "type" : "basic"
         } ]
