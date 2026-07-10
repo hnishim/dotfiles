@@ -2,11 +2,12 @@
 
 formulae:
   - duti
+  - jq # Google Drive File Locker スクリプト用
   - mas
   - nextdns
   - node
   - rclone # Google Drive 同期用
-  - yq
+  - yq # brew-setup.sh スクリプト用（このYAMLファイルを処理するため）
   - yqrashawn/goku/goku
 
   # - gemini-cli
@@ -27,11 +28,11 @@ casks:
     - iina
     - karabiner-elements
     - logi-options-plus
+    - marta
     - meru
     - microsoft-auto-update
     - microsoft-teams
     - monitorcontrol
-    - nani
     - notion
     - obsidian
     - pearcleaner
@@ -41,9 +42,10 @@ casks:
     - thaw
     - warp
     - zoom
-    - commander-one
 
     # 外したもの
+    # - commander-one
+    # - nani
     # - bettercmdtab
     # - jordanbaird-ice
     # - homerow
