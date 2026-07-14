@@ -70,7 +70,7 @@
       [:!!c [:launch "Ferdium"]] ;; Calendar
       [:!!d [:launch "Dictionaries"]]
       [:!!e [:launch "Cursor"]] ;; Editor
-      [:!!f [:launch "ForkLift"]] ;; Files
+      [:!!f [:launch "Finder"]] ;; Files
       [:!!m [:launch "Meru"]] ;; Mail
       [:!!n [:launch "Notion"]]
       [:!!o [:launch "Obsidian"]]

@@ -81,7 +81,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=ForkLift'"
+            "shell_command" : "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=Finder'"
           } ],
           "type" : "basic"
         }, {
