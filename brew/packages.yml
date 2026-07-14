@@ -6,10 +6,10 @@ formulae:
   - mas
   - nextdns
   - node
-  - rclone # Google Drive 同期用
   - yq # brew-setup.sh スクリプト用（このYAMLファイルを処理するため）
   - yqrashawn/goku/goku
 
+  # - rclone # Google Drive 同期用
   # - gemini-cli
   # - cliclick
 
