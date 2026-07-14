@@ -28,7 +28,6 @@ casks:
     - iina
     - karabiner-elements
     - logi-options-plus
-    - marta
     - meru
     - microsoft-auto-update
     - microsoft-teams
@@ -44,6 +43,7 @@ casks:
     - zoom
 
     # 外したもの
+    # - marta
     # - commander-one
     # - nani
     # - bettercmdtab
