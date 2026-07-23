@@ -44,7 +44,7 @@ com.apple.TextEdit .rtf all
 com.apple.Console .log all
 
 # Microsoft Office files
-com.microsoft.Word .doc all
+com.microsoft.Word com.microsoft.word.doc editor
 com.microsoft.Word .docx all
 com.microsoft.Excel .xls all
 com.microsoft.Excel .xlsx all
@@ -80,18 +80,18 @@ com.colliderli.iina .ogg all
 com.colliderli.iina .m4a all
 
 # Archive, Disk images, Installers
-com.apple.archiveutility .zip all
-com.apple.archiveutility .tar all
-com.apple.archiveutility .gz all
-com.apple.archiveutility .bz2 all
-com.apple.archiveutility .xz all
-com.apple.archiveutility .7z all
-com.apple.DiskImageMounter .dmg all
-com.apple.DiskImageMounter .iso all
-com.apple.installer .pkg all
+com.apple.archiveutility public.zip-archive editor
+com.apple.archiveutility public.tar-archive viewer
+com.apple.archiveutility org.gnu.gnu-zip-archive viewer
+com.apple.archiveutility public.bzip2-archive viewer
+com.apple.archiveutility org.tukaani.xz-archive viewer
+com.apple.archiveutility org.7-zip.7-zip-archive viewer
+com.apple.DiskImageMounter com.apple.disk-image-udif viewer
+com.apple.DiskImageMounter public.iso-image viewer
+com.apple.installer com.apple.installer-package-archive viewer
 
 # Default Browser and URL links (Arc)
-company.thebrowser.Browser .webloc all
-company.thebrowser.Browser .url all
+company.thebrowser.Browser com.apple.web-internet-location viewer
+company.thebrowser.Browser com.microsoft.internet-shortcut viewer
 company.thebrowser.Browser http
 company.thebrowser.Browser mailto

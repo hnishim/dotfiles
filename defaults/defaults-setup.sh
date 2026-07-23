@@ -2,6 +2,12 @@
 
 set -u
 
+DEFAULTS_CHANGED=0
+DEFAULTS_FAILURES=0
+DOCK_CHANGED=0
+FINDER_CHANGED=0
+SYSTEM_UI_CHANGED=0
+
 HAS_SUDO=0
 if command -v sudo >/dev/null 2>&1; then
   if sudo -n true >/dev/null 2>&1; then
@@ -14,171 +20,347 @@ if command -v sudo >/dev/null 2>&1; then
   fi
 fi
 
-sudo_defaults_write() {
-  if [ "$HAS_SUDO" -eq 1 ]; then
-    sudo defaults write "$@"
-  else
-    echo "[WARN] Skipped (sudo unavailable): defaults write $*"
+mark_changed() {
+  local restart_target=${1:-}
+
+  DEFAULTS_CHANGED=1
+  case "$restart_target" in
+    dock) DOCK_CHANGED=1 ;;
+    finder) FINDER_CHANGED=1 ;;
+    system-ui) SYSTEM_UI_CHANGED=1 ;;
+  esac
+}
+
+expected_type_name() {
+  case "$1" in
+    -bool) echo "boolean" ;;
+    -int) echo "integer" ;;
+    -float) echo "float" ;;
+    -string) echo "string" ;;
+  esac
+}
+
+values_equal() {
+  local value_type=$1
+  local current=$2
+  local expected=$3
+
+  case "$value_type" in
+    -bool)
+      case "$current" in true|TRUE|YES|yes) current=1 ;; false|FALSE|NO|no) current=0 ;; esac
+      case "$expected" in true|TRUE|YES|yes) expected=1 ;; false|FALSE|NO|no) expected=0 ;; esac
+      [ "$current" = "$expected" ]
+      ;;
+    -float)
+      awk -v current="$current" -v expected="$expected" \
+        'BEGIN { exit !(current + 0 == expected + 0) }'
+      ;;
+    *)
+      [ "$current" = "$expected" ]
+      ;;
+  esac
+}
+
+# $1: scope (user/current-host/system), $2: domain, $3: key
+# $4: type, $5: expected value, $6: process to restart (optional)
+set_default() {
+  local scope=$1
+  local domain=$2
+  local key=$3
+  local value_type=$4
+  local expected=$5
+  local restart_target=${6:-}
+  local current actual_type required_type
+  local defaults_command=()
+
+  case "$scope" in
+    user)
+      defaults_command=(defaults)
+      ;;
+    current-host)
+      defaults_command=(defaults -currentHost)
+      ;;
+    system)
+      if [ "$HAS_SUDO" -ne 1 ]; then
+        echo "[WARN] Skipped (sudo unavailable): $domain $key"
+        DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+        return
+      fi
+      defaults_command=(sudo defaults)
+      ;;
+  esac
+
+  current=$("${defaults_command[@]}" read "$domain" "$key" 2>/dev/null || true)
+  actual_type=$("${defaults_command[@]}" read-type "$domain" "$key" 2>/dev/null || true)
+  required_type=$(expected_type_name "$value_type")
+
+  if [ "$actual_type" = "Type is $required_type" ] &&
+     values_equal "$value_type" "$current" "$expected"; then
+    echo "[INFO] Already set: $domain $key"
+    return
   fi
+
+  if ! "${defaults_command[@]}" write "$domain" "$key" "$value_type" "$expected"; then
+    echo "[WARN] Failed to set: $domain $key"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  current=$("${defaults_command[@]}" read "$domain" "$key" 2>/dev/null || true)
+  actual_type=$("${defaults_command[@]}" read-type "$domain" "$key" 2>/dev/null || true)
+  if [ "$actual_type" != "Type is $required_type" ] ||
+     ! values_equal "$value_type" "$current" "$expected"; then
+    echo "[WARN] Verification failed: $domain $key"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  echo "[SUCCESS] Updated: $domain $key"
+  mark_changed "$restart_target"
+}
+
+set_user_default() {
+  set_default user "$@"
+}
+
+set_current_host_default() {
+  set_default current-host "$@"
+}
+
+set_system_default() {
+  set_default system "$@"
+}
+
+# Arrays are compared as JSON to avoid depending on `defaults read` formatting.
+set_user_array_default() {
+  local domain=$1
+  local key=$2
+  local expected_json=$3
+  local restart_target=$4
+  shift 4
+  local current_json
+
+  current_json=$(defaults read "$domain" "$key" 2>/dev/null |
+    plutil -convert json -o - -- - 2>/dev/null || true)
+  if [ "$current_json" = "$expected_json" ]; then
+    echo "[INFO] Already set: $domain $key"
+    return
+  fi
+
+  if ! defaults write "$domain" "$key" -array "$@"; then
+    echo "[WARN] Failed to set: $domain $key"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  current_json=$(defaults read "$domain" "$key" 2>/dev/null |
+    plutil -convert json -o - -- - 2>/dev/null || true)
+  if [ "$current_json" != "$expected_json" ]; then
+    echo "[WARN] Verification failed: $domain $key"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  echo "[SUCCESS] Updated: $domain $key"
+  mark_changed "$restart_target"
+}
+
+# Adds or updates one dictionary entry while preserving all other entries.
+# $4 is a key path below the dictionary entry, or empty for a scalar entry.
+set_user_dict_entry() {
+  local domain=$1
+  local dictionary_key=$2
+  local entry_key=$3
+  local child_key_path=$4
+  local expected=$5
+  local write_value=$6
+  local restart_target=${7:-}
+  local escaped_entry key_path current
+
+  escaped_entry=${entry_key//./\\.}
+  key_path=$escaped_entry
+  if [ -n "$child_key_path" ]; then
+    key_path="${key_path}.${child_key_path}"
+  fi
+
+  current=$(defaults read "$domain" "$dictionary_key" 2>/dev/null |
+    plutil -extract "$key_path" raw -o - -- - 2>/dev/null || true)
+  if [ "$current" = "$expected" ]; then
+    echo "[INFO] Already set: $domain ${dictionary_key}[$entry_key]"
+    return
+  fi
+
+  if ! defaults write "$domain" "$dictionary_key" -dict-add "$entry_key" "$write_value"; then
+    echo "[WARN] Failed to set: $domain ${dictionary_key}[$entry_key]"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  current=$(defaults read "$domain" "$dictionary_key" 2>/dev/null |
+    plutil -extract "$key_path" raw -o - -- - 2>/dev/null || true)
+  if [ "$current" != "$expected" ]; then
+    echo "[WARN] Verification failed: $domain ${dictionary_key}[$entry_key]"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  echo "[SUCCESS] Updated: $domain ${dictionary_key}[$entry_key]"
+  mark_changed "$restart_target"
 }
 
 # --- Language & Region ---
 # システム言語を英語と日本語に設定（英語を優先）
-defaults write NSGlobalDomain AppleLanguages -array en ja
+set_user_array_default NSGlobalDomain AppleLanguages '["en","ja"]' "" en ja
 # ロケール：システム言語は英語、地域は日本
-defaults write NSGlobalDomain AppleLocale "en_JP"
+set_user_default NSGlobalDomain AppleLocale -string "en_JP"
 # 月曜日始まり
-defaults write NSGlobalDomain AppleFirstWeekday -int 2
+set_user_default NSGlobalDomain AppleFirstWeekday -int 2
 # 単位系：センチメートル
-defaults write NSGlobalDomain AppleMeasurementUnits "Centimeters"
+set_user_default NSGlobalDomain AppleMeasurementUnits -string "Centimeters"
 # メートル法
-defaults write NSGlobalDomain AppleMetricUnits -bool YES
+set_user_default NSGlobalDomain AppleMetricUnits -bool true
 # 摂氏
-defaults write NSGlobalDomain AppleTemperatureUnit "Celsius"
+set_user_default NSGlobalDomain AppleTemperatureUnit -string "Celsius"
 # 日付表示
-defaults write NSGlobalDomain AppleDateFormat -string "yyyy/MM/dd"
+set_user_default NSGlobalDomain AppleDateFormat -string "yyyy/MM/dd"
 
 # --- System ---
 # 保存時のファイル選択ダイアログパネルをデフォルトで拡げた状態にする
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
-defaults write NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
+set_user_default NSGlobalDomain NSNavPanelExpandedStateForSaveMode -bool true
+set_user_default NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
 
 # --- Software Update ---
 # 注意: 以下のコマンドはsudo権限が必要な場合があります
 # macOSアップデートを自動的にチェック
-sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
+set_system_default /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
 # アプリケーションアップデートを7日ごとに自動的にチェック
 # ※この設定はユーザー単位でも有効ですが、システム全体に統一することで一貫性を保ちます
-sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate ScheduleFrequency -string 7
+set_system_default /Library/Preferences/com.apple.SoftwareUpdate ScheduleFrequency -string 7
 # アプリケーションアップデートを自動的にダウンロード
-sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true
+set_system_default /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true
 # アプリケーションアップデートを自動的にインストール（セキュリティアップデートなど）
-sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true
+set_system_default /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true
 # macOSアップデートを自動的にインストール
-sudo_defaults_write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
+set_system_default /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true
 # App Storeからのアプリケーションアップデートを自動的にインストール
-sudo_defaults_write /Library/Preferences/com.apple.commerce AutoUpdate -bool true
+set_system_default /Library/Preferences/com.apple.commerce AutoUpdate -bool true
 # App StoreからのOSアップデートを自動的に再起動
-sudo_defaults_write /Library/Preferences/com.apple.commerce AutoUpdateRestartRequired -bool true
+set_system_default /Library/Preferences/com.apple.commerce AutoUpdateRestartRequired -bool true
 
 # ====== 入力系 ======
 # --- トラックパッド ---
 # トラックパッドのタップでクリックを有効化
-defaults write com.apple.AppleMultitouchTrackpad Clicking -bool true
-defaults write com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
-defaults -currentHost write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
-defaults write NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+set_user_default com.apple.AppleMultitouchTrackpad Clicking -bool true
+set_user_default com.apple.driver.AppleBluetoothMultitouch.trackpad Clicking -bool true
+set_current_host_default NSGlobalDomain com.apple.mouse.tapBehavior -int 1
+set_user_default NSGlobalDomain com.apple.mouse.tapBehavior -int 1
 
 # --- キーボード ---
 # すべてのコントロールでフルキーボードアクセスを有効化（例: モーダルダイアログでのタブ操作）
-defaults write NSGlobalDomain AppleKeyboardUIMode -int 3
+set_user_default NSGlobalDomain AppleKeyboardUIMode -int 3
 # Fnキーを標準のファンクションキーとして使用
-defaults write NSGlobalDomain com.apple.keyboard.fnState -bool true
+set_user_default NSGlobalDomain com.apple.keyboard.fnState -bool true
 # ダブルスペースでピリオドを入力する機能を無効化
-defaults write NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
+set_user_default NSGlobalDomain NSAutomaticPeriodSubstitutionEnabled -bool false
 
 # ====== 出力系 ======
 # --- 画面 ---
 # フォントの表示がLCD向けに最適化された、中程度のアンチエイリアスに変更（Retinaの場合は削除推奨）
-defaults write NSGlobalDomain AppleFontSmoothing -int 2
+set_user_default NSGlobalDomain AppleFontSmoothing -int 2
 
 # --- Bluetooth Audio ---
 # Bluetoothヘッドフォン・ヘッドセットの音質を向上
-defaults write com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int 40
+set_user_default com.apple.BluetoothAudioAgent "Apple Bitpool Min (editable)" -int 40
 
 # ====== UI ======
 # --- Dock ---
 # Dockの自動表示/非表示機能を有効化
-defaults write com.apple.dock autohide -bool true
+set_user_default com.apple.dock autohide -bool true dock
 # Dockを自動表示するまでの遅延と表示/非表示アニメーション速度を設定し、実質的にDockを非表示にする
-defaults write com.apple.dock autohide-delay -float 1000
-defaults write com.apple.dock autohide-time-modifier -float 0
+set_user_default com.apple.dock autohide-delay -float 1000 dock
+set_user_default com.apple.dock autohide-time-modifier -float 0 dock
 # ホットコーナーを無効化
-defaults write com.apple.dock wvous-tl-corner -int 0
-defaults write com.apple.dock wvous-tr-corner -int 0
-defaults write com.apple.dock wvous-bl-corner -int 0
-defaults write com.apple.dock wvous-br-corner -int 0
+set_user_default com.apple.dock wvous-tl-corner -int 0 dock
+set_user_default com.apple.dock wvous-tr-corner -int 0 dock
+set_user_default com.apple.dock wvous-bl-corner -int 0 dock
+set_user_default com.apple.dock wvous-br-corner -int 0 dock
 
 # --- Finder ---
 # ファイルの拡張子を常に表示
-defaults write NSGlobalDomain AppleShowAllExtensions -bool true
+set_user_default NSGlobalDomain AppleShowAllExtensions -bool true finder
 # Finderウィンドウのタイトルバーにフルパスを表示
-defaults write com.apple.finder _FXShowPosixPathInTitle -bool true
+set_user_default com.apple.finder _FXShowPosixPathInTitle -bool true finder
 # 隠しファイルを常に表示
-defaults write com.apple.Finder AppleShowAllFiles -bool true
+set_user_default com.apple.Finder AppleShowAllFiles -bool true finder
 # Finderウィンドウ下部のパスバーを表示
-defaults write com.apple.finder ShowPathbar -bool true
+set_user_default com.apple.finder ShowPathbar -bool true finder
 # Finderにタブバーを表示
-defaults write com.apple.finder ShowTabView -bool true
+set_user_default com.apple.finder ShowTabView -bool true finder
 # 未確認のアプリケーションを開く際の警告を無効化
-defaults write com.apple.LaunchServices LSQuarantine -bool false
+set_user_default com.apple.LaunchServices LSQuarantine -bool false
 # デスクトップにアイコンを表示しない
-defaults write com.apple.finder CreateDesktop -bool false
+set_user_default com.apple.finder CreateDesktop -bool false finder
 # ネットワークドライブやUSBドライブに.DS_Storeファイルを作成しない
-defaults write com.apple.desktopservices DSDontWriteNetworkStores -bool true
-defaults write com.apple.desktopservices DSDontWriteUSBStores -bool true
+set_user_default com.apple.desktopservices DSDontWriteNetworkStores -bool true
+set_user_default com.apple.desktopservices DSDontWriteUSBStores -bool true
 # Finderを⌘ + Qで終了できるようにする
-defaults write com.apple.finder QuitMenuItem -bool true
+set_user_default com.apple.finder QuitMenuItem -bool true finder
 # 名前順でソートする際に、フォルダをファイルの前に表示
-defaults write com.apple.finder _FXSortFoldersFirst -bool true
+set_user_default com.apple.finder _FXSortFoldersFirst -bool true finder
 # ディスクイメージの検証を無効化
-defaults write com.apple.frameworks.diskimages skip-verify -bool true
-defaults write com.apple.frameworks.diskimages skip-verify-locked -bool true
-defaults write com.apple.frameworks.diskimages skip-verify-remote -bool true
+set_user_default com.apple.frameworks.diskimages skip-verify -bool true
+set_user_default com.apple.frameworks.diskimages skip-verify-locked -bool true
+set_user_default com.apple.frameworks.diskimages skip-verify-remote -bool true
 # Finderのデフォルト表示形式をカラムビューに設定
 # 他の表示形式のコード: `icnv` (アイコン), `clmv` (カラム), `glyv` (ギャラリー)
-defaults write com.apple.finder FXPreferredViewStyle -string "Clmv"
+set_user_default com.apple.finder FXPreferredViewStyle -string "Clmv" finder
 # Finderのデフォルト検索範囲を現在のフォルダに設定
-defaults write com.apple.finder FXDefaultSearchScope -string "SCcf"
+set_user_default com.apple.finder FXDefaultSearchScope -string "SCcf" finder
 # 新規Finderウィンドウの表示先をDownloadsフォルダに設定
-defaults write com.apple.finder NewWindowTarget -string "PfLo"
-defaults write com.apple.finder NewWindowTargetPath -string "file://${HOME}/Downloads"
+set_user_default com.apple.finder NewWindowTarget -string "PfLo" finder
+set_user_default com.apple.finder NewWindowTargetPath -string "file://${HOME}/Downloads" finder
 
 # --- メニューバー ---
 macos_major_version="$(sw_vers -productVersion | awk -F. '{print $1}')"
 
 # メニューバーにバッテリー残量をパーセンテージで表示 (macOS 11 Big Sur以降)
 if [ "$macos_major_version" -ge 11 ]; then
-defaults write com.apple.controlcenter "BatteryShowPercentage" -bool true
+set_user_default com.apple.controlcenter "BatteryShowPercentage" -bool true system-ui
 # メニューバーの時計のフォーマットを設定 (24時間表示、曜日、日付)
-defaults write com.apple.menuextra.clock Show24Hour -bool true
-defaults write com.apple.menuextra.clock ShowDayOfWeek -bool true
-defaults write com.apple.menuextra.clock ShowDate -int 2
-defaults write com.apple.menuextra.clock FlashDateSeparators -bool false
+set_user_default com.apple.menuextra.clock Show24Hour -bool true system-ui
+set_user_default com.apple.menuextra.clock ShowDayOfWeek -bool true system-ui
+set_user_default com.apple.menuextra.clock ShowDate -int 2 system-ui
+set_user_default com.apple.menuextra.clock FlashDateSeparators -bool false system-ui
 # メニューバーから不要なアイコンを非表示にする
 # 24 = Don't Show in Menu Bar
-defaults write com.apple.controlcenter "Spotlight" -int 24
-defaults write com.apple.controlcenter "Siri" -int 24
-defaults write com.apple.controlcenter "TimeMachine" -int 24
-defaults write com.apple.controlcenter "Weather" -int 24
+set_user_default com.apple.controlcenter "Spotlight" -int 24 system-ui
+set_user_default com.apple.controlcenter "Siri" -int 24 system-ui
+set_user_default com.apple.controlcenter "TimeMachine" -int 24 system-ui
+set_user_default com.apple.controlcenter "Weather" -int 24 system-ui
 else
   echo "[INFO] Skipped Control Center settings on macOS < 11."
 fi
 
 # --- Desktop & Window ---
 # 書類を開くときにタブで開くようにする
-defaults write NSGlobalDomain AppleWindowTabbingMode -string "always"
+set_user_default NSGlobalDomain AppleWindowTabbingMode -string "always"
 # ウインドウを画面上部にドラッグしてフルスクリーンにする機能を無効化
-defaults write com.apple.WindowManager dragToFullScreenEnabled -bool false
+set_user_default com.apple.WindowManager dragToFullScreenEnabled -bool false
 
 # --- Quicklook ---
 # QuickLookでテキストを選択可能にする
-defaults write com.apple.finder QLEnableTextSelection -bool true
+set_user_default com.apple.finder QLEnableTextSelection -bool true finder
 
 # --- Accessibility ---
 # ズーム機能のキーボードショートカットを有効化
-if [ "$(defaults read com.apple.universalaccess closeViewHotkeysEnabled 2>/dev/null || true)" = "1" ]; then
-  echo "[INFO] Accessibility zoom keyboard shortcuts are already enabled."
-elif ! defaults write com.apple.universalaccess closeViewHotkeysEnabled -bool true; then
-  echo "[WARN] Could not enable accessibility zoom keyboard shortcuts. Grant Full Disk Access to the terminal and retry."
-fi
+set_user_default com.apple.universalaccess closeViewHotkeysEnabled -bool true
 
 # --- 日本語入力（Mac標準） ---
 # かわせみを使用する場合には特に不要な設定
 # Windows風のキー操作を有効化
-defaults write com.apple.inputmethod.Kotoeri 'JIMPrefWindowsLikeShortcut' -bool true
+set_user_default com.apple.inputmethod.Kotoeri 'JIMPrefWindowsLikeShortcut' -bool true
 # 全角数字の使用を無効化
-defaults write com.apple.inputmethod.Kotoeri 'JIMPrefFullWidthNumeralCharacters' -bool false
+set_user_default com.apple.inputmethod.Kotoeri 'JIMPrefFullWidthNumeralCharacters' -bool false
 
 # --- 不要・競合するショートカットを無効化 ---
 # 注意: これによりシステム設定のショートカット定義が上書きされます。
@@ -186,31 +368,43 @@ defaults write com.apple.inputmethod.Kotoeri 'JIMPrefFullWidthNumeralCharacters'
 
 # 標準のスクリーンショットショートカットを無効化 (Shottrなどの別アプリで設定するため)
 # Save picture of screen as a file (⇧⌘3)
-defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 28 '{ enabled = 0; }'
+set_user_dict_entry com.apple.symbolichotkeys AppleSymbolicHotKeys 28 enabled 0 \
+  '{ enabled = 0; }' system-ui
 # Save picture of selected area as a file (⇧⌘4)
-defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 29 '{ enabled = 0; }'
+set_user_dict_entry com.apple.symbolichotkeys AppleSymbolicHotKeys 29 enabled 0 \
+  '{ enabled = 0; }' system-ui
 # Copy picture of screen to the clipboard (^⇧⌘3)
-defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 30 '{ enabled = 0; }'
+set_user_dict_entry com.apple.symbolichotkeys AppleSymbolicHotKeys 30 enabled 0 \
+  '{ enabled = 0; }' system-ui
 # Copy picture of selected area to the clipboard (^⇧⌘4)
-defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 31 '{ enabled = 0; }'
+set_user_dict_entry com.apple.symbolichotkeys AppleSymbolicHotKeys 31 enabled 0 \
+  '{ enabled = 0; }' system-ui
 
 # SpotlightのFinder検索ショートカット(⌥⌘Space)を無効化
 # 65 = Show Finder search window
-defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 65 '{ enabled = 0; }'
+set_user_dict_entry com.apple.symbolichotkeys AppleSymbolicHotKeys 65 enabled 0 \
+  '{ enabled = 0; }' system-ui
 
 # Services Menuの不要な項目を無効化
 # "Convert Text to Simplified Chinese" を無効化（Raycasetで設定するCursor用ハイパーキーとの競合回避）
-defaults write pbs NSServicesStatus -dict-add "com.apple.inputmethod.SCIM.ITService.TCSCTransformation" '{ enabled_services_menu = 0; }'
+set_user_dict_entry pbs NSServicesStatus \
+  "com.apple.inputmethod.SCIM.ITService.TCSCTransformation" \
+  enabled_services_menu 0 '{ enabled_services_menu = 0; }'
 
 # --- ショートカットキーの変更 ---
 # FinderとPreviewでタブ移動のショートカットキーを設定 (⌥⌘→, ⌥⌘←)
-defaults write com.apple.finder NSUserKeyEquivalents -dict-add "Show Next Tab" "@~\\U2192"
-defaults write com.apple.finder NSUserKeyEquivalents -dict-add "Show Previous Tab" "@~\\U2190"
-defaults write com.apple.Preview NSUserKeyEquivalents -dict-add "Show Next Tab" "@~\\U2192"
-defaults write com.apple.Preview NSUserKeyEquivalents -dict-add "Show Previous Tab" "@~\\U2190"
+set_user_dict_entry com.apple.finder NSUserKeyEquivalents \
+  "Show Next Tab" "" "@~\\U2192" "@~\\U2192" finder
+set_user_dict_entry com.apple.finder NSUserKeyEquivalents \
+  "Show Previous Tab" "" "@~\\U2190" "@~\\U2190" finder
+set_user_dict_entry com.apple.Preview NSUserKeyEquivalents \
+  "Show Next Tab" "" "@~\\U2192" "@~\\U2192"
+set_user_dict_entry com.apple.Preview NSUserKeyEquivalents \
+  "Show Previous Tab" "" "@~\\U2190" "@~\\U2190"
 
 # Notionで「現在のページへのリンクをコピー」のショートカットを設定 (⌘⇧C)
-defaults write notion.id NSUserKeyEquivalents -dict-add "Copy Link to Current Page" "@\$c"
+set_user_dict_entry notion.id NSUserKeyEquivalents \
+  "Copy Link to Current Page" "" "@\$c" "@\$c"
 
 # PowerPointでオブジェクト整列メニューのショートカットを設定
 # 対象: Arrange → Align or Distribute
@@ -223,9 +417,14 @@ defaults write notion.id NSUserKeyEquivalents -dict-add "Copy Link to Current Pa
 # - Distribute Horizontally: ⌃⌥H
 # - Distribute Vertically:   ⌃⌥V
 # 参考: メニュー階層を含めて指定することで、他の「Align Left」「Align Right」等との競合を防ぐ
+if pgrep -x "Microsoft PowerPoint" >/dev/null 2>&1; then
+  echo "[WARN] Skipped PowerPoint shortcut settings because PowerPoint is running."
+  DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+else
 python3 - <<'PY'
 import os
 import plistlib
+import shutil
 import tempfile
 from pathlib import Path
 from xml.parsers.expat import ExpatError
@@ -244,18 +443,21 @@ try:
     if not isinstance(equivs, dict):
         equivs = {}
 
-    equivs.update(
-        {
-            "Arrange->Align or Distribute->Align Left": "^~l",
-            "Arrange->Align or Distribute->Align Center": "^~c",
-            "Arrange->Align or Distribute->Align Right": "^~r",
-            "Arrange->Align or Distribute->Align Top": "^~t",
-            "Arrange->Align or Distribute->Align Middle": "^~m",
-            "Arrange->Align or Distribute->Align Bottom": "^~b",
-            "Arrange->Align or Distribute->Distribute Horizontally": "^~h",
-            "Arrange->Align or Distribute->Distribute Vertically": "^~v",
-        }
-    )
+    expected = {
+        "Arrange->Align or Distribute->Align Left": "^~l",
+        "Arrange->Align or Distribute->Align Center": "^~c",
+        "Arrange->Align or Distribute->Align Right": "^~r",
+        "Arrange->Align or Distribute->Align Top": "^~t",
+        "Arrange->Align or Distribute->Align Middle": "^~m",
+        "Arrange->Align or Distribute->Align Bottom": "^~b",
+        "Arrange->Align or Distribute->Distribute Horizontally": "^~h",
+        "Arrange->Align or Distribute->Distribute Vertically": "^~v",
+    }
+    if all(equivs.get(key) == value for key, value in expected.items()):
+        print("[INFO] PowerPoint shortcut settings are already set.")
+        raise SystemExit(0)
+
+    equivs.update(expected)
 
     data["NSUserKeyEquivalents"] = equivs
     # Interrupted writes must not leave the preferences file truncated.
@@ -265,19 +467,48 @@ try:
             plistlib.dump(data, f)
             f.flush()
             os.fsync(f.fileno())
+        if plist_path.exists():
+            shutil.copystat(plist_path, temporary_path)
+            os.utime(temporary_path, None)
         os.replace(temporary_path, plist_path)
     finally:
         if os.path.exists(temporary_path):
             os.unlink(temporary_path)
+    print("[SUCCESS] Updated PowerPoint shortcut settings.")
+    raise SystemExit(10)
 except PermissionError:
     print(f"[WARN] Skipped PowerPoint shortcut settings (permission denied): {plist_path}")
+    raise SystemExit(1)
 except (plistlib.InvalidFileException, ExpatError) as error:
     print(f"[WARN] Skipped PowerPoint shortcut settings (invalid plist: {error}): {plist_path}")
+    raise SystemExit(1)
 PY
+  powerpoint_status=$?
+  if [ "$powerpoint_status" -eq 10 ]; then
+    mark_changed
+  elif [ "$powerpoint_status" -ne 0 ]; then
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+  fi
+fi
 
 # --- 変更の反映 ---
-killall Dock >/dev/null 2>&1 || true
-killall Finder >/dev/null 2>&1 || true
-killall SystemUIServer >/dev/null 2>&1 || true
+if [ "$DOCK_CHANGED" -eq 1 ]; then
+  killall Dock >/dev/null 2>&1 || true
+fi
+if [ "$FINDER_CHANGED" -eq 1 ]; then
+  killall Finder >/dev/null 2>&1 || true
+fi
+if [ "$SYSTEM_UI_CHANGED" -eq 1 ]; then
+  killall SystemUIServer >/dev/null 2>&1 || true
+fi
 
-echo "macOS defaults have been set. Some changes may require a restart to take effect."
+if [ "$DEFAULTS_CHANGED" -eq 0 ]; then
+  echo "macOS defaults are already up to date."
+else
+  echo "macOS defaults have been updated. Some changes may require a restart to take effect."
+fi
+
+if [ "$DEFAULTS_FAILURES" -gt 0 ]; then
+  echo "[WARN] $DEFAULTS_FAILURES default setting(s) could not be applied."
+  exit 1
+fi
