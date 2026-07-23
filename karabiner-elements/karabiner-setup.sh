@@ -18,8 +18,8 @@ LOCAL_KARABINER_EDN="$HOME/.config/karabiner.edn"
 LOCAL_BACKUP_DIR="$LOCAL_KARABINER_DIR/_backup"
 
 # iCloud path
-ICLOUD_KARABINER_JSON="$HOME/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/karabiner-elements/karabiner.json"
-ICLOUD_KARABINER_EDN="$HOME/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/karabiner-elements/goku/karabiner.edn"
+ICLOUD_KARABINER_JSON="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/dotfiles/karabiner-elements/karabiner.json"
+ICLOUD_KARABINER_EDN="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/dotfiles/karabiner-elements/goku/karabiner.edn"
 
 echo "=== Karabiner-Elements設定ファイル同期スクリプト ==="
 echo "開始時刻: $(date)"
