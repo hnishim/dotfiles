@@ -18,6 +18,7 @@ casks:
     - 1password
     - alt-tab
     - arc
+    - chatgpt
     - cursor
     - deskpad
     - ferdium
@@ -35,14 +36,14 @@ casks:
     - notion
     - obsidian
     - pearcleaner
-    - raycast
     - shottr
     - slack
-    - thaw
     - warp
     - zoom
 
     # 外したもの
+    # - thaw
+    # - raycast
     # - marta
     # - commander-one
     # - nani
@@ -58,7 +59,7 @@ casks:
     - fujitsu-scansnap-home
 
     # 外したもの
-    - evernote
+    # - evernote
   business:
     - microsoft-powerpoint
     - microsoft-excel
@@ -72,11 +73,11 @@ mas:
     - name: "辞書 by 物書堂"
       id: 1380563956
     # - name: "Logovista 電子辞典閲覧用統合ブラウザ"
-    #  id: 1339041727
+    #   id: 1339041727
   personal:
     - name: "Amazon Kindle"
       id: 302584613
-    - name: "bunkoOCR"
-      id: 1611405865
+    # - name: "bunkoOCR"
+    #   id: 1611405865
   business:
     # Add business-specific Mac App Store apps here if any
