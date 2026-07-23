@@ -71,6 +71,7 @@
       [:!!d [:launch "Dictionaries"]]
       [:!!e [:launch "Cursor"]] ;; Editor
       [:!!f [:launch "Finder"]] ;; Files
+      [:!!g [:launch "ChatGPT"]] ;; chatGpt
       [:!!m [:launch "Meru"]] ;; Mail
       [:!!n [:launch "Notion"]]
       [:!!o [:launch "Obsidian"]]

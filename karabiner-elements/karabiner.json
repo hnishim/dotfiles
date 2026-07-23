@@ -86,6 +86,17 @@
           "type" : "basic"
         }, {
           "from" : {
+            "key_code" : "g",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control", "left_option", "left_shift" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=ChatGPT'"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
             "key_code" : "m",
             "modifiers" : {
               "mandatory" : [ "left_command", "left_control", "left_option", "left_shift" ]
