@@ -167,7 +167,11 @@ defaults write com.apple.finder QLEnableTextSelection -bool true
 
 # --- Accessibility ---
 # ズーム機能のキーボードショートカットを有効化
-defaults write com.apple.universalaccess closeViewHotkeysEnabled -bool true
+if [ "$(defaults read com.apple.universalaccess closeViewHotkeysEnabled 2>/dev/null || true)" = "1" ]; then
+  echo "[INFO] Accessibility zoom keyboard shortcuts are already enabled."
+elif ! defaults write com.apple.universalaccess closeViewHotkeysEnabled -bool true; then
+  echo "[WARN] Could not enable accessibility zoom keyboard shortcuts. Grant Full Disk Access to the terminal and retry."
+fi
 
 # --- 日本語入力（Mac標準） ---
 # かわせみを使用する場合には特に不要な設定
@@ -220,8 +224,11 @@ defaults write notion.id NSUserKeyEquivalents -dict-add "Copy Link to Current Pa
 # - Distribute Vertically:   ⌃⌥V
 # 参考: メニュー階層を含めて指定することで、他の「Align Left」「Align Right」等との競合を防ぐ
 python3 - <<'PY'
+import os
 import plistlib
+import tempfile
 from pathlib import Path
+from xml.parsers.expat import ExpatError
 
 domain = "com.microsoft.Powerpoint"
 plist_path = Path.home() / "Library" / "Containers" / domain / "Data" / "Library" / "Preferences" / f"{domain}.plist"
@@ -251,10 +258,21 @@ try:
     )
 
     data["NSUserKeyEquivalents"] = equivs
-    with plist_path.open("wb") as f:
-        plistlib.dump(data, f)
+    # Interrupted writes must not leave the preferences file truncated.
+    fd, temporary_path = tempfile.mkstemp(dir=plist_path.parent, prefix=f".{plist_path.name}.")
+    try:
+        with os.fdopen(fd, "wb") as f:
+            plistlib.dump(data, f)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary_path, plist_path)
+    finally:
+        if os.path.exists(temporary_path):
+            os.unlink(temporary_path)
 except PermissionError:
     print(f"[WARN] Skipped PowerPoint shortcut settings (permission denied): {plist_path}")
+except (plistlib.InvalidFileException, ExpatError) as error:
+    print(f"[WARN] Skipped PowerPoint shortcut settings (invalid plist: {error}): {plist_path}")
 PY
 
 # --- 変更の反映 ---
