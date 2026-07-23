@@ -14,7 +14,7 @@ LOCAL_KEYBINDINGS_JSON="$LOCAL_USER_DIR/keybindings.json"
 LOCAL_BACKUP_DIR="$LOCAL_USER_DIR/_backup"
 
 # iCloud path
-ICLOUD_CURSOR_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/dotfiles/cursor"
+ICLOUD_CURSOR_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/dotfiles/cursor"
 ICLOUD_SETTINGS_JSON="$ICLOUD_CURSOR_DIR/user-profile/settings.json"
 ICLOUD_KEYBINDINGS_JSON="$ICLOUD_CURSOR_DIR/user-profile/keybindings.json"
 ICLOUD_EXTENSIONS_YML="$ICLOUD_CURSOR_DIR/extensions/extensions.yml"
