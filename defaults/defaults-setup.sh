@@ -131,6 +131,38 @@ set_system_default() {
   set_default system "$@"
 }
 
+# Removes an obsolete system-wide preference when it exists.
+delete_system_default() {
+  local domain=$1
+  local key=$2
+
+  if [ "$HAS_SUDO" -ne 1 ]; then
+    echo "[WARN] Skipped obsolete key removal (sudo unavailable): $domain $key"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  if ! sudo defaults read "$domain" "$key" >/dev/null 2>&1; then
+    echo "[INFO] Already removed: $domain $key"
+    return
+  fi
+
+  if ! sudo defaults delete "$domain" "$key"; then
+    echo "[WARN] Failed to remove obsolete key: $domain $key"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  if sudo defaults read "$domain" "$key" >/dev/null 2>&1; then
+    echo "[WARN] Verification failed after removing: $domain $key"
+    DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
+    return
+  fi
+
+  echo "[SUCCESS] Removed obsolete key: $domain $key"
+  mark_changed
+}
+
 # Arrays are compared as JSON to avoid depending on `defaults read` formatting.
 set_user_array_default() {
   local domain=$1
@@ -233,9 +265,8 @@ set_user_default NSGlobalDomain NSNavPanelExpandedStateForSaveMode2 -bool true
 # 注意: 以下のコマンドはsudo権限が必要な場合があります
 # macOSアップデートを自動的にチェック
 set_system_default /Library/Preferences/com.apple.SoftwareUpdate AutomaticCheckEnabled -bool true
-# アプリケーションアップデートを7日ごとに自動的にチェック
-# ※この設定はユーザー単位でも有効ですが、システム全体に統一することで一貫性を保ちます
-set_system_default /Library/Preferences/com.apple.SoftwareUpdate ScheduleFrequency -string 7
+# 現行macOSでは利用されない旧チェック間隔キーを削除
+delete_system_default /Library/Preferences/com.apple.SoftwareUpdate ScheduleFrequency
 # アプリケーションアップデートを自動的にダウンロード
 set_system_default /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true
 # アプリケーションアップデートを自動的にインストール（セキュリティアップデートなど）

@@ -14,6 +14,23 @@ const GOOGLE_CALENDAR_ASSET_BASE =
 
 // タブ間で共有する一時ファイルのパス
 const syncFilePath = _path.default.join(os.tmpdir(), 'ferdium_gcal_sync.json');
+const validViews = new Set(['day', 'week', 'month', 'year', 'custom', 'agenda']);
+
+const isValidCalendarState = state => {
+  if (!state || typeof state !== 'object' || !validViews.has(state.view)) {
+    return false;
+  }
+
+  if (!/^\d{4}$/.test(state.year) ||
+      !/^\d{1,2}$/.test(state.month) ||
+      !/^\d{1,2}$/.test(state.day)) {
+    return false;
+  }
+
+  const month = Number(state.month);
+  const day = Number(state.day);
+  return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+};
 
 module.exports = Ferdium => {
   // 自身のタブを識別する一意のID
@@ -22,12 +39,33 @@ module.exports = Ferdium => {
   // user.jsからの書き込み要求をフックしてファイルに保存
   window.addEventListener('ferdium_gcal_send_state', (event) => {
     const state = event.detail;
-    state.senderId = myTabId;
-    state.timestamp = Date.now();
+    if (!isValidCalendarState(state)) {
+      console.warn('[GCal Sync] 不正なカレンダー状態を破棄しました:', state);
+      return;
+    }
+
+    const payload = {
+      ...state,
+      senderId: myTabId,
+      timestamp: Date.now(),
+    };
+    const temporaryPath = `${syncFilePath}.${process.pid}.${myTabId}.tmp`;
+
     try {
-      fs.writeFileSync(syncFilePath, JSON.stringify(state), 'utf8');
+      fs.writeFileSync(temporaryPath, JSON.stringify(payload), {
+        encoding: 'utf8',
+        mode: 0o600,
+      });
+      fs.renameSync(temporaryPath, syncFilePath);
     } catch (err) {
-      // 権限エラー等の対策
+      try {
+        fs.unlinkSync(temporaryPath);
+      } catch (cleanupError) {
+        if (cleanupError.code !== 'ENOENT') {
+          console.error('[GCal Sync] 一時ファイルの削除に失敗しました:', cleanupError);
+        }
+      }
+      console.error('[GCal Sync] 状態ファイルの書き込みに失敗しました:', err);
     }
   });
 
@@ -43,6 +81,12 @@ module.exports = Ferdium => {
       const content = fs.readFileSync(syncFilePath, 'utf8');
       if (!content) return;
       const data = JSON.parse(content);
+      if (!isValidCalendarState(data) ||
+          typeof data.senderId !== 'string' ||
+          !Number.isFinite(data.timestamp)) {
+        console.warn('[GCal Sync] 不正な同期データを破棄しました:', data);
+        return;
+      }
 
       // 他のタブが3秒以内に書き込んだデータであればuser.jsへ通知
       if (data && data.senderId !== myTabId && (Date.now() - data.timestamp < 3000)) {
@@ -50,7 +94,7 @@ module.exports = Ferdium => {
         window.dispatchEvent(customEvent);
       }
     } catch (err) {
-      // エラーは黙殺
+      console.error('[GCal Sync] 状態ファイルの読み込みに失敗しました:', err);
     }
   }, 400);
 

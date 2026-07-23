@@ -45,9 +45,14 @@ log_info "シンボリックリンクの状態を確認・作成します..."
 create_symlink "$ICLOUD_IGNORE_FILE" "$LOCAL_GIT_IGNORE_FILE" "$LOCAL_BACKUP_DIR" "ignore" "ignore ファイル" || exit 1
 
 # 5. Gitグローバル設定の更新
-log_info "Gitのグローバル設定を更新中..."
-git config --global core.excludesfile "$LOCAL_GIT_IGNORE_FILE"
-log_success "Gitのグローバルignore設定を更新しました: core.excludesfile -> $LOCAL_GIT_IGNORE_FILE"
+current_excludes_file=$(git config --global --get core.excludesfile || true)
+if [ "$current_excludes_file" = "$LOCAL_GIT_IGNORE_FILE" ]; then
+    log_success "Gitのグローバルignore設定は既に正しく設定されています"
+else
+    log_info "Gitのグローバル設定を更新中..."
+    git config --global core.excludesfile "$LOCAL_GIT_IGNORE_FILE"
+    log_success "Gitのグローバルignore設定を更新しました: core.excludesfile -> $LOCAL_GIT_IGNORE_FILE"
+fi
 
 # 完了メッセージの表示
 symlinks_info="  ignore: $LOCAL_GIT_IGNORE_FILE -> $ICLOUD_IGNORE_FILE"

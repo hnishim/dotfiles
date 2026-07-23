@@ -7,14 +7,17 @@
 source "$(dirname "$0")/../lib/common.sh"
 
 # 変数定義
+# Script path
+SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+
 # Local path
 LOCAL_USER_DIR="$HOME/Library/Application Support/Cursor/User"
 LOCAL_SETTINGS_JSON="$LOCAL_USER_DIR/settings.json"
 LOCAL_KEYBINDINGS_JSON="$LOCAL_USER_DIR/keybindings.json"
 LOCAL_BACKUP_DIR="$LOCAL_USER_DIR/_backup"
 
-# iCloud path
-ICLOUD_CURSOR_DIR="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/dotfiles/cursor"
+# Repository path
+ICLOUD_CURSOR_DIR="$SCRIPT_DIR"
 ICLOUD_SETTINGS_JSON="$ICLOUD_CURSOR_DIR/user-profile/settings.json"
 ICLOUD_KEYBINDINGS_JSON="$ICLOUD_CURSOR_DIR/user-profile/keybindings.json"
 ICLOUD_EXTENSIONS_YML="$ICLOUD_CURSOR_DIR/extensions/extensions.yml"

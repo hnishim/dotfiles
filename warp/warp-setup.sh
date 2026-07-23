@@ -28,8 +28,12 @@ log_success "前提条件チェック完了"
 
 # 2. ローカルWarp設定ディレクトリの作成
 log_info "ローカルWarp設定ディレクトリを確認・作成中..."
-mkdir -p "$LOCAL_WARP_DIR"
-log_success "ディレクトリを作成しました: $LOCAL_WARP_DIR"
+if [ -d "$LOCAL_WARP_DIR" ]; then
+    log_info "ディレクトリは既に存在します: $LOCAL_WARP_DIR"
+else
+    mkdir -p "$LOCAL_WARP_DIR"
+    log_success "ディレクトリを作成しました: $LOCAL_WARP_DIR"
+fi
 
 # 3. バックアップディレクトリの作成
 create_backup_dir "$LOCAL_BACKUP_DIR"

@@ -1,7 +1,24 @@
 module.exports = (config, Ferdium) => {
   // 日付指定があるURL用の正規表現
   const urlRegex = /\/calendar\/u\/\d+\/r\/(day|week|month|year|custom|agenda)\/(\d{4})\/(\d{1,2})\/(\d{1,2})/;
+  const validViews = new Set(['day', 'week', 'month', 'year', 'custom', 'agenda']);
   let isProcessing = false;
+
+  function isValidCalendarState(state) {
+    if (!state || typeof state !== 'object' || !validViews.has(state.view)) {
+      return false;
+    }
+
+    if (!/^\d{4}$/.test(state.year) ||
+        !/^\d{1,2}$/.test(state.month) ||
+        !/^\d{1,2}$/.test(state.day)) {
+      return false;
+    }
+
+    const month = Number(state.month);
+    const day = Number(state.day);
+    return month >= 1 && month <= 12 && day >= 1 && day <= 31;
+  }
 
   // 初期表示（日付なし）のときにDOMから現在表示されている日付を取得するフォールバック
   function getDateFromDOM() {
@@ -21,7 +38,7 @@ module.exports = (config, Ferdium) => {
         }
       }
     } catch (e) {
-      // 取得失敗時はnullを返す
+      console.warn('[GCal Sync] DOMからの日付取得に失敗しました:', e);
     }
     return null;
   }
@@ -43,7 +60,10 @@ module.exports = (config, Ferdium) => {
   // webview.js経由で他タブの変更を検知した時の処理
   window.addEventListener('ferdium_gcal_receive_state', (event) => {
     const data = event.detail;
-    if (!data) return;
+    if (!isValidCalendarState(data)) {
+      console.warn('[GCal Sync] 不正な同期データを破棄しました:', data);
+      return;
+    }
 
     const currentState = getCalendarState(window.location.href);
 

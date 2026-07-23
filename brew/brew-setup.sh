@@ -14,19 +14,25 @@ PACKAGE_FILE="$SCRIPT_DIR/packages.yml"
 # --- Argument Parsing ---
 INSTALL_PERSONAL=false
 INSTALL_BUSINESS=false
+UPDATE_HOMEBREW=false
 
-for arg in "$@"
-do
-    case $arg in
+while [ "$#" -gt 0 ]; do
+    case "$1" in
         --personal)
-        INSTALL_PERSONAL=true
-        shift
-        ;;
+            INSTALL_PERSONAL=true
+            ;;
         --business)
-        INSTALL_BUSINESS=true
-        shift
-        ;;
+            INSTALL_BUSINESS=true
+            ;;
+        --update)
+            UPDATE_HOMEBREW=true
+            ;;
+        *)
+            log_error "未対応の引数です: $1"
+            exit 1
+            ;;
     esac
+    shift
 done
 
 # --- Homebrew Install ---
@@ -56,9 +62,13 @@ fi
 # Add Homebrew to the current shell session's PATH
 eval "$(/opt/homebrew/bin/brew shellenv)"
 
-log_info "Homebrewを更新中..."
-brew update
-log_success "Homebrewの更新が完了しました"
+if [ "$UPDATE_HOMEBREW" = true ]; then
+  log_info "Homebrewを更新中..."
+  brew update
+  log_success "Homebrewの更新が完了しました"
+else
+  log_info "Homebrewの明示更新をスキップします（更新する場合は --update を指定してください）"
+fi
 
 # --- Prerequisite Check (yq) ---
 log_info "yq (YAML processor) の確認中..."
@@ -80,6 +90,9 @@ check_path "$PACKAGE_FILE" "パッケージ定義ファイル" "file" || exit 1
 
 # インストール済みのFormula/Caskを一度だけ取得し、以降はこの一覧を参照する
 INSTALLED_BREW_PACKAGES=$(brew list --full-name -1)
+# `mas` はFormulaの処理で導入される可能性があるため、最初の利用時に一度だけ取得する
+INSTALLED_MAS_APPS=""
+MAS_APPS_LOADED=false
 
 # Installs Homebrew formulae/casks.
 # $1: Type argument for brew command ("" for formula, "--cask" for cask)
@@ -146,22 +159,29 @@ install_mas_packages() {
 		return
 	fi
 
-	# `mas list`の結果を一度だけ取得して高速化
-	local installed_apps
-	installed_apps=$(mas list)
+	if [ "$MAS_APPS_LOADED" = false ]; then
+		INSTALLED_MAS_APPS=$(mas list)
+		MAS_APPS_LOADED=true
+	fi
 
 	# yqから受け取ったTSVリストをループ処理
-	echo "$apps_tsv" | while IFS=$'\t' read -r app_id app_name; do
+	while IFS=$'\t' read -r app_id app_name; do
 		# Skip empty lines
 		if [ -z "$app_id" ]; then continue; fi
 
-		if echo "$installed_apps" | grep -q "^$app_id "; then
+		if echo "$INSTALLED_MAS_APPS" | grep -q "^$app_id "; then
 			log_success "${package_label} '$app_name' (ID: $app_id) は既にインストールされています。スキップします"
 		else
 			log_info "${package_label} '$app_name' (ID: $app_id) をインストール中..."
-			mas install "$app_id"
+			if mas install "$app_id"; then
+				INSTALLED_MAS_APPS+="${INSTALLED_MAS_APPS:+$'\n'}$app_id installed-in-this-run"
+				log_success "${package_label} '$app_name' (ID: $app_id) のインストールが完了しました"
+			else
+				log_error "${package_label} '$app_name' (ID: $app_id) のインストールに失敗しました"
+				return 1
+			fi
 		fi
-	done
+	done <<< "$apps_tsv"
 }
 
 # --- Main Installation Logic ---

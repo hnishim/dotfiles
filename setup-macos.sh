@@ -14,10 +14,15 @@ DOTFILES_ROOT=$(cd "$(dirname "$0")" && pwd)
 log_header "macOS セットアップ開始"
 
 # 1. Homebrew & アプリケーションのインストール
-# このスクリプトに渡された引数（--personal, --business）をそのままbrew.shに渡す
+# このスクリプトに渡された引数（--personal, --business, --update）をそのままbrew.shに渡す
 log_header "Step 1: Homebrew & アプリケーションのインストール"
-"$DOTFILES_ROOT/brew/brew-setup.sh" "$@"
-log_success "Homebrew & アプリケーションのインストール完了"
+if "$DOTFILES_ROOT/brew/brew-setup.sh" "$@"; then
+    log_success "Homebrew & アプリケーションのインストール完了"
+else
+    brew_status=$?
+    log_error "Homebrew & アプリケーションのインストールに失敗しました（終了コード: ${brew_status}）"
+    exit "$brew_status"
+fi
 
 # 2. それ以外の設定
 # 実行するセットアップスクリプトを配列で定義
@@ -36,7 +41,13 @@ setup_scripts=(
 for script in "${setup_scripts[@]}"; do
     script_path="$DOTFILES_ROOT/$script"
     log_info "実行中: $script"
-    bash "$script_path"
+    if bash "$script_path"; then
+        log_success "$script の実行が完了しました"
+    else
+        script_status=$?
+        log_error "$script の実行に失敗しました（終了コード: ${script_status}）"
+        exit "$script_status"
+    fi
 done
 
 log_header "全てのセットアップが完了しました！"
