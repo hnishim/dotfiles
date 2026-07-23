@@ -62,9 +62,13 @@ if [ -z "$rule_keys" ]; then
     log_info "インストール対象のルールが見つかりませんでした。"
 else
     # インストール済みnpmパッケージリストを一度だけ取得して高速化
-    installed_packages=$(npm list -g --depth=0 --json)
+    if ! installed_packages=$(npm list -g --depth=0 --json); then
+        log_error "インストール済みnpmパッケージの取得に失敗しました。"
+        exit 1
+    fi
 
-    echo "$rule_keys" | while IFS= read -r key; do
+    rule_install_failures=0
+    while IFS= read -r key; do
         # prhはtextlint本体に同梱されているためスキップ
         if [ "$key" = "prh" ]; then
             continue
@@ -97,10 +101,16 @@ else
             if npm install -g "$package_name"; then
                 log_success "ルール '$package_name' のインストールに成功しました。"
             else
-                log_error "ルール '$package_name' のインストールに失敗しました。スキップします。"
+                log_error "ルール '$package_name' のインストールに失敗しました。"
+                rule_install_failures=$((rule_install_failures + 1))
             fi
         fi
-    done
+    done <<< "$rule_keys"
+
+    if [ "$rule_install_failures" -gt 0 ]; then
+        log_error "$rule_install_failures 件のtextlintルールをインストールできませんでした。"
+        exit 1
+    fi
 fi
 
 echo ""

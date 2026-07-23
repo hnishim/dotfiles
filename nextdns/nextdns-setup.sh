@@ -4,75 +4,48 @@
 # HomebrewでNextDNSをインストールし、構成IDを設定して起動する
 
 # 共通ライブラリを読み込み
-source "$(dirname "$0")/../lib/common.sh"
+NEXTDNS_SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+source "$NEXTDNS_SCRIPT_DIR/../lib/common.sh"
 
 # --- 変数定義 ---
 
 # NextDNS設定ID
 NEXTDNS_CONFIG_ID="993725"
 NEXTDNS_PATH=""
-
-# スクリプト自身の場所を基準にパスを決定
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+NEXTDNS_CHANGED=0
 
 log_header "=== NextDNSセットアップスクリプト ==="
 
-# sudoers に NextDNS の NOPASSWD 設定を追加
-add_nextdns_sudoers_rule() {
+run_as_root() {
+    sudo "$@"
+}
+
+# 過去のスクリプトが追加した危険な NOPASSWD 設定を削除
+remove_legacy_nextdns_sudoers_rule() {
     local target_user
     target_user="${SUDO_USER:-$(whoami)}"
-    local sudoers_dir="/private/etc/sudoers.d"
-    local sudoers_file="$sudoers_dir/nextdns"
+    local sudoers_file="/private/etc/sudoers.d/nextdns"
     local expected_rule
     expected_rule="$target_user ALL=(root) NOPASSWD: $NEXTDNS_PATH"
 
-    log_info "NextDNSのsudoers設定を確認中..."
-
-    # ファイル属性とNOPASSWDでの実行結果が正しければ書き換えない。
-    # sudoersファイルの読み取りにsudoを使うと、コマンド置換内でTTY停止する場合がある。
-    if [ -f "$sudoers_file" ]; then
-        local current_metadata
-        current_metadata=$(stat -f '%Su:%Sg:%Lp' "$sudoers_file" 2>/dev/null || true)
-
-        if [ "$current_metadata" = "root:wheel:440" ] &&
-           sudo -n "$NEXTDNS_PATH" status >/dev/null 2>&1; then
-            log_success "NextDNSのsudoers設定は既に正しく構成されています"
-            return
-        fi
+    if ! run_as_root test -f "$sudoers_file"; then
+        return
     fi
 
-    # ディレクトリ作成（存在しない場合）
-    if [ ! -d "$sudoers_dir" ]; then
-        if sudo mkdir -p "$sudoers_dir"; then
-            log_success "sudoers ディレクトリを作成しました: $sudoers_dir"
-        else
-            log_error "sudoers ディレクトリの作成に失敗しました"
-            exit 1
-        fi
-    fi
-
-    # 一時ファイル作成
     local tmpfile
     tmpfile=$(mktemp "/tmp/nextdns_sudoers.XXXXXX")
     printf '%s\n' "$expected_rule" > "$tmpfile"
 
-    # visudo で検証
-    if sudo visudo -cf "$tmpfile"; then
-        # 権限・所有権を設定して配置
-        if sudo install -m 0440 -o root -g wheel "$tmpfile" "$sudoers_file" &&
-           sudo visudo -cf "$sudoers_file" >/dev/null 2>&1; then
-            log_success "sudoers エントリを配置しました: $sudoers_file"
+    if run_as_root cmp -s "$tmpfile" "$sudoers_file"; then
+        if run_as_root rm -f "$sudoers_file"; then
+            log_success "旧NextDNS NOPASSWD設定を削除しました: $sudoers_file"
         else
-            log_error "sudoers エントリの配置に失敗しました"
             rm -f "$tmpfile"
+            log_error "旧NextDNS NOPASSWD設定の削除に失敗しました"
             exit 1
         fi
     else
-        log_error "sudoers エントリの検証に失敗しました"
-        echo "内容:" >&2
-        cat "$tmpfile" >&2
-        rm -f "$tmpfile"
-        exit 1
+        log_warning "$sudoers_file は旧ルールと一致しないため、自動削除しません"
     fi
 
     rm -f "$tmpfile"
@@ -83,12 +56,30 @@ check_and_install_nextdns() {
     check_and_install_brew_package "nextdns" "NextDNS"
 }
 
-# NextDNSの設定をインストール
+# 現在のNextDNS設定が期待値と一致するか確認
+nextdns_config_matches() {
+    local current_config
+    if ! current_config=$("$NEXTDNS_PATH" config 2>/dev/null); then
+        return 1
+    fi
+
+    grep -Fqx "profile $NEXTDNS_CONFIG_ID" <<< "$current_config" &&
+        grep -Fqx "report-client-info true" <<< "$current_config" &&
+        grep -Fqx "auto-activate true" <<< "$current_config"
+}
+
+# NextDNSのlaunchdサービスがインストール済みか確認
+nextdns_service_is_installed() {
+    [ -f "/Library/LaunchDaemons/nextdns.plist" ]
+}
+
+# NextDNSのサービスと設定をインストール
 install_nextdns_config() {
     log_info "NextDNSの設定をインストール中..."
     log_info "設定ID: $NEXTDNS_CONFIG_ID"
     
-    if sudo -n "$NEXTDNS_PATH" install -config "$NEXTDNS_CONFIG_ID" -report-client-info -auto-activate; then
+    if run_as_root "$NEXTDNS_PATH" install -profile "$NEXTDNS_CONFIG_ID" -report-client-info -auto-activate; then
+        NEXTDNS_CHANGED=1
         log_success "NextDNSの設定が完了しました"
     else
         log_error "NextDNSの設定に失敗しました"
@@ -99,11 +90,11 @@ install_nextdns_config() {
 # NextDNSのステータスを取得
 get_nextdns_status() {
     local status_output
-    if ! status_output=$(sudo -n "$NEXTDNS_PATH" status 2>&1); then
-        log_error "NextDNSのステータス確認に失敗しました"
-        exit 1
+    if ! status_output=$(run_as_root "$NEXTDNS_PATH" status 2>&1); then
+        printf '%s\n' "$status_output" >&2
+        return 1
     fi
-    echo "$status_output"
+    printf '%s\n' "$status_output"
 }
 
 # NextDNSのステータスを確認（runningかどうかチェック）
@@ -116,26 +107,22 @@ check_nextdns_running() {
     fi
 }
 
-# NextDNSを再起動
-restart_nextdns() {
+# NextDNSが停止中の場合だけ起動
+ensure_nextdns_running() {
     log_info "NextDNSのステータスを確認中..."
     
-    # まずステータスを確認
     local status_output
-    status_output=$(get_nextdns_status)
+    if ! status_output=$(get_nextdns_status); then
+        log_error "NextDNSサービスの状態を確認できませんでした"
+        exit 1
+    fi
     
-    # ステータスに応じて処理を分岐
     if check_nextdns_running "$status_output"; then
-        log_info "NextDNSが動作中です。再起動を実行します..."
-        if sudo -n "$NEXTDNS_PATH" restart; then
-            log_success "NextDNSの再起動が完了しました"
-        else
-            log_error "NextDNSの再起動に失敗しました"
-            exit 1
-        fi
+        log_success "NextDNSは既に動作中です"
     elif echo "$status_output" | grep -q "stopped"; then
         log_info "NextDNSが停止中です。起動を実行します..."
-        if sudo -n "$NEXTDNS_PATH" start; then
+        if run_as_root "$NEXTDNS_PATH" start; then
+            NEXTDNS_CHANGED=1
             log_success "NextDNSの起動が完了しました"
         else
             log_error "NextDNSの起動に失敗しました"
@@ -149,10 +136,11 @@ restart_nextdns() {
 
 # NextDNSのステータスを確認
 check_nextdns_status() {
-    log_info "NextDNSのステータスを再確認中..."
+    log_info "NextDNSのステータスを確認中..."
     
-    # 少し待機してからステータスを確認
-    sleep 3
+    if [ "$NEXTDNS_CHANGED" -eq 1 ]; then
+        sleep 3
+    fi
     
     local status_output
     status_output=$(get_nextdns_status)
@@ -179,14 +167,34 @@ check_command "brew" "先にHomebrewをインストールしてください。" 
 check_and_install_nextdns
 NEXTDNS_PATH=$(command -v nextdns)
 
-# 2.5 sudoers 設定追加（ノンインタラクティブで nextdns コマンドを許可）
-add_nextdns_sudoers_rule
+# 2.5 管理者権限の確認と旧NOPASSWD設定の削除
+# defaults-setup.sh と同様に、必要な場合だけ対話認証する。
+if sudo -n true </dev/null >/dev/null 2>&1; then
+    :
+elif [ -t 0 ]; then
+    log_info "NextDNSの設定にsudo認証が必要です。パスワードを入力してください。"
+    if ! sudo -v; then
+        log_error "sudoの認証に失敗しました"
+        exit 1
+    fi
+else
+    log_error "sudo認証が必要ですが、対話可能なTerminalではありません"
+    exit 1
+fi
+remove_legacy_nextdns_sudoers_rule
 
-# 3. NextDNSの設定インストール
-install_nextdns_config
+# 3. サービスが未導入、または設定が異なる場合だけ更新
+if ! nextdns_service_is_installed; then
+    log_info "NextDNSサービスが未インストールです"
+    install_nextdns_config
+elif nextdns_config_matches; then
+    log_success "NextDNSの設定は既に期待値と一致しています"
+else
+    install_nextdns_config
+fi
 
-# 4. NextDNSの再起動
-restart_nextdns
+# 4. 停止中の場合だけ起動
+ensure_nextdns_running
 
 # 5. ステータス確認
 check_nextdns_status

@@ -1,14 +1,3 @@
-// GoogleのTrusted TypesによるinnerHTML・インジェクション制限を回避
-if (window.trustedTypes && window.trustedTypes.createPolicy) {
-  if (!window.trustedTypes.defaultPolicy) {
-    window.trustedTypes.createPolicy('default', {
-      createHTML: (string) => string,
-      createScript: (string) => string,
-      createScriptURL: (string) => string,
-    });
-  }
-}
-
 function _interopRequireDefault(obj) {
   return obj && obj.__esModule ? obj : { default: obj };
 }
@@ -16,6 +5,12 @@ function _interopRequireDefault(obj) {
 const _path = _interopRequireDefault(require('path'));
 const fs = require('fs');
 const os = require('os');
+
+// 外部アセットは変更されない固定コミットのみを参照する。
+const FERDIUM_RECIPES_COMMIT =
+  '713a79b3200a381b2fd6816699949ca553b48d94';
+const GOOGLE_CALENDAR_ASSET_BASE =
+  `https://cdn.jsdelivr.net/gh/ferdium/ferdium-recipes@${FERDIUM_RECIPES_COMMIT}/recipes/google-calendar`;
 
 // タブ間で共有する一時ファイルのパス
 const syncFilePath = _path.default.join(os.tmpdir(), 'ferdium_gcal_sync.json');
@@ -67,13 +62,7 @@ module.exports = Ferdium => {
       'https://accounts.google.com/AccountChooser?continue=https://calendar.google.com/u/0/';
   }
 
-  Ferdium.injectCSS(_path.default.join(__dirname, 'service.css'));
-  Ferdium.injectCSS(
-    'https://cdn.statically.io/gh/ferdium/ferdium-recipes/main/recipes/google-calendar/calendar.css',
-  );
-  Ferdium.injectJSUnsafe(
-    'https://cdn.statically.io/gh/ferdium/ferdium-recipes/main/recipes/google-calendar/webview-unsave.js',
-  );
+  Ferdium.injectCSS(`${GOOGLE_CALENDAR_ASSET_BASE}/calendar.css`);
 
   Ferdium.handleDarkMode(isEnabled => {
     const cssId = 'cssDarkModeWorkaround';
@@ -85,8 +74,7 @@ module.exports = Ferdium => {
         link.id = cssId;
         link.rel = 'stylesheet';
         link.type = 'text/css';
-        link.href =
-          'https://cdn.statically.io/gh/ferdium/ferdium-recipes/main/recipes/google-calendar/darkmode.css';
+        link.href = `${GOOGLE_CALENDAR_ASSET_BASE}/darkmode.css`;
         link.media = 'all';
         head.append(link);
       }

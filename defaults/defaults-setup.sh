@@ -296,8 +296,8 @@ set_user_default com.apple.Finder AppleShowAllFiles -bool true finder
 set_user_default com.apple.finder ShowPathbar -bool true finder
 # Finderにタブバーを表示
 set_user_default com.apple.finder ShowTabView -bool true finder
-# 未確認のアプリケーションを開く際の警告を無効化
-set_user_default com.apple.LaunchServices LSQuarantine -bool false
+# 未確認のアプリケーションを開く際の警告を有効化
+set_user_default com.apple.LaunchServices LSQuarantine -bool true
 # デスクトップにアイコンを表示しない
 set_user_default com.apple.finder CreateDesktop -bool false finder
 # ネットワークドライブやUSBドライブに.DS_Storeファイルを作成しない
@@ -307,10 +307,10 @@ set_user_default com.apple.desktopservices DSDontWriteUSBStores -bool true
 set_user_default com.apple.finder QuitMenuItem -bool true finder
 # 名前順でソートする際に、フォルダをファイルの前に表示
 set_user_default com.apple.finder _FXSortFoldersFirst -bool true finder
-# ディスクイメージの検証を無効化
-set_user_default com.apple.frameworks.diskimages skip-verify -bool true
-set_user_default com.apple.frameworks.diskimages skip-verify-locked -bool true
-set_user_default com.apple.frameworks.diskimages skip-verify-remote -bool true
+# ディスクイメージの検証を有効化
+set_user_default com.apple.frameworks.diskimages skip-verify -bool false
+set_user_default com.apple.frameworks.diskimages skip-verify-locked -bool false
+set_user_default com.apple.frameworks.diskimages skip-verify-remote -bool false
 # Finderのデフォルト表示形式をカラムビューに設定
 # 他の表示形式のコード: `icnv` (アイコン), `clmv` (カラム), `glyv` (ギャラリー)
 set_user_default com.apple.finder FXPreferredViewStyle -string "Clmv" finder

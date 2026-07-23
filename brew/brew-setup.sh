@@ -119,6 +119,10 @@ install_brew_packages() {
 			if brew install "${brew_args[@]}"; then
 				# 同一実行中に同じパッケージが再登場しても再インストールしない
 				INSTALLED_BREW_PACKAGES+="${INSTALLED_BREW_PACKAGES:+$'\n'}$package"
+				log_success "${package_label} '$package' のインストールが完了しました"
+			else
+				log_error "${package_label} '$package' のインストールに失敗しました"
+				return 1
 			fi
 		fi
 	done <<< "$packages"

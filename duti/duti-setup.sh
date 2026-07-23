@@ -28,8 +28,11 @@ check_path "$SETTINGS_FILE" "duti設定ファイル" "file" || exit 1
 echo "--- Setting default applications using duti ---"
 echo "Processing settings from: $SETTINGS_FILE"
 
-duti_output=$(duti "$SETTINGS_FILE" 2>&1)
-duti_status=$?
+if duti_output=$(duti "$SETTINGS_FILE" 2>&1); then
+    duti_status=0
+else
+    duti_status=$?
+fi
 
 # Cursorが拡張子だけを宣言しているファイル形式では、拡張子ハンドラーの
 # 登録後にdutiが動的UTIも設定しようとしてerror -50を返すことがある。
