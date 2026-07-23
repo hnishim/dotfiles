@@ -502,13 +502,16 @@ if [ "$SYSTEM_UI_CHANGED" -eq 1 ]; then
   killall SystemUIServer >/dev/null 2>&1 || true
 fi
 
-if [ "$DEFAULTS_CHANGED" -eq 0 ]; then
+if [ "$DEFAULTS_FAILURES" -gt 0 ]; then
+  if [ "$DEFAULTS_CHANGED" -eq 1 ]; then
+    echo "macOS defaults were updated, but some settings could not be applied."
+  else
+    echo "macOS defaults check completed, but some settings could not be applied."
+  fi
+  echo "[WARN] $DEFAULTS_FAILURES default setting(s) could not be applied."
+  exit 1
+elif [ "$DEFAULTS_CHANGED" -eq 0 ]; then
   echo "macOS defaults are already up to date."
 else
   echo "macOS defaults have been updated. Some changes may require a restart to take effect."
-fi
-
-if [ "$DEFAULTS_FAILURES" -gt 0 ]; then
-  echo "[WARN] $DEFAULTS_FAILURES default setting(s) could not be applied."
-  exit 1
 fi
