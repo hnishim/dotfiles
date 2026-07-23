@@ -78,6 +78,9 @@ check_path "$PACKAGE_FILE" "パッケージ定義ファイル" "file" || exit 1
 
 # --- Function Definitions ---
 
+# インストール済みのFormula/Caskを一度だけ取得し、以降はこの一覧を参照する
+INSTALLED_BREW_PACKAGES=$(brew list --full-name -1)
+
 # Installs Homebrew formulae/casks.
 # $1: Type argument for brew command ("" for formula, "--cask" for cask)
 # $2: yq query to get the list of packages
@@ -97,7 +100,7 @@ install_brew_packages() {
 		return
 	fi
 
-	echo "$packages" | while IFS= read -r package; do
+	while IFS= read -r package; do
 		# Skip empty lines that might result from yq output
 		if [ -z "$package" ]; then continue; fi
 
@@ -109,13 +112,16 @@ install_brew_packages() {
 		fi
 		brew_args+=("$package")
 
-		if brew list "${brew_args[@]}" &>/dev/null; then
+		if grep -Fqx -- "$package" <<< "$INSTALLED_BREW_PACKAGES"; then
 			log_success "${package_label} '$package' は既にインストールされています。スキップします"
 		else
 			log_info "${package_label} '$package' をインストール中..."
-			brew install "${brew_args[@]}"
+			if brew install "${brew_args[@]}"; then
+				# 同一実行中に同じパッケージが再登場しても再インストールしない
+				INSTALLED_BREW_PACKAGES+="${INSTALLED_BREW_PACKAGES:+$'\n'}$package"
+			fi
 		fi
-	done
+	done <<< "$packages"
 }
 
 # Installs Mac App Store apps.
