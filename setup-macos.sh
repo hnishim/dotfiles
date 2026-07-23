@@ -10,14 +10,29 @@ source "$(dirname "$0")/lib/common.sh"
 # このスクリプトが存在するディレクトリをdotfilesのルートとする
 DOTFILES_ROOT=$(cd "$(dirname "$0")" && pwd)
 
+refresh_sudo_credentials() {
+    # バックグラウンドでsudoを実行すると、TTY操作時にジョブが停止することがあるため、
+    # 必要なタイミングでフォアグラウンドから認証を更新する。
+    if sudo -n true </dev/null >/dev/null 2>&1; then
+        return
+    fi
+
+    log_info "sudoの認証期限が切れています。パスワードを入力してください。"
+    if ! sudo -v; then
+        log_error "sudoの認証に失敗しました"
+        exit 1
+    fi
+}
+
 # --- メイン処理 ---
 log_header "macOS セットアップ開始"
 
 # sudoのパスワードを最初に入力させる
 log_info "一部の処理で管理者権限が必要です。パスワードを入力してください。"
-sudo -v
-# セッションが切れないように、バックグラウンドでsudoの状態を維持する
-while true; do sudo -n true; sleep 60; kill -0 "$$" || exit; done 2>/dev/null &
+if ! sudo -v; then
+    log_error "sudoの認証に失敗しました"
+    exit 1
+fi
 
 # 1. Homebrew & アプリケーションのインストール
 # このスクリプトに渡された引数（--personal, --business）をそのままbrew.shに渡す
@@ -41,6 +56,7 @@ setup_scripts=(
 
 for script in "${setup_scripts[@]}"; do
     script_path="$DOTFILES_ROOT/$script"
+    refresh_sudo_credentials
     log_info "実行中: $script"
     bash "$script_path"
 done
