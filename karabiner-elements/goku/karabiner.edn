@@ -74,7 +74,6 @@
       [:!!g [:launch "ChatGPT"]] ;; chatGpt
       [:!!m [:launch "Meru"]] ;; Mail
       [:!!n [:launch "Notion"]]
-      [:!!o [:launch "Obsidian"]]
       [:!!p [:launch "Microsoft PowerPoint"]] ;; Password
       [:!!r [:launch "Reminders"]] ;; Reminders
       [:!!s [:launch "Slack"]] ;; Slack

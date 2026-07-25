@@ -34,7 +34,6 @@ casks:
     - microsoft-teams
     - monitorcontrol
     - notion
-    - obsidian
     - pearcleaner
     - shottr
     - slack
@@ -42,6 +41,7 @@ casks:
     - zoom
 
     # 外したもの
+    # - obsidian
     # - thaw
     # - raycast
     # - marta
