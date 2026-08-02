@@ -3,8 +3,6 @@
 # Format: <bundle_id> <uti | extension | scheme> [role]
 
 # Text, code, and web-related files (Cursor)
-com.todesktop.230313mzl4w4u92 .txt all
-com.todesktop.230313mzl4w4u92 .md all
 com.todesktop.230313mzl4w4u92 .csv all
 com.todesktop.230313mzl4w4u92 .tsv all
 com.todesktop.230313mzl4w4u92 .ini all
@@ -37,19 +35,15 @@ com.todesktop.230313mzl4w4u92 .plist all
 com.todesktop.230313mzl4w4u92 com.apple.property-list all
 com.todesktop.230313mzl4w4u92 .mk all
 
+# Plain Text (Cogito)
+com.cogito.app .txt all
+com.cogito.app .md all
+
 # Rich Text (TextEdit)
 com.apple.TextEdit .rtf all
 
 # Log files (Console)
 com.apple.Console .log all
-
-# Microsoft Office files
-com.microsoft.Word com.microsoft.word.doc editor
-com.microsoft.Word .docx all
-com.microsoft.Excel .xls all
-com.microsoft.Excel .xlsx all
-com.microsoft.Powerpoint .ppt all
-com.microsoft.Powerpoint .pptx all
 
 # Document and Image files (Preview)
 com.apple.Preview .pdf all
