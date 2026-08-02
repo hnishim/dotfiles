@@ -32,6 +32,7 @@ setup_scripts=(
     "duti/duti-setup.sh"
     "karabiner-elements/karabiner-setup.sh"
     "gitignore/global-gitignore-setup.sh"
+    "skills/skills-setup.sh"
     "warp/warp-setup.sh"
     "cursor/cursor-setup.sh"
     "ferdium/ferdium-setup.sh"
