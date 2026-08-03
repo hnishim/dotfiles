@@ -1,3 +1,7 @@
 # dotfiles: gitignore
-# raycastフォルダのみを除外
-raycast/ 
+
+# Raycastのエクスポート設定
+raycast/
+
+# 個人プロファイルを含む自動生成ファイル
+codex/AGENTS.md
