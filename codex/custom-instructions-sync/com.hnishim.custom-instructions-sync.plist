@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.hnishim.custom-instructions-sync</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>__HELPER_EXECUTABLE__</string>
+        <string>--sync</string>
+    </array>
+    <key>WatchPaths</key>
+    <array>
+        <string>__WATCH_PATH__</string>
+    </array>
+    <key>RunAtLoad</key>
+    <true/>
+    <key>ThrottleInterval</key>
+    <integer>5</integer>
+    <key>ProcessType</key>
+    <string>Background</string>
+    <key>StandardOutPath</key>
+    <string>__STDOUT_PATH__</string>
+    <key>StandardErrorPath</key>
+    <string>__STDERR_PATH__</string>
+</dict>
+</plist>
