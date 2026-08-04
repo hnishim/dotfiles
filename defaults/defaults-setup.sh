@@ -383,8 +383,8 @@ set_user_default com.apple.WindowManager dragToFullScreenEnabled -bool false
 set_user_default com.apple.finder QLEnableTextSelection -bool true finder
 
 # --- Accessibility ---
-# ズーム機能のキーボードショートカットを有効化
-set_user_default com.apple.universalaccess closeViewHotkeysEnabled -bool true
+# ズーム機能のキーボードショートカットを無効化
+set_user_default com.apple.universalaccess closeViewHotkeysEnabled -bool false
 
 # --- 日本語入力（Mac標準） ---
 # かわせみを使用する場合には特に不要な設定
