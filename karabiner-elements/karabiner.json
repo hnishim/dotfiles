@@ -2164,6 +2164,43 @@
           } ],
           "type" : "basic"
         } ]
+      }, {
+        "description" : "英字入力時、⌥Tを無効化",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "t",
+            "modifiers" : {
+              "mandatory" : [ "left_option" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "vk_none"
+          } ],
+          "conditions" : [ {
+            "input_sources" : [ {
+              "language" : "ja"
+            } ],
+            "type" : "input_source_unless"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "t",
+            "modifiers" : {
+              "mandatory" : [ "right_option" ]
+            }
+          },
+          "to" : [ {
+            "key_code" : "vk_none"
+          } ],
+          "conditions" : [ {
+            "input_sources" : [ {
+              "language" : "ja"
+            } ],
+            "type" : "input_source_unless"
+          } ],
+          "type" : "basic"
+        } ]
       } ]
     },
     "devices" : [ {

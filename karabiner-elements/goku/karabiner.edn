@@ -210,5 +210,11 @@
       [:!Cm  :vk_none] ;; Cmd + M
       [:!Qm  :vk_none] ;; Cmd (right) + M
     ]}
+
+    {:des "英字入力時、⌥Tを無効化"
+     :rules [
+      [:!Ot :vk_none :!ja] ;; Opt (left) + T
+      [:!Et :vk_none :!ja] ;; Opt (right) + T
+    ]}
   ]
 }
