@@ -6,8 +6,11 @@
     <string>com.hnishim.custom-instructions-sync</string>
     <key>ProgramArguments</key>
     <array>
+        <string>__SYNC_EXECUTABLE__</string>
         <string>__HELPER_EXECUTABLE__</string>
-        <string>--sync</string>
+        <string>__NTN_EXECUTABLE__</string>
+        <string>__CODEX_HOME_DIR__</string>
+        <string>__NOTION_CONFIG__</string>
     </array>
     <key>WatchPaths</key>
     <array>

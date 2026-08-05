@@ -45,6 +45,7 @@ struct CustomInstructionsSync {
     static let customInstructionsName = "custom-instructions.md"
     static let userProfileName = "user-profile.md"
     static let outputName = "AGENTS.md"
+    static let mirrorDirectoryName = "custom-instructions-sync"
 
     static func main() {
         do {
@@ -215,16 +216,30 @@ struct CustomInstructionsSync {
             throw SyncError.unstableSources
         }
 
-        let outputURL = access.outputURL.appendingPathComponent(outputName, isDirectory: false)
-        if let current = try? Data(contentsOf: outputURL), current == outputData {
-            try setPrivatePermissions(on: outputURL)
-            print("[SUCCESS] AGENTS.mdは最新です。更新をスキップしました。")
-            return
-        }
+        let mirrorDirectory = access.outputURL.appendingPathComponent(mirrorDirectoryName, isDirectory: true)
+        try FileManager.default.createDirectory(
+            at: mirrorDirectory,
+            withIntermediateDirectories: true,
+            attributes: [.posixPermissions: 0o700]
+        )
+        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: mirrorDirectory.path)
 
-        try outputData.write(to: outputURL, options: .atomic)
-        try setPrivatePermissions(on: outputURL)
-        print("[SUCCESS] AGENTS.mdを更新しました: \(outputURL.path)")
+        let customMirror = mirrorDirectory.appendingPathComponent(customInstructionsName, isDirectory: false)
+        let profileMirror = mirrorDirectory.appendingPathComponent(userProfileName, isDirectory: false)
+        let customUpdated = try writePrivatelyIfChanged(stablePair.custom, to: customMirror)
+        let profileUpdated = try writePrivatelyIfChanged(stablePair.profile, to: profileMirror)
+
+        let outputURL = access.outputURL.appendingPathComponent(outputName, isDirectory: false)
+        let agentsUpdated = try writePrivatelyIfChanged(outputData, to: outputURL)
+
+        if customUpdated || profileUpdated {
+            print("[SUCCESS] Notion同期用のローカルコピーを更新しました。")
+        } else {
+            print("[SUCCESS] Notion同期用のローカルコピーは最新です。")
+        }
+        print(agentsUpdated
+            ? "[SUCCESS] AGENTS.mdを更新しました: \(outputURL.path)"
+            : "[SUCCESS] AGENTS.mdは最新です。更新をスキップしました。")
     }
 
     static func readStableSources(from folderURL: URL) throws -> (custom: Data, profile: Data) {
@@ -271,6 +286,16 @@ struct CustomInstructionsSync {
 
     static func setPrivatePermissions(on url: URL) throws {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
+    }
+
+    static func writePrivatelyIfChanged(_ data: Data, to url: URL) throws -> Bool {
+        if let current = try? Data(contentsOf: url), current == data {
+            try setPrivatePermissions(on: url)
+            return false
+        }
+        try data.write(to: url, options: .atomic)
+        try setPrivatePermissions(on: url)
+        return true
     }
 
     static func writeError(_ message: String) {

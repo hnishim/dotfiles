@@ -1,0 +1,137 @@
+#!/bin/bash
+
+set -euo pipefail
+
+export LC_ALL=C
+export LANG=C
+umask 077
+
+if [ "$#" -ne 4 ]; then
+    printf '[ERROR] 使い方: sync-custom-instructions <helper> <ntn> <codex-home> <notion-config>\n' >&2
+    exit 64
+fi
+
+HELPER_EXECUTABLE=$1
+NTN_EXECUTABLE=$2
+CODEX_HOME_DIR=$3
+NOTION_CONFIG=$4
+MIRROR_DIR="$CODEX_HOME_DIR/custom-instructions-sync"
+STATE_DIR="$(dirname -- "$NOTION_CONFIG")/state"
+
+for executable in "$HELPER_EXECUTABLE" "$NTN_EXECUTABLE"; do
+    if [ ! -x "$executable" ]; then
+        printf '[ERROR] 実行ファイルが見つかりません: %s\n' "$executable" >&2
+        exit 1
+    fi
+done
+
+if [ ! -f "$NOTION_CONFIG" ]; then
+    printf '[ERROR] Notion設定が見つかりません: %s\n' "$NOTION_CONFIG" >&2
+    exit 1
+fi
+
+read_config() {
+    local key=$1
+    sed -n "s/^${key}=//p" "$NOTION_CONFIG" | tail -n 1
+}
+
+workspace_id=$(read_config workspace_id)
+custom_page_id=$(read_config custom_instructions_page_id)
+profile_page_id=$(read_config user_profile_page_id)
+
+is_notion_id() {
+    printf '%s\n' "$1" | grep -Eq '^[0-9A-Fa-f]{32}$|^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
+}
+
+for notion_id in "$workspace_id" "$custom_page_id" "$profile_page_id"; do
+    if ! is_notion_id "$notion_id"; then
+        printf '[ERROR] Notion設定に不正なIDがあります。\n' >&2
+        exit 1
+    fi
+done
+
+export NOTION_WORKSPACE_ID="$workspace_id"
+
+"$HELPER_EXECUTABLE" --sync
+
+mkdir -p "$STATE_DIR"
+chmod 700 "$STATE_DIR"
+
+temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/custom-instructions-notion.XXXXXX")
+case "${temp_dir:?}" in
+    "${TMPDIR:-/tmp}"/custom-instructions-notion.*) ;;
+    *)
+        printf '[ERROR] 想定外の一時パスです: %s\n' "$temp_dir" >&2
+        exit 1
+        ;;
+esac
+
+cleanup() {
+    case "${temp_dir:?}" in
+        "${TMPDIR:-/tmp}"/custom-instructions-notion.*) rm -rf -- "$temp_dir" ;;
+        *) printf '[ERROR] 一時ディレクトリを削除しません: %s\n' "$temp_dir" >&2 ;;
+    esac
+}
+trap cleanup EXIT
+
+normalize_markdown() {
+    awk '
+        NR == 1 && $0 == "---" { frontmatter = 1; next }
+        frontmatter && $0 == "---" { frontmatter = 0; next }
+        frontmatter { next }
+        {
+            gsub(/^[[:space:]]+/, "")
+            gsub(/[[:space:]]+$/, "")
+            if (length($0) > 0) print
+        }
+    ' "$1"
+}
+
+sync_page() {
+    local label=$1
+    local source_file=$2
+    local page_id=$3
+    local state_file="$STATE_DIR/$label.sha256"
+    local source_hash
+    local saved_hash=''
+    local attempt
+
+    if [ ! -s "$source_file" ]; then
+        printf '[ERROR] Notion同期用コピーが存在しないか空です: %s\n' "$source_file" >&2
+        return 1
+    fi
+
+    source_hash=$(shasum -a 256 "$source_file" | awk '{print $1}')
+    if [ -f "$state_file" ]; then
+        saved_hash=$(sed -n '1p' "$state_file")
+    fi
+    if [ "$saved_hash" = "$source_hash" ]; then
+        printf '[SUCCESS] %s は前回同期済みです。\n' "$label"
+        return 0
+    fi
+
+    normalize_markdown "$source_file" >"$temp_dir/$label.expected"
+
+    attempt=1
+    while [ "$attempt" -le 3 ]; do
+        if "$NTN_EXECUTABLE" pages update "$page_id" <"$source_file" >"$temp_dir/$label.update" \
+            && "$NTN_EXECUTABLE" pages get "$page_id" >"$temp_dir/$label.actual"; then
+            normalize_markdown "$temp_dir/$label.actual" >"$temp_dir/$label.normalized"
+            if cmp -s "$temp_dir/$label.expected" "$temp_dir/$label.normalized"; then
+                printf '%s\n' "$source_hash" >"$temp_dir/$label.sha256"
+                install -m 600 "$temp_dir/$label.sha256" "$state_file"
+                printf '[SUCCESS] %s をNotionへ反映し、再読込で確認しました。\n' "$label"
+                return 0
+            fi
+            printf '[ERROR] %s のNotion再読込結果が正本と一致しません（%d/3）。\n' "$label" "$attempt" >&2
+        else
+            printf '[ERROR] %s のNotion更新または再読込に失敗しました（%d/3）。\n' "$label" "$attempt" >&2
+        fi
+        attempt=$((attempt + 1))
+        [ "$attempt" -gt 3 ] || sleep 2
+    done
+    return 1
+}
+
+sync_page custom-instructions "$MIRROR_DIR/custom-instructions.md" "$custom_page_id"
+sync_page user-profile "$MIRROR_DIR/user-profile.md" "$profile_page_id"

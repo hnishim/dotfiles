@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Custom Instructions同期を設定し、Codex用AGENTS.mdを生成する。
+# Custom InstructionsをCodexとMOLCURE Notionへ同期する。
 
 set -euo pipefail
 
@@ -18,11 +18,22 @@ SWIFT_SOURCE="$ASSET_DIR/CustomInstructionsSync.swift"
 INFO_PLIST="$ASSET_DIR/Info.plist"
 ENTITLEMENTS="$ASSET_DIR/CustomInstructionsSync.entitlements"
 SOURCE_PLIST="$ASSET_DIR/$LABEL.plist"
+SYNC_SOURCE="$ASSET_DIR/sync-custom-instructions"
 CODEX_HOME_DIR="${CODEX_HOME_DIR_OVERRIDE:-${CODEX_HOME:-$HOME/.codex}}"
 CUSTOM_INSTRUCTIONS_DIR_HINT="${CUSTOM_INSTRUCTIONS_DIR_HINT:-$HOME}"
 APPLICATIONS_DIR="${CUSTOM_INSTRUCTIONS_APPLICATIONS_DIR_OVERRIDE:-$HOME/Applications}"
 APP_PATH="$APPLICATIONS_DIR/$APP_NAME"
 HELPER_EXECUTABLE="$APP_PATH/Contents/MacOS/$EXECUTABLE_NAME"
+APPLICATION_SUPPORT_DIR="${CUSTOM_INSTRUCTIONS_SUPPORT_DIR_OVERRIDE:-$HOME/Library/Application Support/$LABEL}"
+SYNC_EXECUTABLE="$APPLICATION_SUPPORT_DIR/sync-custom-instructions"
+NOTION_CONFIG="$APPLICATION_SUPPORT_DIR/notion-pages.conf"
+if [ -n "${NTN_EXECUTABLE_OVERRIDE:-}" ]; then
+    NTN_EXECUTABLE="$NTN_EXECUTABLE_OVERRIDE"
+elif NTN_EXECUTABLE=$(command -v ntn 2>/dev/null); then
+    :
+else
+    NTN_EXECUTABLE="$HOME/.local/bin/ntn"
+fi
 LAUNCH_AGENTS_DIR="${LAUNCH_AGENTS_DIR_OVERRIDE:-$HOME/Library/LaunchAgents}"
 TARGET_PLIST="$LAUNCH_AGENTS_DIR/$LABEL.plist"
 LOG_DIR="${CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE:-$HOME/Library/Logs}"
@@ -35,7 +46,7 @@ log_info() { printf '[INFO] %s\n' "$1" >&2; }
 log_success() { printf '[SUCCESS] %s\n' "$1" >&2; }
 log_error() { printf '[ERROR] %s\n' "$1" >&2; }
 
-for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST"; do
+for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$SYNC_SOURCE"; do
     if [ ! -f "$required_file" ]; then
         log_error "必要なファイルが見つかりません: $required_file"
         exit 1
@@ -47,12 +58,20 @@ if [ ! -d "$CUSTOM_INSTRUCTIONS_DIR_HINT" ]; then
     exit 1
 fi
 
+if [ ! -x "$NTN_EXECUTABLE" ]; then
+    log_error "Notion CLIが見つかりません: $NTN_EXECUTABLE"
+    log_error "公式手順でntnを導入し、MOLCUREへログインしてから再実行してください。"
+    exit 1
+fi
+
 if ! SWIFTC=$(xcrun --find swiftc 2>/dev/null); then
     log_error "Swiftコンパイラがありません。Command Line Toolsをインストールしてください。"
     exit 1
 fi
 
-mkdir -p "$CODEX_HOME_DIR" "$APPLICATIONS_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR" "$MODULE_CACHE_DIR"
+mkdir -p "$CODEX_HOME_DIR" "$APPLICATIONS_DIR" "$APPLICATION_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR" "$MODULE_CACHE_DIR"
+chmod 700 "$APPLICATION_SUPPORT_DIR"
+install -m 755 "$SYNC_SOURCE" "$SYNC_EXECUTABLE"
 
 build_root=$(mktemp -d "${TMPDIR:-/tmp}/custom-instructions-sync-build.XXXXXX")
 case "${build_root:?}" in
@@ -134,6 +153,53 @@ if [ "$authorized_output_dir" != "$CODEX_HOME_DIR" ]; then
     exit 1
 fi
 
+read_local_config() {
+    local key=$1
+    if [ -f "$NOTION_CONFIG" ]; then
+        sed -n "s/^${key}=//p" "$NOTION_CONFIG" | tail -n 1
+    fi
+    return 0
+}
+
+is_notion_id() {
+    printf '%s\n' "$1" | grep -Eq '^[0-9A-Fa-f]{32}$|^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
+}
+
+workspace_id="${NOTION_WORKSPACE_ID_OVERRIDE:-$(read_local_config workspace_id)}"
+if [ -z "$workspace_id" ]; then
+    notion_cli_config="${NOTION_HOME:-$HOME/.config/notion}/config.json"
+    if [ -f "$notion_cli_config" ]; then
+        workspace_id=$(/usr/bin/plutil -extract defaultWorkspaceIds.prod raw -o - "$notion_cli_config" 2>/dev/null || true)
+    fi
+fi
+
+custom_page_id="${NOTION_CUSTOM_INSTRUCTIONS_PAGE_ID_OVERRIDE:-$(read_local_config custom_instructions_page_id)}"
+profile_page_id="${NOTION_USER_PROFILE_PAGE_ID_OVERRIDE:-$(read_local_config user_profile_page_id)}"
+
+if [ -z "$custom_page_id" ] && [ -t 0 ]; then
+    read -r -p '基本的なガイドラインのNotionページID: ' custom_page_id
+fi
+if [ -z "$profile_page_id" ] && [ -t 0 ]; then
+    read -r -p 'ユーザープロファイルのNotionページID: ' profile_page_id
+fi
+
+for notion_id in "$workspace_id" "$custom_page_id" "$profile_page_id"; do
+    if ! is_notion_id "$notion_id"; then
+        log_error "MOLCURE NotionのワークスペースIDまたはページIDを確認できません。"
+        exit 1
+    fi
+done
+
+notion_config_temp="$build_root/notion-pages.conf"
+printf 'workspace_id=%s\ncustom_instructions_page_id=%s\nuser_profile_page_id=%s\n' \
+    "$workspace_id" "$custom_page_id" "$profile_page_id" >"$notion_config_temp"
+install -m 600 "$notion_config_temp" "$NOTION_CONFIG"
+
+if ! NOTION_WORKSPACE_ID="$workspace_id" "$NTN_EXECUTABLE" api v1/users/me >/dev/null; then
+    log_error "MOLCURE Notionの認証を確認できません。ntn loginを再実行してください。"
+    exit 1
+fi
+
 target_agents="$CODEX_HOME_DIR/AGENTS.md"
 if [ -L "$target_agents" ]; then
     backup_dir="$CODEX_HOME_DIR/backups"
@@ -148,20 +214,17 @@ if [ -L "$target_agents" ]; then
     log_success "既存のAGENTS.mdシムリンクをバックアップしました: $backup_path"
 fi
 
-log_info "初期同期を実行します。"
-"$HELPER_EXECUTABLE" --sync
+log_info "CodexとMOLCURE Notionへの初期同期を実行します。"
+"$SYNC_EXECUTABLE" "$HELPER_EXECUTABLE" "$NTN_EXECUTABLE" "$CODEX_HOME_DIR" "$NOTION_CONFIG"
 
-temp_plist=$(mktemp "${TMPDIR:-/tmp}/$LABEL.plist.XXXXXX")
-case "${temp_plist:?}" in
-    "${TMPDIR:-/tmp}"/"$LABEL".plist.*) ;;
-    *)
-        log_error "想定外のplist一時パスです: $temp_plist"
-        exit 1
-        ;;
-esac
+temp_plist="$build_root/$LABEL.plist"
 
 cp "$SOURCE_PLIST" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $HELPER_EXECUTABLE" "$temp_plist"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:1 $HELPER_EXECUTABLE" "$temp_plist"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $NTN_EXECUTABLE" "$temp_plist"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
+/usr/libexec/PlistBuddy -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
 /usr/libexec/PlistBuddy -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
 /usr/libexec/PlistBuddy -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
 /usr/libexec/PlistBuddy -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
