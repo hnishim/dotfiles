@@ -1,6 +1,5 @@
 {
   :applications {
-    :slack_notion ["^com\\.tinyspeck\\.slackmacgap$" "^notion\\.id"]
     :notion ["^notion\\.id"]
     :slack ["^com\\.tinyspeck\\.slackmacgap$"]
     :excel ["^com\\.microsoft\\.Excel"]
@@ -91,9 +90,6 @@
 
     {:des "アプリ横断でショートカットキーを統一"
      :rules [
-      ;; Slack & Notion
-      [:!Cl :!Ck :slack_notion] ;; 検索 ⌘ L -> ⌘ K
-
       ;; Notion
       [:!CSTc :!CTl :notion]  ;; ブロックリンクコピー ⌘⇧^ C -> ⌘^ L
       [:!CS7  :!CO6 :notion]  ;; 番号付き箇条書き ⌘⇧ 7 -> ⌘⌥ 6

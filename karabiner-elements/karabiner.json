@@ -224,22 +224,6 @@
         "description" : "アプリ横断でショートカットキーを統一",
         "manipulators" : [ {
           "from" : {
-            "key_code" : "l",
-            "modifiers" : {
-              "mandatory" : [ "left_command" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "k",
-            "modifiers" : [ "left_command" ]
-          } ],
-          "conditions" : [ {
-            "type" : "frontmost_application_if",
-            "bundle_identifiers" : [ "^com\\.tinyspeck\\.slackmacgap$", "^notion\\.id" ]
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
             "key_code" : "c",
             "modifiers" : {
               "mandatory" : [ "left_command", "left_control", "left_shift" ]
