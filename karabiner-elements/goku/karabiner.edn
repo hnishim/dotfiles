@@ -107,62 +107,62 @@
     {:des "Mimiでウィンドウを配置"
      :rules [
       ;; Bottom: 1/2 → 1/3 → 2/3
-      [:!CTt [[:mimi "resize_window --width-percent 100 --height-percent 33.333333 --anchor bl"]
+      [:!CCTTt [[:mimi "resize_window --width-percent 100 --height-percent 33.333333 --anchor bl"]
               ["mimi-window-cycle" 2]]
              [["mimi-window-direction" 1] ["mimi-window-cycle" 1]]]
-      [:!CTt [[:mimi "resize_window --width-percent 100 --height-percent 66.666667 --anchor bl"]
+      [:!CCTTt [[:mimi "resize_window --width-percent 100 --height-percent 66.666667 --anchor bl"]
               ["mimi-window-cycle" 0]]
              [["mimi-window-direction" 1] ["mimi-window-cycle" 2]]]
-      [:!CTt [[:mimi "resize_window bottom-half"]
+      [:!CCTTt [[:mimi "resize_window bottom-half"]
               ["mimi-window-direction" 1]
               ["mimi-window-cycle" 1]]]
 
       ;; Center: 1/2 → 1/3 → 2/3
-      [:!CTc [[:mimi "resize_window --width-percent 33.333333 --height-percent 100 --anchor cc"]
+      [:!CCTTc [[:mimi "resize_window --width-percent 33.333333 --height-percent 100 --anchor cc"]
               ["mimi-window-cycle" 2]]
              [["mimi-window-direction" 2] ["mimi-window-cycle" 1]]]
-      [:!CTc [[:mimi "resize_window --width-percent 66.666667 --height-percent 100 --anchor cc"]
+      [:!CCTTc [[:mimi "resize_window --width-percent 66.666667 --height-percent 100 --anchor cc"]
               ["mimi-window-cycle" 0]]
              [["mimi-window-direction" 2] ["mimi-window-cycle" 2]]]
-      [:!CTc [[:mimi "resize_window --width-percent 50 --height-percent 100 --anchor cc"]
+      [:!CCTTc [[:mimi "resize_window --width-percent 50 --height-percent 100 --anchor cc"]
               ["mimi-window-direction" 2]
               ["mimi-window-cycle" 1]]]
 
       ;; Left: 1/2 → 1/3 → 2/3
-      [:!CTg [[:mimi "resize_window --width-percent 33.333333 --height-percent 100 --anchor tl"]
+      [:!CCTTg [[:mimi "resize_window --width-percent 33.333333 --height-percent 100 --anchor tl"]
               ["mimi-window-cycle" 2]]
              [["mimi-window-direction" 3] ["mimi-window-cycle" 1]]]
-      [:!CTg [[:mimi "resize_window --width-percent 66.666667 --height-percent 100 --anchor tl"]
+      [:!CCTTg [[:mimi "resize_window --width-percent 66.666667 --height-percent 100 --anchor tl"]
               ["mimi-window-cycle" 0]]
              [["mimi-window-direction" 3] ["mimi-window-cycle" 2]]]
-      [:!CTg [[:mimi "resize_window left-half"]
+      [:!CCTTg [[:mimi "resize_window left-half"]
               ["mimi-window-direction" 3]
               ["mimi-window-cycle" 1]]]
 
       ;; Maximize ⌃⌘F
-      [:!CTf [[:mimi "resize_window fill"]
+      [:!CCTTf [[:mimi "resize_window fill"]
                ["mimi-window-direction" 0]
                ["mimi-window-cycle" 0]]]
 
       ;; Right: 1/2 → 1/3 → 2/3
-      [:!CTr [[:mimi "resize_window --width-percent 33.333333 --height-percent 100 --anchor tr"]
+      [:!CCTTr [[:mimi "resize_window --width-percent 33.333333 --height-percent 100 --anchor tr"]
               ["mimi-window-cycle" 2]]
              [["mimi-window-direction" 4] ["mimi-window-cycle" 1]]]
-      [:!CTr [[:mimi "resize_window --width-percent 66.666667 --height-percent 100 --anchor tr"]
+      [:!CCTTr [[:mimi "resize_window --width-percent 66.666667 --height-percent 100 --anchor tr"]
               ["mimi-window-cycle" 0]]
              [["mimi-window-direction" 4] ["mimi-window-cycle" 2]]]
-      [:!CTr [[:mimi "resize_window right-half"]
+      [:!CCTTr [[:mimi "resize_window right-half"]
               ["mimi-window-direction" 4]
               ["mimi-window-cycle" 1]]]
 
       ;; Top: 1/2 → 1/3 → 2/3
-      [:!CTn [[:mimi "resize_window --width-percent 100 --height-percent 33.333333 --anchor tl"]
+      [:!CCTTn [[:mimi "resize_window --width-percent 100 --height-percent 33.333333 --anchor tl"]
               ["mimi-window-cycle" 2]]
              [["mimi-window-direction" 5] ["mimi-window-cycle" 1]]]
-      [:!CTn [[:mimi "resize_window --width-percent 100 --height-percent 66.666667 --anchor tl"]
+      [:!CCTTn [[:mimi "resize_window --width-percent 100 --height-percent 66.666667 --anchor tl"]
               ["mimi-window-cycle" 0]]
              [["mimi-window-direction" 5] ["mimi-window-cycle" 2]]]
-      [:!CTn [[:mimi "resize_window top-half"]
+      [:!CCTTn [[:mimi "resize_window top-half"]
               ["mimi-window-direction" 5]
               ["mimi-window-cycle" 1]]]
     ]}
