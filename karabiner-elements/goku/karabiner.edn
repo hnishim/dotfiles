@@ -59,6 +59,7 @@
   :templates {
     :launch "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=%s'"
     :mimi-resize "/opt/homebrew/bin/mimi action resize_window --width-percent %s --height-percent %s --anchor %s"
+    :osascript "/usr/bin/osascript \"$HOME/.config/karabiner/.local/%s\""
   }
 
   ;; ------------------------------------------------------------
@@ -151,6 +152,11 @@
                 ["mimi-window-direction" 5] ["mimi-window-cycle" 1]]]
     ]}
 
+    {:des "Two-panes Finder"
+     :rules [
+      [:!CCOOSSf [:osascript "two-panes-finder.applescript"]]
+    ]}
+
     {:des "Comboで括弧を自動的に閉じてカーソルを中に移動"
      :rules [
       ;; ^⌥⇧リターンは日本語の確定動作（かわせみで定義必要：「変換と確定」→「全文節確定」、「候補操作」→「候補決定」）
@@ -193,7 +199,7 @@
       [[:9 :0] :to_parentheses_jp_xls     [:ja :excel]]   ;; 日本語、Excel
       [[:9 :0] :to_parentheses_en_non-xls [:!ja :!excel]] ;; 日本語以外、Excel以外
       [[:9 :0] :to_parentheses_en_xls     [:!ja :excel]]  ;; 日本語以外、Excel
-      ;; pd → 丸括弧 (Geonix)
+      ;; pd → 丸括弧（） (Geonix)
       [[:p :d] :to_parentheses_jp_non-xls [:geonix :ja :!excel]]  ;; 日本語、Excel以外
       [[:p :d] :to_parentheses_jp_xls     [:geonix :ja :excel]]   ;; 日本語、Excel
       [[:p :d] :to_parentheses_en_non-xls [:geonix :!ja :!excel]] ;; 日本語以外、Excel以外

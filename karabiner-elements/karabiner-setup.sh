@@ -19,6 +19,10 @@ LOCAL_KARABINER_DIR="$HOME/.config/karabiner"
 LOCAL_KARABINER_JSON="$LOCAL_KARABINER_DIR/karabiner.json"
 LOCAL_KARABINER_EDN="$HOME/.config/karabiner.edn"
 LOCAL_BACKUP_DIR="$LOCAL_KARABINER_DIR/_backup"
+LOCAL_ASSETS_DIR="$LOCAL_KARABINER_DIR/.local"
+TWO_PANES_FINDER_NAME="two-panes-finder.applescript"
+TWO_PANES_FINDER_LINK="$LOCAL_ASSETS_DIR/$TWO_PANES_FINDER_NAME"
+TWO_PANES_FINDER_SEARCH_ROOT="${TWO_PANES_FINDER_SEARCH_ROOT:-$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/scripts}"
 
 # Repository path
 ICLOUD_KARABINER_JSON="$SCRIPT_DIR/karabiner.json"
@@ -50,6 +54,27 @@ create_symlink "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON" "$LOCAL_BACKUP_D
 
 # --- karabiner.edn (goku) の同期 ---
 create_symlink "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN" "$LOCAL_BACKUP_DIR" "karabiner" "karabiner.edn" || exit 1
+
+# --- ローカル依存スクリプトの検出・リンク ---
+log_info "ローカル依存スクリプトを確認します..."
+mkdir -p "$LOCAL_ASSETS_DIR"
+
+two_panes_finder_source=""
+if [ -d "$TWO_PANES_FINDER_SEARCH_ROOT" ]; then
+    two_panes_finder_source=$(find "$TWO_PANES_FINDER_SEARCH_ROOT" -type f -name "$TWO_PANES_FINDER_NAME" -print -quit)
+fi
+
+if [ -n "$two_panes_finder_source" ]; then
+    if [ -e "$TWO_PANES_FINDER_LINK" ] && [ ! -L "$TWO_PANES_FINDER_LINK" ]; then
+        log_warning "Two-panes Finderのローカルリンク先が通常ファイルです。置き換えません: $TWO_PANES_FINDER_LINK"
+    elif ln -sfn "$two_panes_finder_source" "$TWO_PANES_FINDER_LINK"; then
+        log_success "Two-panes Finderをローカル依存としてリンクしました: $TWO_PANES_FINDER_LINK"
+    else
+        log_warning "Two-panes Finderのローカルリンク作成に失敗しました: $TWO_PANES_FINDER_LINK"
+    fi
+else
+    log_warning "Two-panes Finderスクリプトが見つかりません。検索先: $TWO_PANES_FINDER_SEARCH_ROOT"
+fi
 
 # --- goku を実行して karabiner.json を更新 ---
 log_info "goku を実行して karabiner.json の内容を更新します..."

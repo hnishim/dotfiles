@@ -683,6 +683,20 @@
           "type" : "basic"
         } ]
       }, {
+        "description" : "Two-panes Finder",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "f",
+            "modifiers" : {
+              "mandatory" : [ "command", "option", "shift" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/usr/bin/osascript \"$HOME/.config/karabiner/.local/two-panes-finder.applescript\""
+          } ],
+          "type" : "basic"
+        } ]
+      }, {
         "description" : "Comboで括弧を自動的に閉じてカーソルを中に移動",
         "manipulators" : [ {
           "from" : {
