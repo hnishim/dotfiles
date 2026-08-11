@@ -226,7 +226,7 @@
           "from" : {
             "key_code" : "c",
             "modifiers" : {
-              "mandatory" : [ "left_command", "left_control", "left_shift" ]
+              "mandatory" : [ "command", "control", "shift" ]
             }
           },
           "to" : [ {
@@ -242,7 +242,7 @@
           "from" : {
             "key_code" : "7",
             "modifiers" : {
-              "mandatory" : [ "left_command", "left_shift" ]
+              "mandatory" : [ "command", "shift" ]
             }
           },
           "to" : [ {
@@ -258,7 +258,7 @@
           "from" : {
             "key_code" : "8",
             "modifiers" : {
-              "mandatory" : [ "left_command", "left_shift" ]
+              "mandatory" : [ "command", "shift" ]
             }
           },
           "to" : [ {
@@ -274,7 +274,7 @@
           "from" : {
             "key_code" : "9",
             "modifiers" : {
-              "mandatory" : [ "left_command", "left_shift" ]
+              "mandatory" : [ "command", "shift" ]
             }
           },
           "to" : [ {
@@ -290,7 +290,7 @@
           "from" : {
             "key_code" : "e",
             "modifiers" : {
-              "mandatory" : [ "left_command" ]
+              "mandatory" : [ "command" ]
             }
           },
           "to" : [ {
@@ -1151,7 +1151,7 @@
         }, {
           "from" : {
             "modifiers" : {
-              "mandatory" : [ "left_shift" ]
+              "mandatory" : [ "shift" ]
             },
             "simultaneous" : [ {
               "key_code" : "open_bracket"
@@ -1190,7 +1190,7 @@
         }, {
           "from" : {
             "modifiers" : {
-              "mandatory" : [ "left_shift" ]
+              "mandatory" : [ "shift" ]
             },
             "simultaneous" : [ {
               "key_code" : "open_bracket"
@@ -1232,7 +1232,7 @@
         }, {
           "from" : {
             "modifiers" : {
-              "mandatory" : [ "left_shift" ]
+              "mandatory" : [ "shift" ]
             },
             "simultaneous" : [ {
               "key_code" : "open_bracket"
@@ -1268,7 +1268,7 @@
         }, {
           "from" : {
             "modifiers" : {
-              "mandatory" : [ "left_shift" ]
+              "mandatory" : [ "shift" ]
             },
             "simultaneous" : [ {
               "key_code" : "open_bracket"
@@ -1969,7 +1969,7 @@
         }, {
           "from" : {
             "modifiers" : {
-              "mandatory" : [ "left_shift" ]
+              "mandatory" : [ "shift" ]
             },
             "simultaneous" : [ {
               "key_code" : "semicolon"
@@ -2000,7 +2000,7 @@
         }, {
           "from" : {
             "modifiers" : {
-              "mandatory" : [ "left_shift" ]
+              "mandatory" : [ "shift" ]
             },
             "simultaneous" : [ {
               "key_code" : "semicolon"
@@ -2255,7 +2255,7 @@
           "from" : {
             "key_code" : "hyphen",
             "modifiers" : {
-              "mandatory" : [ "left_option" ]
+              "mandatory" : [ "option" ]
             }
           },
           "to" : [ {
@@ -2278,7 +2278,7 @@
           "from" : {
             "key_code" : "hyphen",
             "modifiers" : {
-              "mandatory" : [ "left_option" ]
+              "mandatory" : [ "option" ]
             }
           },
           "to" : [ {
@@ -2300,7 +2300,7 @@
           "from" : {
             "key_code" : "9",
             "modifiers" : {
-              "mandatory" : [ "left_option" ]
+              "mandatory" : [ "option" ]
             }
           },
           "to" : [ {
@@ -2329,7 +2329,7 @@
           "from" : {
             "key_code" : "9",
             "modifiers" : {
-              "mandatory" : [ "left_option" ]
+              "mandatory" : [ "option" ]
             }
           },
           "to" : [ {
@@ -2361,7 +2361,7 @@
           "from" : {
             "key_code" : "9",
             "modifiers" : {
-              "mandatory" : [ "left_option" ]
+              "mandatory" : [ "option" ]
             }
           },
           "to" : [ {
@@ -2387,7 +2387,7 @@
           "from" : {
             "key_code" : "9",
             "modifiers" : {
-              "mandatory" : [ "left_option" ]
+              "mandatory" : [ "option" ]
             }
           },
           "to" : [ {
@@ -2464,7 +2464,7 @@
           "from" : {
             "key_code" : "h",
             "modifiers" : {
-              "mandatory" : [ "left_command" ]
+              "mandatory" : [ "command" ]
             }
           },
           "to" : [ {
@@ -2475,29 +2475,7 @@
           "from" : {
             "key_code" : "h",
             "modifiers" : {
-              "mandatory" : [ "left_command", "left_option" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "vk_none"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "h",
-            "modifiers" : {
-              "mandatory" : [ "right_command" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "vk_none"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "h",
-            "modifiers" : {
-              "mandatory" : [ "right_command", "right_option" ]
+              "mandatory" : [ "command", "option" ]
             }
           },
           "to" : [ {
@@ -2508,18 +2486,7 @@
           "from" : {
             "key_code" : "m",
             "modifiers" : {
-              "mandatory" : [ "left_command" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "vk_none"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "m",
-            "modifiers" : {
-              "mandatory" : [ "right_command" ]
+              "mandatory" : [ "command" ]
             }
           },
           "to" : [ {
@@ -2533,24 +2500,7 @@
           "from" : {
             "key_code" : "t",
             "modifiers" : {
-              "mandatory" : [ "left_option" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "vk_none"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
-          } ],
-          "type" : "basic"
-        }, {
-          "from" : {
-            "key_code" : "t",
-            "modifiers" : {
-              "mandatory" : [ "right_option" ]
+              "mandatory" : [ "option" ]
             }
           },
           "to" : [ {

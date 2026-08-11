@@ -15,9 +15,9 @@
   
   :froms {
     ;; 波括弧 {}
-    :sim_curved_brackets {:sim [:open_bracket :close_bracket] :modi {:mandatory [:left_shift]}}
+    :sim_curved_brackets {:sim [:open_bracket :close_bracket] :modi {:mandatory [:shift]}}
     ;; ダブルクォート ""
-    :sim_colon_double-quote {:sim [:semicolon :quote] :modi {:mandatory [:left_shift]}}
+    :sim_colon_double-quote {:sim [:semicolon :quote] :modi {:mandatory [:shift]}}
   }
 
   :tos {
@@ -95,13 +95,13 @@
     {:des "アプリ横断でショートカットキーを統一"
      :rules [
       ;; Notion
-      [:!CSTc :!CTl :notion]  ;; ブロックリンクコピー ⌘⇧^ C -> ⌘^ L
-      [:!CS7  :!CO6 :notion]  ;; 番号付き箇条書き ⌘⇧ 7 -> ⌘⌥ 6
-      [:!CS8  :!CO5 :notion]  ;; 箇条書き ⌘⇧ 8 -> ⌘⌥ 5
-      [:!CS9  :!CO4 :notion]  ;; チェックリスト ⌘⇧ 9 -> ⌘⌥ 4
+      [:!CCTTSSc :!CTl :notion]  ;; ブロックリンクコピー ⌘⇧^ C -> ⌘^ L
+      [:!CCSS7   :!CO6 :notion]  ;; 番号付き箇条書き ⌘⇧ 7 -> ⌘⌥ 6
+      [:!CCSS8   :!CO5 :notion]  ;; 箇条書き ⌘⇧ 8 -> ⌘⌥ 5
+      [:!CCSS9   :!CO4 :notion]  ;; チェックリスト ⌘⇧ 9 -> ⌘⌥ 4
 
       ;; Slack
-      [:!Ce :!CSc :slack];; コード ⌘ E -> ⌘⇧ C (Notion's shortcut)
+      [:!CCe :!CSc :slack];; コード ⌘ E -> ⌘⇧ C (Notion's shortcut)
     ]}
 
     {:des "Mimiでウィンドウを配置"
@@ -242,16 +242,16 @@
 
     {:des "⌥- → Markdownの箇条書き"
      :rules [
-      [:!Ohyphen [:japanese_eisuu :hyphen :spacebar :japanese_kana] :ja]
-      [:!Ohyphen [                :hyphen :spacebar]                :!ja]
+      [:!OOhyphen [:japanese_eisuu :hyphen :spacebar :japanese_kana] :ja]
+      [:!OOhyphen [                :hyphen :spacebar]                :!ja]
     ]}
 
     {:des "⌥9 → （）閉じ＆カーソル移動"
      :rules [
-      [:!O9 :to_parentheses_jp_non-xls [:ja :!excel]]
-      [:!O9 :to_parentheses_jp_xls     [:ja :excel]]
-      [:!O9 :to_parentheses_en_non-xls [:!ja :!excel]]
-      [:!O9 :to_parentheses_en_xls     [:!ja :excel]]
+      [:!OO9 :to_parentheses_jp_non-xls [:ja :!excel]]
+      [:!OO9 :to_parentheses_jp_xls     [:ja :excel]]
+      [:!OO9 :to_parentheses_en_non-xls [:!ja :!excel]]
+      [:!OO9 :to_parentheses_en_xls     [:!ja :excel]]
     ]}
 
     {:des "Geonix用：F19とF20を英かなキーに"
@@ -264,20 +264,16 @@
     {:des "ウィンドウを隠すショートカットキーを無効化"
      :rules [
       ;; ウィンドウを隠す
-      [:!Ch  :vk_none] ;; Cmd + H
-      [:!COh :vk_none] ;; Cmd + Option + H
-      [:!Qh  :vk_none] ;; Cmd (right) + H
-      [:!QEh :vk_none] ;; Cmd (right) + Option (r) + H
+      [:!CCh   :vk_none] ;; Cmd（左右共通）+ H
+      [:!CCOOh :vk_none] ;; Cmd + Option（ともに左右共通）+ H
       
       ;; ウィンドウを最小化
-      [:!Cm  :vk_none] ;; Cmd + M
-      [:!Qm  :vk_none] ;; Cmd (right) + M
+      [:!CCm :vk_none] ;; Cmd（左右共通）+ M
     ]}
 
     {:des "英字入力時、⌥Tを無効化"
      :rules [
-      [:!Ot :vk_none :!ja] ;; Opt (left) + T
-      [:!Et :vk_none :!ja] ;; Opt (right) + T
+      [:!OOt :vk_none :!ja] ;; Opt（左右共通）+ T
     ]}
   ]
 }
