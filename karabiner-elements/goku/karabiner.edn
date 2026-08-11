@@ -160,11 +160,11 @@
               ["mimi-window-cycle" 2]]
              [["mimi-window-direction" 5] ["mimi-window-cycle" 1]]]
       [:!CTn [[:mimi "resize_window --width-percent 100 --height-percent 66.666667 --anchor tl"]
-               ["mimi-window-cycle" 0]]
-       [["mimi-window-direction" 5] ["mimi-window-cycle" 2]]]
+              ["mimi-window-cycle" 0]]
+             [["mimi-window-direction" 5] ["mimi-window-cycle" 2]]]
       [:!CTn [[:mimi "resize_window top-half"]
-               ["mimi-window-direction" 5]
-               ["mimi-window-cycle" 1]]]
+              ["mimi-window-direction" 5]
+              ["mimi-window-cycle" 1]]]
     ]}
 
     {:des "Comboで括弧を自動的に閉じてカーソルを中に移動"
