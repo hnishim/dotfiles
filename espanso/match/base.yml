@@ -1,0 +1,137 @@
+# espanso match file
+
+# For a complete introduction, visit the official docs at: https://espanso.org/docs/
+
+# You can use this file to define the base matches (aka snippets)
+# that will be available in every application when using espanso.
+
+# Matches are substitution rules: when you type the "trigger" string
+# it gets replaced by the "replace" string.
+
+# yaml-language-server: $schema=https://raw.githubusercontent.com/espanso/espanso/dev/schemas/match.schema.json
+
+matches:
+  # NOTE: espanso uses YAML to define matches, so pay attention to the indentation!
+  # But matches can also be dynamic:
+  # And much more! For more information, visit the docs: https://espanso.org/docs/
+
+  - trigger: migu
+    replace: Miguel-san
+
+  - trigger: '\today'
+    replace: "{{today}}"
+    vars:
+      - name: today
+        type: date
+        params:
+          format: "%Y%m%d"
+
+  - trigger: phd
+    replace: Ph.D.
+
+  - trigger: '\tbd'
+    replace: To be discussed
+
+  - trigger: '\tbc'
+    replace: To be confirmed
+
+  # Color Sceme
+
+  - trigger: '\clr'
+    replace: 06883F
+    label: JCR Pharma
+
+  - trigger: '\clr'
+    replace: 003F73
+    label: "[Koopa]小野薬品工業/Ono"
+
+  - trigger: '\clr'
+    replace: 67C688
+    label: "[Peach]ファーマフーズ/PFI"
+
+  # Shell Commands
+
+  - trigger: '\git'
+    replace: 'git add . && git commit -m "$|$" && git push'
+
+  # テキスト補完
+
+  - triggers: [Meso, meso]
+    replace: Mesothelin
+
+  - triggers: [Boe, boe]
+    replace: Boehringer Ingelheim
+
+  # Laten
+
+  - trigger: etc
+    replace: "etc. "
+
+  - trigger: e.g
+    replace: "e.g., "
+
+  # Laten Italic
+
+  - trigger: de novo
+    markdown: "*de novo*"
+
+  - trigger: De novo
+    markdown: "*De novo*"
+
+  - trigger: in vivo
+    markdown: "*in vivo*"
+
+  - trigger: in vitro
+    markdown: "*in vitro*"
+
+  - trigger: in silico
+    markdown: "*in silico*"
+
+  - trigger: etal
+    markdown: "*et al.*"
+
+  # Correct spelling
+
+  - trigger: modarity
+    replace: modality
+
+  - trigger: Temas
+    replace: Teams
+
+  - trigger: experiemental
+    replace: experimental
+
+  - trigger: quikc
+    replace: quick
+
+  # 記号
+
+  - trigger: '\command'
+    replace: ⌘
+
+  - trigger: '\option'
+    replace: ⌥
+
+  - trigger: '\control'
+    replace: "^"
+
+  - trigger: '\dia'
+    replace: ✦
+
+  - trigger: '\sft'
+    replace: ⇧
+
+  - trigger: '\shift'
+    replace: ⇧
+
+  - trigger: '\ctr'
+    replace: "^"
+
+  - trigger: '\cmd'
+    replace: ⌘
+
+  - trigger: '\opt'
+    replace: ⌥
+
+  - trigger: '\hyper'
+    replace: ✦

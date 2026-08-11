@@ -35,6 +35,7 @@ setup_scripts=(
     "skills/skills-setup.sh"
     "codex/codex-setup.sh"
     "warp/warp-setup.sh"
+    "espanso/espanso-setup.sh"
     "cursor/cursor-setup.sh"
     "ferdium/ferdium-setup.sh"
     "textlint/textlint-setup.sh"
