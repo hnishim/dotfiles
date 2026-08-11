@@ -1,5 +1,9 @@
 #!/bin/bash
 
+if [ -z "${BASH_VERSION:-}" ] || set -o | grep -q '^posix[[:space:]]*on$'; then
+    exec /bin/bash "$0" "$@"
+fi
+
 # Custom InstructionsをCodexとMOLCURE Notionへ同期する。
 
 set -euo pipefail
@@ -54,12 +58,6 @@ done
 
 if [ ! -d "$CUSTOM_INSTRUCTIONS_DIR_HINT" ]; then
     log_error "正本フォルダー候補が見つかりません: $CUSTOM_INSTRUCTIONS_DIR_HINT"
-    exit 1
-fi
-
-if [ ! -x "$NTN_EXECUTABLE" ]; then
-    log_error "Notion CLIが見つかりません: $NTN_EXECUTABLE"
-    log_error "公式手順でntnを導入し、MOLCUREへログインしてから再実行してください。"
     exit 1
 fi
 
@@ -152,6 +150,79 @@ if [ "$authorized_output_dir" != "$CODEX_HOME_DIR" ]; then
     exit 1
 fi
 
+target_agents="$CODEX_HOME_DIR/AGENTS.md"
+if [ -L "$target_agents" ]; then
+    backup_dir="$CODEX_HOME_DIR/backups"
+    backup_timestamp=$(date '+%Y%m%d-%H%M%S')
+    backup_path="$backup_dir/AGENTS.md.symlink.$backup_timestamp"
+    mkdir -p "$backup_dir"
+    if [ -e "$backup_path" ] || [ -L "$backup_path" ]; then
+        log_error "バックアップ先が既に存在します: $backup_path"
+        exit 1
+    fi
+    mv "$target_agents" "$backup_path"
+    log_success "既存のAGENTS.mdシムリンクをバックアップしました: $backup_path"
+fi
+
+log_info "Codex用AGENTS.mdの初期同期を実行します。"
+"$HELPER_EXECUTABLE" --sync
+
+install_sync_launch_agent() {
+    local temp_plist="$build_root/$LABEL.plist"
+    local attempt
+    local job_state
+
+    cp "$SOURCE_PLIST" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:1 $HELPER_EXECUTABLE" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $NTN_EXECUTABLE" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
+    plutil -lint "$temp_plist" >/dev/null
+
+    if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
+        launchctl bootout "$DOMAIN/$LABEL"
+    fi
+    install -m 600 "$temp_plist" "$TARGET_PLIST"
+    launchctl bootstrap "$DOMAIN" "$TARGET_PLIST"
+    launchctl kickstart -k "$DOMAIN/$LABEL"
+
+    attempt=1
+    while [ "$attempt" -le 40 ]; do
+        job_state=$(launchctl print "$DOMAIN/$LABEL" 2>/dev/null || true)
+        if printf '%s\n' "$job_state" | grep -q 'last exit code = 0'; then
+            if [ ! -f "$target_agents" ] || [ -L "$target_agents" ]; then
+                log_error "通常ファイルのAGENTS.mdを確認できません: $target_agents"
+                return 1
+            fi
+            log_success "LaunchAgentの正常終了を確認しました。"
+            log_success "Codex用AGENTS.mdを確認しました: $target_agents"
+            return 0
+        fi
+        sleep 0.25
+        attempt=$((attempt + 1))
+    done
+
+    tail -n 40 "$STDERR_PATH" 2>/dev/null || true
+    log_error "LaunchAgentの正常終了を確認できませんでした。"
+    return 1
+}
+
+if [ ! -x "$NTN_EXECUTABLE" ]; then
+    log_warning "Notion CLIが見つかりません。MOLCURE Notion同期の設定をスキップします: $NTN_EXECUTABLE"
+    install_sync_launch_agent || exit 1
+    exit 0
+fi
+
+if ! "$NTN_EXECUTABLE" whoami >/dev/null; then
+    log_warning "MOLCURE Notionにログインしていません。MOLCURE Notion同期の設定をスキップします。ntn login後に再実行してください。"
+    install_sync_launch_agent || exit 1
+    exit 0
+fi
+
 read_local_config() {
     local key=$1
     if [ -f "$NOTION_CONFIG" ]; then
@@ -194,64 +265,7 @@ printf 'workspace_id=%s\ncustom_instructions_page_id=%s\nuser_profile_page_id=%s
     "$workspace_id" "$custom_page_id" "$profile_page_id" >"$notion_config_temp"
 install -m 600 "$notion_config_temp" "$NOTION_CONFIG"
 
-if ! NOTION_WORKSPACE_ID="$workspace_id" "$NTN_EXECUTABLE" api v1/users/me >/dev/null; then
-    log_error "MOLCURE Notionの認証を確認できません。ntn loginを再実行してください。"
-    exit 1
-fi
-
-target_agents="$CODEX_HOME_DIR/AGENTS.md"
-if [ -L "$target_agents" ]; then
-    backup_dir="$CODEX_HOME_DIR/backups"
-    backup_timestamp=$(date '+%Y%m%d-%H%M%S')
-    backup_path="$backup_dir/AGENTS.md.symlink.$backup_timestamp"
-    mkdir -p "$backup_dir"
-    if [ -e "$backup_path" ] || [ -L "$backup_path" ]; then
-        log_error "バックアップ先が既に存在します: $backup_path"
-        exit 1
-    fi
-    mv "$target_agents" "$backup_path"
-    log_success "既存のAGENTS.mdシムリンクをバックアップしました: $backup_path"
-fi
-
-log_info "CodexとMOLCURE Notionへの初期同期を実行します。"
+log_info "MOLCURE Notionへの初期同期を実行します。"
 "$SYNC_EXECUTABLE" "$HELPER_EXECUTABLE" "$NTN_EXECUTABLE" "$CODEX_HOME_DIR" "$NOTION_CONFIG"
 
-temp_plist="$build_root/$LABEL.plist"
-
-cp "$SOURCE_PLIST" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :ProgramArguments:1 $HELPER_EXECUTABLE" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $NTN_EXECUTABLE" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
-/usr/libexec/PlistBuddy -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
-plutil -lint "$temp_plist" >/dev/null
-
-if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
-    launchctl bootout "$DOMAIN/$LABEL"
-fi
-install -m 600 "$temp_plist" "$TARGET_PLIST"
-launchctl bootstrap "$DOMAIN" "$TARGET_PLIST"
-launchctl kickstart -k "$DOMAIN/$LABEL"
-
-attempt=1
-while [ "$attempt" -le 40 ]; do
-    job_state=$(launchctl print "$DOMAIN/$LABEL" 2>/dev/null || true)
-    if printf '%s\n' "$job_state" | grep -q 'last exit code = 0'; then
-        if [ ! -f "$target_agents" ] || [ -L "$target_agents" ]; then
-            log_error "通常ファイルのAGENTS.mdを確認できません: $target_agents"
-            exit 1
-        fi
-        log_success "LaunchAgentの正常終了を確認しました。"
-        log_success "Codex用AGENTS.mdを確認しました: $target_agents"
-        exit 0
-    fi
-    sleep 0.25
-    attempt=$((attempt + 1))
-done
-
-tail -n 40 "$STDERR_PATH" 2>/dev/null || true
-log_error "LaunchAgentの正常終了を確認できませんでした。"
-exit 1
+install_sync_launch_agent || exit 1

@@ -18,16 +18,26 @@ NOTION_CONFIG=$4
 MIRROR_DIR="$CODEX_HOME_DIR/custom-instructions-sync"
 STATE_DIR="$(dirname -- "$NOTION_CONFIG")/state"
 
-for executable in "$HELPER_EXECUTABLE" "$NTN_EXECUTABLE"; do
-    if [ ! -x "$executable" ]; then
-        printf '[ERROR] 実行ファイルが見つかりません: %s\n' "$executable" >&2
-        exit 1
-    fi
-done
+if [ ! -x "$HELPER_EXECUTABLE" ]; then
+    printf '[ERROR] 実行ファイルが見つかりません: %s\n' "$HELPER_EXECUTABLE" >&2
+    exit 1
+fi
+
+"$HELPER_EXECUTABLE" --sync
+
+if [ ! -x "$NTN_EXECUTABLE" ]; then
+    printf '[WARNING] Notion CLIが見つかりません。CodexとMOLCURE Notionの同期をスキップします。\n' >&2
+    exit 0
+fi
+
+if ! "$NTN_EXECUTABLE" whoami >/dev/null; then
+    printf '[WARNING] MOLCURE Notionにログインしていません。CodexとMOLCURE Notionの同期をスキップします。\n' >&2
+    exit 0
+fi
 
 if [ ! -f "$NOTION_CONFIG" ]; then
-    printf '[ERROR] Notion設定が見つかりません: %s\n' "$NOTION_CONFIG" >&2
-    exit 1
+    printf '[WARNING] Notion設定が見つかりません。Notion同期をスキップします: %s\n' "$NOTION_CONFIG" >&2
+    exit 0
 fi
 
 read_config() {
@@ -45,8 +55,8 @@ is_notion_id() {
 
 for notion_id in "$workspace_id" "$custom_page_id" "$profile_page_id"; do
     if ! is_notion_id "$notion_id"; then
-        printf '[ERROR] Notion設定に不正なIDがあります。\n' >&2
-        exit 1
+        printf '[WARNING] Notion設定に不正なIDがあります。Notion同期をスキップします。\n' >&2
+        exit 0
     fi
 done
 

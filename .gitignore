@@ -2,6 +2,3 @@
 
 # Raycastのエクスポート設定
 raycast/
-
-# 個人プロファイルを含むローカル正本
-codex/AGENTS.md
