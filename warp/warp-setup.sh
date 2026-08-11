@@ -9,7 +9,7 @@ source "$(dirname "$0")/../lib/common.sh"
 # --- 変数定義 ---
 
 # スクリプト自身の場所を基準にiCloud上の設定ファイルのパスを決定
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(get_script_dir)
 ICLOUD_KEYBINDINGS_FILE="$SCRIPT_DIR/keybindings.yaml"
 
 # ローカルのWarp設定パス
@@ -27,13 +27,7 @@ check_path "$ICLOUD_KEYBINDINGS_FILE" "実体ファイル" "file" || exit 1
 log_success "前提条件チェック完了"
 
 # 2. ローカルWarp設定ディレクトリの作成
-log_info "ローカルWarp設定ディレクトリを確認・作成中..."
-if [ -d "$LOCAL_WARP_DIR" ]; then
-    log_info "ディレクトリは既に存在します: $LOCAL_WARP_DIR"
-else
-    mkdir -p "$LOCAL_WARP_DIR"
-    log_success "ディレクトリを作成しました: $LOCAL_WARP_DIR"
-fi
+ensure_directory "$LOCAL_WARP_DIR" "ローカルWarp設定ディレクトリ" || exit 1
 
 # 3. バックアップディレクトリの作成
 create_backup_dir "$LOCAL_BACKUP_DIR"

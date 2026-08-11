@@ -8,7 +8,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 # --- 変数定義 ---
 
-SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
+SCRIPT_DIR=$(get_script_dir)
 ICLOUD_GCAL_DIR="$SCRIPT_DIR/recipes/google-calendar"
 ICLOUD_USER_JS="$ICLOUD_GCAL_DIR/user.js"
 ICLOUD_WEBVIEW_JS="$ICLOUD_GCAL_DIR/webview.js"
@@ -27,9 +27,7 @@ check_path "$ICLOUD_WEBVIEW_JS" "webview.js（dotfiles）" "file" || exit 1
 log_success "前提条件チェック完了"
 
 # --- ローカルディレクトリの作成 ---
-log_info "ローカルFerdiumレシピディレクトリを確認・作成中..."
-mkdir -p "$LOCAL_GCAL_DIR"
-log_success "ディレクトリを確認しました: $LOCAL_GCAL_DIR"
+ensure_directory "$LOCAL_GCAL_DIR" "ローカルFerdiumレシピディレクトリ" || exit 1
 
 # --- バックアップディレクトリの作成 ---
 create_backup_dir "$LOCAL_BACKUP_DIR"

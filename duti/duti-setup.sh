@@ -9,7 +9,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 # --- Configuration ---
 # Point to the settings file in the same directory as the script.
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPT_DIR=$(get_script_dir)
 SETTINGS_FILE="$SCRIPT_DIR/duti_settings.duti"
 
 # --- 事前チェック ---

@@ -4,11 +4,14 @@
 
 set -euo pipefail
 
+# 共通ライブラリを読み込み
+source "$(dirname "$0")/../lib/common.sh"
+
 export LC_ALL=C
 export LANG=C
 umask 077
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPT_DIR=$(get_script_dir)
 ASSET_DIR="$SCRIPT_DIR/custom-instructions-sync"
 
 LABEL='com.hnishim.custom-instructions-sync'
@@ -41,10 +44,6 @@ STDOUT_PATH="$LOG_DIR/$LABEL.log"
 STDERR_PATH="$LOG_DIR/$LABEL.err.log"
 DOMAIN="gui/$(id -u)"
 MODULE_CACHE_DIR="${CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE:-$HOME/Library/Caches/$LABEL/SwiftModuleCache}"
-
-log_info() { printf '[INFO] %s\n' "$1" >&2; }
-log_success() { printf '[SUCCESS] %s\n' "$1" >&2; }
-log_error() { printf '[ERROR] %s\n' "$1" >&2; }
 
 for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$SYNC_SOURCE"; do
     if [ ! -f "$required_file" ]; then

@@ -9,7 +9,7 @@ source "$(dirname "$0")/../lib/common.sh"
 # --- 変数定義 ---
 
 # dotfiles上のEspanso設定パス
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPT_DIR=$(get_script_dir)
 ICLOUD_DEFAULT_YML="$SCRIPT_DIR/config/default.yml"
 ICLOUD_BASE_YML="$SCRIPT_DIR/match/base.yml"
 
@@ -33,12 +33,7 @@ log_success "前提条件チェック完了"
 
 # 2. ローカル設定ディレクトリの作成
 for directory in "$LOCAL_CONFIG_DIR" "$LOCAL_MATCH_DIR"; do
-    if [ -d "$directory" ]; then
-        log_info "ディレクトリは既に存在します: $directory"
-    else
-        mkdir -p "$directory"
-        log_success "ディレクトリを作成しました: $directory"
-    fi
+    ensure_directory "$directory" "Espanso設定ディレクトリ" || exit 1
 done
 
 # 3. バックアップディレクトリの作成

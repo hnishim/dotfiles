@@ -7,7 +7,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 # --- 変数定義 ---
 # このスクリプトが存在するディレクトリ
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPT_DIR=$(get_script_dir)
 # 設定ファイル
 ICLOUD_TEXTLINT_CONFIG="$SCRIPT_DIR/.textlintrc.json"
 ICLOUD_PRH_CONFIG="$SCRIPT_DIR/my-prh.yml"
@@ -16,7 +16,6 @@ HOME_TEXTLINT_CONFIG="$HOME/.textlintrc.json"
 HOME_PRH_CONFIG="$HOME/my-prh.yml"
 # バックアップ用ディレクトリ
 BACKUP_DIR="$HOME/.config_backup/textlint"
-BACKUP_DATE=$(date +%Y%m%d)
 
 # --- 前提条件チェック ---
 log_info "前提条件をチェックしています..."
@@ -119,27 +118,8 @@ log_info "--- 設定ファイルのシンボリックリンクを作成します
 # バックアップディレクトリの作成
 create_backup_dir "$BACKUP_DIR"
 
-# シンボリックリンク作成用の汎用関数
-create_symlink() {
-    local source_file=$1
-    local link_name=$2
-    local file_label=$3
-
-    if [ -L "$link_name" ] && [ "$(readlink "$link_name")" = "$source_file" ]; then
-        log_success "$file_label は既に正しくリンクされています。"
-    else
-        log_info "$file_label の設定を開始します..."
-        if [ -e "$link_name" ] || [ -L "$link_name" ]; then
-            mv "$link_name" "$BACKUP_DIR/$(basename "$link_name")_${BACKUP_DATE}"
-            log_success "既存の $file_label をバックアップしました。"
-        fi
-        ln -s "$source_file" "$link_name"
-        log_success "$file_label のシンボリックリンクを作成しました。"
-    fi
-}
-
-create_symlink "$ICLOUD_TEXTLINT_CONFIG" "$HOME_TEXTLINT_CONFIG" ".textlintrc.json"
-create_symlink "$ICLOUD_PRH_CONFIG" "$HOME_PRH_CONFIG" "my-prh.yml"
+create_symlink "$ICLOUD_TEXTLINT_CONFIG" "$HOME_TEXTLINT_CONFIG" "$BACKUP_DIR" ".textlintrc.json" ".textlintrc.json" || exit 1
+create_symlink "$ICLOUD_PRH_CONFIG" "$HOME_PRH_CONFIG" "$BACKUP_DIR" "my-prh.yml" "my-prh.yml" || exit 1
 
 # 完了メッセージの表示
 symlinks_info="  .textlintrc.json: $HOME_TEXTLINT_CONFIG -> $ICLOUD_TEXTLINT_CONFIG

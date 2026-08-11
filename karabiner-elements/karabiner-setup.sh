@@ -12,7 +12,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 # 変数定義
 # Script path
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPT_DIR=$(get_script_dir)
 
 # Local path
 LOCAL_KARABINER_DIR="$HOME/.config/karabiner"

@@ -7,7 +7,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 # --- 変数定義 ---
 
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPT_DIR=$(get_script_dir)
 DOTFILES_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 DEV_ROOT=$(cd "$DOTFILES_ROOT/.." && pwd)
 
@@ -44,12 +44,7 @@ if [ "$skill_count" -eq 0 ]; then
     exit 1
 fi
 
-if [ ! -d "$LOCAL_CODEX_SKILLS_DIR" ]; then
-    mkdir -p "$LOCAL_CODEX_SKILLS_DIR"
-    log_success "ローカルCodexスキルディレクトリを作成しました: $LOCAL_CODEX_SKILLS_DIR"
-else
-    log_info "ローカルCodexスキルディレクトリは既に存在します: $LOCAL_CODEX_SKILLS_DIR"
-fi
+ensure_directory "$LOCAL_CODEX_SKILLS_DIR" "ローカルCodexスキルディレクトリ" || exit 1
 
 for skill_path in "${skill_paths[@]}"; do
     if [ ! -d "$skill_path" ] || [ ! -f "$skill_path/SKILL.md" ]; then

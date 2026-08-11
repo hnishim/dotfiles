@@ -47,17 +47,27 @@ get_dotfiles_root() {
     cd "$(dirname -- "${BASH_SOURCE[1]}")" &> /dev/null && cd .. && pwd
 }
 
+# ディレクトリが存在することを保証する
+ensure_directory() {
+    local directory="$1"
+    local description="${2:-ディレクトリ}"
+
+    if [ -d "$directory" ]; then
+        log_info "${description}は既に存在します: $directory"
+    elif mkdir -p "$directory"; then
+        log_success "${description}を作成しました: $directory"
+    else
+        log_error "${description}の作成に失敗しました: $directory"
+        return 1
+    fi
+}
+
 # --- バックアップ処理関数 ---
 
 # バックアップディレクトリを作成
 create_backup_dir() {
     local backup_dir="$1"
-    if [ ! -d "$backup_dir" ]; then
-        mkdir -p "$backup_dir"
-        log_success "バックアップディレクトリを作成しました: $backup_dir"
-    else
-        log_info "バックアップディレクトリは既に存在します: $backup_dir"
-    fi
+    ensure_directory "$backup_dir" "バックアップディレクトリ"
 }
 
 # 既存ファイルをバックアップ

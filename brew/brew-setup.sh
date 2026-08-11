@@ -8,7 +8,7 @@ source "$(dirname "$0")/../lib/common.sh"
 
 # --- Configuration ---
 # スクリプトと同じディレクトリにあるpackages.ymlを指すように変更
-SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)
+SCRIPT_DIR=$(get_script_dir)
 PACKAGE_FILE="$SCRIPT_DIR/packages.yml"
 
 # --- Argument Parsing ---
