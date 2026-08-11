@@ -363,7 +363,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window bottom-half"
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 50 --anchor bl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -505,7 +505,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window left-half"
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 50 --height-percent 100 --anchor tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -526,7 +526,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window fill"
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 100 --anchor tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -597,7 +597,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window right-half"
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 50 --height-percent 100 --anchor tr"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -668,7 +668,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window top-half"
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 50 --anchor tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
