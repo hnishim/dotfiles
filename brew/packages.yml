@@ -39,6 +39,7 @@ casks:
     - slack
     - warp
     - zoom
+    - y3owk1n/tap/mimi
 
     # 外したもの
     # - obsidian
