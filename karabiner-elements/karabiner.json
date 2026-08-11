@@ -304,6 +304,385 @@
           "type" : "basic"
         } ]
       }, {
+        "description" : "Mimiでウィンドウを配置",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "t",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 33.333333 --anchor bl"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 2
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 1,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 1,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "t",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 66.666667 --anchor bl"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 0
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 1,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 2,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "t",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window bottom-half"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-direction",
+              "value" : 1
+            }
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 1
+            }
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "c",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 33.333333 --height-percent 100 --anchor cc"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 2
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 2,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 1,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "c",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 66.666667 --height-percent 100 --anchor cc"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 0
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 2,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 2,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "c",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 50 --height-percent 100 --anchor cc"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-direction",
+              "value" : 2
+            }
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 1
+            }
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "g",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 33.333333 --height-percent 100 --anchor tl"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 2
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 3,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 1,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "g",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 66.666667 --height-percent 100 --anchor tl"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 0
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 3,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 2,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "g",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window left-half"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-direction",
+              "value" : 3
+            }
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 1
+            }
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "f",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window fill"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-direction",
+              "value" : 0
+            }
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 0
+            }
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "r",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 33.333333 --height-percent 100 --anchor tr"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 2
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 4,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 1,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "r",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 66.666667 --height-percent 100 --anchor tr"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 0
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 4,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 2,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "r",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window right-half"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-direction",
+              "value" : 4
+            }
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 1
+            }
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "n",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 33.333333 --anchor tl"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 2
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 5,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 1,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "n",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 66.666667 --anchor tl"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 0
+            }
+          } ],
+          "conditions" : [ {
+            "name" : "mimi-window-direction",
+            "value" : 5,
+            "type" : "variable_if"
+          }, {
+            "name" : "mimi-window-cycle",
+            "value" : 2,
+            "type" : "variable_if"
+          } ],
+          "type" : "basic"
+        }, {
+          "from" : {
+            "key_code" : "n",
+            "modifiers" : {
+              "mandatory" : [ "left_command", "left_control" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "/opt/homebrew/bin/mimi action resize_window top-half"
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-direction",
+              "value" : 5
+            }
+          }, {
+            "set_variable" : {
+              "name" : "mimi-window-cycle",
+              "value" : 1
+            }
+          } ],
+          "type" : "basic"
+        } ]
+      }, {
         "description" : "Comboで括弧を自動的に閉じてカーソルを中に移動",
         "manipulators" : [ {
           "from" : {

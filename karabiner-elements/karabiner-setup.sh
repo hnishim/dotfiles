@@ -58,17 +58,12 @@ log_info "goku を実行して karabiner.json の内容を更新します..."
 check_command "goku" "'brew install yqrashawn/goku/goku' を実行してインストールしてください。" || exit 1
 
 # goku を実行して設定を karabiner.json に反映
-karabiner_hash_before=$(shasum -a 256 "$LOCAL_KARABINER_JSON" | awk '{print $1}')
 if goku; then
     log_success "goku を実行し、karabiner.json を正常に更新しました。"
-
-    karabiner_hash_after=$(shasum -a 256 "$LOCAL_KARABINER_JSON" | awk '{print $1}')
-    if [ "$karabiner_hash_before" != "$karabiner_hash_after" ]; then
-        log_info "karabiner.jsonが変更されたため、Karabiner-Elementsを再起動します..."
-        restart_process "Karabiner-Elements" "org.pqrs.service.agent.karabiner_console_user_server" || exit 1
-    else
-        log_success "karabiner.jsonに変更はありません。再起動をスキップします。"
-    fi
+    # JSONが事前生成済みでも、実行中のKarabinerが旧設定を保持している場合がある。
+    # setup後の読み込み状態を保証するため、差分の有無にかかわらず再起動する。
+    log_info "現在の設定を確実に読み込むため、Karabiner-Elementsを再起動します..."
+    restart_process "Karabiner-Elements" "org.pqrs.service.agent.karabiner_console_user_server" || exit 1
 else
     log_error "goku の実行に失敗しました。karabiner.edn の内容を確認してください。"
     exit 1
