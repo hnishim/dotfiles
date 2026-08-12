@@ -324,7 +324,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 33.333333 --anchor bl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 100 33.333333 bl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -349,7 +349,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 66.666667 --anchor bl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 100 66.666667 bl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -374,7 +374,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 50 --anchor bl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 100 50 bl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -395,7 +395,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 33.333333 --height-percent 100 --anchor cc"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 33.333333 100 cc"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -420,7 +420,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 66.666667 --height-percent 100 --anchor cc"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 66.666667 100 cc"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -445,7 +445,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 50 --height-percent 100 --anchor cc"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 50 100 cc"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -466,7 +466,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 33.333333 --height-percent 100 --anchor tl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 33.333333 100 tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -491,7 +491,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 66.666667 --height-percent 100 --anchor tl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 66.666667 100 tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -516,7 +516,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 50 --height-percent 100 --anchor tl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 50 100 tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -537,7 +537,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 100 --anchor tl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 100 100 tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -558,7 +558,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 33.333333 --height-percent 100 --anchor tr"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 33.333333 100 tr"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -583,7 +583,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 66.666667 --height-percent 100 --anchor tr"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 66.666667 100 tr"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -608,7 +608,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 50 --height-percent 100 --anchor tr"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 50 100 tr"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",
@@ -629,7 +629,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 33.333333 --anchor tl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 100 33.333333 tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -654,7 +654,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 66.666667 --anchor tl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 100 66.666667 tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-cycle",
@@ -679,7 +679,7 @@
             }
           },
           "to" : [ {
-            "shell_command" : "/opt/homebrew/bin/mimi action resize_window --width-percent 100 --height-percent 50 --anchor tl"
+            "shell_command" : "$HOME/.config/karabiner/.local/mimi-resize.sh 100 50 tl"
           }, {
             "set_variable" : {
               "name" : "mimi-window-direction",

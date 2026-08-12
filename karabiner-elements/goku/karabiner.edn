@@ -58,7 +58,7 @@
 
   :templates {
     :launch "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=%s'"
-    :mimi-resize "/opt/homebrew/bin/mimi action resize_window --width-percent %s --height-percent %s --anchor %s"
+    :mimi-resize "$HOME/.config/karabiner/.local/mimi-resize.sh %s %s %s"
     :osascript "/usr/bin/osascript \"$HOME/.config/karabiner/.local/%s\""
   }
 

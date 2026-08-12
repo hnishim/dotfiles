@@ -2,6 +2,11 @@
 
 # Karabiner-Elements設定ファイル同期スクリプト
 # iCloud上の設定ファイルをローカルのKarabiner-Elements設定にシンボリックリンクで同期する
+#
+# Mimiなどのshell_commandからウインドウを操作する設定では、実行主体である
+# `karabiner_console_user_server` にAccessibility許可が必要です。
+# この許可はmacOSのTCC管理下にあり、dotfilesから自動付与できないため、
+# 初回セットアップ後またはKarabiner更新後にシステム設定で手動確認します。
 
 # 前提
 # `Karabiner-Core-Service` を、以下の設定箇所に追加
@@ -23,6 +28,9 @@ LOCAL_ASSETS_DIR="$LOCAL_KARABINER_DIR/.local"
 TWO_PANES_FINDER_NAME="two-panes-finder.applescript"
 TWO_PANES_FINDER_LINK="$LOCAL_ASSETS_DIR/$TWO_PANES_FINDER_NAME"
 TWO_PANES_FINDER_SEARCH_ROOT="${TWO_PANES_FINDER_SEARCH_ROOT:-$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/scripts}"
+MIMI_RESIZE_NAME="mimi-resize.sh"
+MIMI_RESIZE_SOURCE="$SCRIPT_DIR/$MIMI_RESIZE_NAME"
+MIMI_RESIZE_LINK="$LOCAL_ASSETS_DIR/$MIMI_RESIZE_NAME"
 
 # Repository path
 ICLOUD_KARABINER_JSON="$SCRIPT_DIR/karabiner.json"
@@ -37,6 +45,7 @@ log_info "前提条件をチェック中..."
 # iCloud設定ファイルの存在確認
 check_path "$ICLOUD_KARABINER_JSON" "iCloud karabiner.json" "file" || exit 1
 check_path "$ICLOUD_KARABINER_EDN" "iCloud karabiner.edn" "file" || exit 1
+check_path "$MIMI_RESIZE_SOURCE" "Mimiラッパースクリプト" "file" || exit 1
 
 # ローカルKarabinerディレクトリの存在確認
 check_path "$LOCAL_KARABINER_DIR" "ローカルKarabinerディレクトリ" "directory" || exit 1
@@ -76,6 +85,15 @@ else
     log_warning "Two-panes Finderスクリプトが見つかりません。検索先: $TWO_PANES_FINDER_SEARCH_ROOT"
 fi
 
+if [ -e "$MIMI_RESIZE_LINK" ] && [ ! -L "$MIMI_RESIZE_LINK" ]; then
+    log_warning "Mimiラッパーのローカルリンク先が通常ファイルです。置き換えません: $MIMI_RESIZE_LINK"
+elif ln -sfn "$MIMI_RESIZE_SOURCE" "$MIMI_RESIZE_LINK"; then
+    log_success "Mimiラッパーをローカル依存としてリンクしました: $MIMI_RESIZE_LINK"
+else
+    log_error "Mimiラッパーのローカルリンク作成に失敗しました: $MIMI_RESIZE_LINK"
+    exit 1
+fi
+
 # --- goku を実行して karabiner.json を更新 ---
 log_info "goku を実行して karabiner.json の内容を更新します..."
 
@@ -89,6 +107,7 @@ if goku; then
     # setup後の読み込み状態を保証するため、差分の有無にかかわらず再起動する。
     log_info "現在の設定を確実に読み込むため、Karabiner-Elementsを再起動します..."
     restart_process "Karabiner-Elements" "org.pqrs.service.agent.karabiner_console_user_server" || exit 1
+    log_info "MimiをKarabinerから使う場合は、システム設定 > プライバシーとセキュリティ > アクセシビリティで karabiner_console_user_server がオンであることを確認してください。"
 else
     log_error "goku の実行に失敗しました。karabiner.edn の内容を確認してください。"
     exit 1
