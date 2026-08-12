@@ -31,6 +31,12 @@ TWO_PANES_FINDER_SEARCH_ROOT="${TWO_PANES_FINDER_SEARCH_ROOT:-$HOME/Library/Mobi
 MIMI_RESIZE_NAME="mimi-resize.sh"
 MIMI_RESIZE_SOURCE="$SCRIPT_DIR/$MIMI_RESIZE_NAME"
 MIMI_RESIZE_LINK="$LOCAL_ASSETS_DIR/$MIMI_RESIZE_NAME"
+TITLE_CASE_CHICAGO_NAME="title-case-chicago.sh"
+TITLE_CASE_CHICAGO_SOURCE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/scripts/raycast/$TITLE_CASE_CHICAGO_NAME"
+TITLE_CASE_CHICAGO_LINK="$LOCAL_ASSETS_DIR/$TITLE_CASE_CHICAGO_NAME"
+TITLE_CASE_CHICAGO_PY_NAME="title-case-chicago.py"
+TITLE_CASE_CHICAGO_PY_SOURCE="$HOME/Library/Mobile Documents/com~apple~CloudDocs/Dev/scripts/raycast/$TITLE_CASE_CHICAGO_PY_NAME"
+TITLE_CASE_CHICAGO_PY_LINK="$LOCAL_ASSETS_DIR/$TITLE_CASE_CHICAGO_PY_NAME"
 
 # Repository path
 ICLOUD_KARABINER_JSON="$SCRIPT_DIR/karabiner.json"
@@ -46,6 +52,8 @@ log_info "前提条件をチェック中..."
 check_path "$ICLOUD_KARABINER_JSON" "iCloud karabiner.json" "file" || exit 1
 check_path "$ICLOUD_KARABINER_EDN" "iCloud karabiner.edn" "file" || exit 1
 check_path "$MIMI_RESIZE_SOURCE" "Mimiラッパースクリプト" "file" || exit 1
+check_path "$TITLE_CASE_CHICAGO_SOURCE" "Title Case (Chicago)スクリプト" "file" || exit 1
+check_path "$TITLE_CASE_CHICAGO_PY_SOURCE" "Title Case (Chicago) Pythonスクリプト" "file" || exit 1
 
 # ローカルKarabinerディレクトリの存在確認
 check_path "$LOCAL_KARABINER_DIR" "ローカルKarabinerディレクトリ" "directory" || exit 1
@@ -91,6 +99,24 @@ elif ln -sfn "$MIMI_RESIZE_SOURCE" "$MIMI_RESIZE_LINK"; then
     log_success "Mimiラッパーをローカル依存としてリンクしました: $MIMI_RESIZE_LINK"
 else
     log_error "Mimiラッパーのローカルリンク作成に失敗しました: $MIMI_RESIZE_LINK"
+    exit 1
+fi
+
+if [ -e "$TITLE_CASE_CHICAGO_LINK" ] && [ ! -L "$TITLE_CASE_CHICAGO_LINK" ]; then
+    log_warning "Title Case (Chicago)のローカルリンク先が通常ファイルです。置き換えません: $TITLE_CASE_CHICAGO_LINK"
+elif ln -sfn "$TITLE_CASE_CHICAGO_SOURCE" "$TITLE_CASE_CHICAGO_LINK"; then
+    log_success "Title Case (Chicago)をローカル依存としてリンクしました: $TITLE_CASE_CHICAGO_LINK"
+else
+    log_error "Title Case (Chicago)のローカルリンク作成に失敗しました: $TITLE_CASE_CHICAGO_LINK"
+    exit 1
+fi
+
+if [ -e "$TITLE_CASE_CHICAGO_PY_LINK" ] && [ ! -L "$TITLE_CASE_CHICAGO_PY_LINK" ]; then
+    log_warning "Title Case (Chicago) Pythonのローカルリンク先が通常ファイルです。置き換えません: $TITLE_CASE_CHICAGO_PY_LINK"
+elif ln -sfn "$TITLE_CASE_CHICAGO_PY_SOURCE" "$TITLE_CASE_CHICAGO_PY_LINK"; then
+    log_success "Title Case (Chicago) Pythonをローカル依存としてリンクしました: $TITLE_CASE_CHICAGO_PY_LINK"
+else
+    log_error "Title Case (Chicago) Pythonのローカルリンク作成に失敗しました: $TITLE_CASE_CHICAGO_PY_LINK"
     exit 1
 fi
 

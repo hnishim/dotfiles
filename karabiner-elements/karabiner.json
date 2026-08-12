@@ -708,6 +708,20 @@
           "type" : "basic"
         } ]
       }, {
+        "description" : "Title Case (Chicago)",
+        "manipulators" : [ {
+          "from" : {
+            "key_code" : "c",
+            "modifiers" : {
+              "mandatory" : [ "command", "option", "shift" ]
+            }
+          },
+          "to" : [ {
+            "shell_command" : "\"$HOME/.config/karabiner/.local/title-case-chicago.sh\""
+          } ],
+          "type" : "basic"
+        } ]
+      }, {
         "description" : "Comboで括弧を自動的に閉じてカーソルを中に移動",
         "manipulators" : [ {
           "from" : {
