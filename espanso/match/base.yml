@@ -15,9 +15,6 @@ matches:
   # But matches can also be dynamic:
   # And much more! For more information, visit the docs: https://espanso.org/docs/
 
-  - trigger: migu
-    replace: Miguel-san
-
   - trigger: '\today'
     replace: "{{today}}"
     vars:
@@ -47,7 +44,39 @@ matches:
 
   - trigger: '\clr'
     replace: 67C688
-    label: "[Peach]ファーマフーズ/PFI"
+    label: "[Peach]ファーマフーズ/Pharam Foods/PFI"
+
+  - trigger: '\clr'
+    replace: 4BB234
+    label: "[Koratta]Axcelead Drug Discovery Partners/ADDP"
+
+  - trigger: '\clr'
+    replace: C43D33
+    label: "[Donkey]YUMAB"
+
+  - trigger: '\clr'
+    replace: EE1337
+    label: "[FF]Fuji Film"
+
+  - trigger: '\clr'
+    replace: FF0000
+    label: "[Pikachu]帝人ファーマ/Teijin/TPM"
+
+  - trigger: '\clr'
+    replace: 005BAA
+    label: "[Caterpie]第一三共/Daiichi Sankyo/DS"
+
+  - trigger: '\clr'
+    replace: CC0200
+    label: "[Hitokage]日立製作所/Hitachi"
+
+  - trigger: '\clr'
+    replace: 01E47D
+    label: "[Kuribo]Boehringer Ingelheim"
+
+  - trigger: '\clr'
+    replace: 7B00E6
+    label: "[Sand]Sanofi"
 
   # Shell Commands
 
@@ -135,3 +164,31 @@ matches:
 
   - trigger: '\hyper'
     replace: ✦
+
+  # 曜日
+
+  - triggers: ['\getu', '\mon']
+    replace: （月）
+
+  - triggers: ['\ka', '\tue']
+    replace: （火）
+
+  - triggers: ['\sui', '\wed']
+    replace: （水）
+
+  - triggers: ['\moku', '\thu']
+    replace: （木）
+
+  - triggers: ['\kin', '\fri']
+    replace: （金）
+
+  - triggers: ['\do', '\sat']
+    replace: （土）
+
+  - triggers: ['\niti', '\nichi', '\sun']
+    replace: （日）
+
+  # Prompts
+
+  - triggers: ['\dr', '\deepr']
+    replace: "余計な一般論はいっさい不要です。指示した調査内容に限定し、詳細かつ簡潔なアウトプットをしてください。"
