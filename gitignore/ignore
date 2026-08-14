@@ -1,24 +1,28 @@
 # macOS specific
 .DS_Store
 ._*
+.AppleDouble
+.LSOverride
+.DocumentRevisions-V100
+.TemporaryItems
 .Spotlight-V100
 .Trashes
 .VolumeIcon.icns
 .fseventsd
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+.apdisk
+Network Trash Folder
+Temporary Items
+Icon?
 
-# Temporary files and logs
+# Editor temporary files
 *~
 *.swp
 *.swo
-*.tmp
-*.log
+*.orig
+*.rej
 
-# Build artifacts (example - adjust as needed for your projects)
-# build/
-# dist/
-# *.out # Common executable output
-
-# Editor/IDE specific (common, includes patterns often used by VS Code/Cursor)
-.vscode/
-.idea/
-
+# Local application metadata
+.cogito-folder.json
