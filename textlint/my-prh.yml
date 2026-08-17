@@ -7,7 +7,6 @@ rules:
   - expected: VHH
   - expected: scFv
   - expected: Fab
-  - expected: F(ab)
   - expected: F(ab')2
     patterns:
       - Fab2
@@ -65,18 +64,6 @@ rules:
       - harrdware
       - harddware
 
-# Allow to write `pattern` as RegExp
-# Can use $1...$9
-# Should wrap `/` and `/`
-  # ECMAScript
-  - expected: ECMAScript $1
-    patterns:
-      - /ECMAScript([0-9]+)/
-      - /ECMA Script([0-9]+)/
-    specs:
-      - from: ECMAScript2015
-        to:   ECMAScript 2015
-
 # expected contain pattern
 # https://github.com/textlint-rule/textlint-rule-prh/pull/8
   - expected: ベンダー
@@ -86,13 +73,3 @@ rules:
         to: ベンダー
       - from: ベンダー
         to: ベンダー
-  # wordBoundary option
-  - expected: js
-  # === pattern: "/\b[JjＪｊ][SsＳｓ]\b/g"
-    options:
-      wordBoundary: true
-    specs:
-      - from: foo JS bar
-        to:   foo js bar
-      - from: foo altJS bar
-        to:   foo altJS bar
