@@ -4,7 +4,7 @@ if [ -z "${BASH_VERSION:-}" ] || set -o | grep -q '^posix[[:space:]]*on$'; then
     exec /bin/bash "$0" "$@"
 fi
 
-# Custom InstructionsをCodexとMOLCURE Notionへ同期する。
+# Custom InstructionsとSkillsをCodexとMOLCURE Notionへ同期する。
 
 set -euo pipefail
 
@@ -28,6 +28,7 @@ SOURCE_PLIST="$ASSET_DIR/$LABEL.plist"
 SYNC_SOURCE="$ASSET_DIR/sync-custom-instructions"
 CODEX_HOME_DIR="${CODEX_HOME_DIR_OVERRIDE:-${CODEX_HOME:-$HOME/.codex}}"
 CUSTOM_INSTRUCTIONS_DIR_HINT="${CUSTOM_INSTRUCTIONS_DIR_HINT:-$HOME}"
+SKILLS_DIR_HINT="${SKILLS_DIR_HINT:-$HOME}"
 APPLICATIONS_DIR="${CUSTOM_INSTRUCTIONS_APPLICATIONS_DIR_OVERRIDE:-$HOME/Applications}"
 APP_PATH="$APPLICATIONS_DIR/$APP_NAME"
 HELPER_EXECUTABLE="$APP_PATH/Contents/MacOS/$EXECUTABLE_NAME"
@@ -56,8 +57,8 @@ for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIS
     fi
 done
 
-if [ ! -d "$CUSTOM_INSTRUCTIONS_DIR_HINT" ]; then
-    log_error "正本フォルダー候補が見つかりません: $CUSTOM_INSTRUCTIONS_DIR_HINT"
+if [ ! -d "$CUSTOM_INSTRUCTIONS_DIR_HINT" ] || [ ! -d "$SKILLS_DIR_HINT" ]; then
+    log_error "正本フォルダー候補が見つかりません: custom=$CUSTOM_INSTRUCTIONS_DIR_HINT skills=$SKILLS_DIR_HINT"
     exit 1
 fi
 
@@ -131,16 +132,18 @@ ditto "$build_app" "$APP_PATH"
 codesign --verify --strict "$APP_PATH"
 
 if ! "$HELPER_EXECUTABLE" --status >/dev/null 2>&1; then
-    log_info "初回フォルダーアクセス権を設定します。2つのフォルダーを順に選択してください。"
-    "$HELPER_EXECUTABLE" --authorize "$CODEX_HOME_DIR" "$CUSTOM_INSTRUCTIONS_DIR_HINT"
+    log_info "初回フォルダーアクセス権を設定します。3つのフォルダーを順に選択してください。"
+    "$HELPER_EXECUTABLE" --authorize "$CODEX_HOME_DIR" "$CUSTOM_INSTRUCTIONS_DIR_HINT" "$SKILLS_DIR_HINT"
 fi
 
 status_output=$("$HELPER_EXECUTABLE" --status)
 printf '%s\n' "$status_output"
 custom_instructions_dir=$(printf '%s\n' "$status_output" | sed -n 's/^source=//p')
+skills_dir=$(printf '%s\n' "$status_output" | sed -n 's/^skills=//p')
 authorized_output_dir=$(printf '%s\n' "$status_output" | sed -n 's/^output=//p')
 
-if [ -z "$custom_instructions_dir" ] || [ ! -d "$custom_instructions_dir" ]; then
+if [ -z "$custom_instructions_dir" ] || [ ! -d "$custom_instructions_dir" ] ||
+   [ -z "$skills_dir" ] || [ ! -d "$skills_dir" ]; then
     log_error "保存済みの正本フォルダーを確認できません。"
     exit 1
 fi
@@ -171,6 +174,9 @@ install_sync_launch_agent() {
     local temp_plist="$build_root/$LABEL.plist"
     local attempt
     local job_state
+    local previous_runs=0
+    local current_runs
+    local run_observed=false
 
     cp "$SOURCE_PLIST" "$temp_plist"
     /usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
@@ -179,6 +185,7 @@ install_sync_launch_agent() {
     /usr/libexec/PlistBuddy -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
     /usr/libexec/PlistBuddy -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
     /usr/libexec/PlistBuddy -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
+    /usr/libexec/PlistBuddy -c "Set :WatchPaths:1 $skills_dir" "$temp_plist"
     /usr/libexec/PlistBuddy -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
     /usr/libexec/PlistBuddy -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
     plutil -lint "$temp_plist" >/dev/null
@@ -188,12 +195,21 @@ install_sync_launch_agent() {
     fi
     install -m 600 "$temp_plist" "$TARGET_PLIST"
     launchctl bootstrap "$DOMAIN" "$TARGET_PLIST"
+    job_state=$(launchctl print "$DOMAIN/$LABEL" 2>/dev/null || true)
+    previous_runs=$(printf '%s\n' "$job_state" | sed -n 's/^[[:space:]]*runs = \([0-9][0-9]*\).*$/\1/p' | head -n 1)
+    previous_runs=${previous_runs:-0}
     launchctl kickstart -k "$DOMAIN/$LABEL"
 
     attempt=1
-    while [ "$attempt" -le 40 ]; do
+    while [ "$attempt" -le 240 ]; do
         job_state=$(launchctl print "$DOMAIN/$LABEL" 2>/dev/null || true)
-        if printf '%s\n' "$job_state" | grep -q 'last exit code = 0'; then
+        current_runs=$(printf '%s\n' "$job_state" | sed -n 's/^[[:space:]]*runs = \([0-9][0-9]*\).*$/\1/p' | head -n 1)
+        if [ -n "$current_runs" ] && [ "$current_runs" -gt "$previous_runs" ]; then
+            run_observed=true
+        fi
+        if [ "$run_observed" = true ] &&
+           printf '%s\n' "$job_state" | grep -q 'active count = 0' &&
+           printf '%s\n' "$job_state" | grep -q 'last exit code = 0'; then
             if [ ! -f "$target_agents" ] || [ -L "$target_agents" ]; then
                 log_error "通常ファイルのAGENTS.mdを確認できません: $target_agents"
                 return 1
@@ -245,6 +261,7 @@ fi
 
 custom_page_id="${NOTION_CUSTOM_INSTRUCTIONS_PAGE_ID_OVERRIDE:-$(read_local_config custom_instructions_page_id)}"
 profile_page_id="${NOTION_USER_PROFILE_PAGE_ID_OVERRIDE:-$(read_local_config user_profile_page_id)}"
+skills_data_source_id="${NOTION_SKILLS_DATA_SOURCE_ID_OVERRIDE:-$(read_local_config skills_data_source_id)}"
 
 if [ -z "$custom_page_id" ] && [ -t 0 ]; then
     read -r -p '基本的なガイドラインのNotionページID: ' custom_page_id
@@ -252,17 +269,20 @@ fi
 if [ -z "$profile_page_id" ] && [ -t 0 ]; then
     read -r -p 'ユーザープロファイルのNotionページID: ' profile_page_id
 fi
+if [ -z "$skills_data_source_id" ] && [ -t 0 ]; then
+    read -r -p 'SkillsデータソースID: ' skills_data_source_id
+fi
 
-for notion_id in "$workspace_id" "$custom_page_id" "$profile_page_id"; do
+for notion_id in "$workspace_id" "$custom_page_id" "$profile_page_id" "$skills_data_source_id"; do
     if ! is_notion_id "$notion_id"; then
-        log_error "MOLCURE NotionのワークスペースIDまたはページIDを確認できません。"
+        log_error "MOLCURE NotionのワークスペースID、ページID、SkillsデータソースIDを確認できません。"
         exit 1
     fi
 done
 
 notion_config_temp="$build_root/notion-pages.conf"
-printf 'workspace_id=%s\ncustom_instructions_page_id=%s\nuser_profile_page_id=%s\n' \
-    "$workspace_id" "$custom_page_id" "$profile_page_id" >"$notion_config_temp"
+printf 'workspace_id=%s\ncustom_instructions_page_id=%s\nuser_profile_page_id=%s\nskills_data_source_id=%s\n' \
+    "$workspace_id" "$custom_page_id" "$profile_page_id" "$skills_data_source_id" >"$notion_config_temp"
 install -m 600 "$notion_config_temp" "$NOTION_CONFIG"
 
 log_info "MOLCURE Notionへの初期同期を実行します。"

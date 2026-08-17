@@ -16,14 +16,20 @@ NTN_EXECUTABLE=$2
 CODEX_HOME_DIR=$3
 NOTION_CONFIG=$4
 MIRROR_DIR="$CODEX_HOME_DIR/custom-instructions-sync"
+SKILLS_MIRROR_DIR="$CODEX_HOME_DIR/skills-notion-sync"
 STATE_DIR="$(dirname -- "$NOTION_CONFIG")/state"
+JQ_EXECUTABLE=/usr/bin/jq
+RUBY_EXECUTABLE=/usr/bin/ruby
 
 if [ ! -x "$HELPER_EXECUTABLE" ]; then
     printf '[ERROR] 実行ファイルが見つかりません: %s\n' "$HELPER_EXECUTABLE" >&2
     exit 1
 fi
 
-"$HELPER_EXECUTABLE" --sync
+if ! "$HELPER_EXECUTABLE" --sync; then
+    printf '[ERROR] 正本のローカルミラー作成に失敗しました。\n' >&2
+    exit 1
+fi
 
 if [ ! -x "$NTN_EXECUTABLE" ]; then
     printf '[WARNING] Notion CLIが見つかりません。CodexとMOLCURE Notionの同期をスキップします。\n' >&2
@@ -40,6 +46,11 @@ if [ ! -f "$NOTION_CONFIG" ]; then
     exit 0
 fi
 
+if [ ! -x "$JQ_EXECUTABLE" ] || [ ! -x "$RUBY_EXECUTABLE" ]; then
+    printf '[ERROR] JSON/frontmatter解析に必要な実行ファイルが見つかりません。\n' >&2
+    exit 1
+fi
+
 read_config() {
     local key=$1
     sed -n "s/^${key}=//p" "$NOTION_CONFIG" | tail -n 1
@@ -48,6 +59,7 @@ read_config() {
 workspace_id=$(read_config workspace_id)
 custom_page_id=$(read_config custom_instructions_page_id)
 profile_page_id=$(read_config user_profile_page_id)
+skills_data_source_id=$(read_config skills_data_source_id)
 
 is_notion_id() {
     printf '%s\n' "$1" | grep -Eq '^[0-9A-Fa-f]{32}$|^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
@@ -60,9 +72,12 @@ for notion_id in "$workspace_id" "$custom_page_id" "$profile_page_id"; do
     fi
 done
 
-export NOTION_WORKSPACE_ID="$workspace_id"
+if ! is_notion_id "$skills_data_source_id"; then
+    printf '[WARNING] SkillsデータソースIDが未設定または不正です。Skills同期をスキップします。\n' >&2
+    exit 0
+fi
 
-"$HELPER_EXECUTABLE" --sync
+export NOTION_WORKSPACE_ID="$workspace_id"
 
 mkdir -p "$STATE_DIR"
 chmod 700 "$STATE_DIR"
@@ -85,26 +100,161 @@ cleanup() {
 trap cleanup EXIT
 
 normalize_markdown() {
-    awk '
-        NR == 1 && $0 == "---" { frontmatter = 1; next }
-        frontmatter && $0 == "---" { frontmatter = 0; next }
-        frontmatter { next }
-        {
-            gsub(/^[[:space:]]+/, "")
-            gsub(/[[:space:]]+$/, "")
-            if (length($0) > 0) print
-        }
-    ' "$1"
+    "$RUBY_EXECUTABLE" - "$1" <<'RUBY'
+require "uri"
+
+path = ARGV.fetch(0)
+text = File.read(path, encoding: "UTF-8")
+text = text.sub(/\A---\r?\n(?:.*?\r?\n)?---\r?\n?/m, "")
+text = text.gsub("\r\n", "\n").gsub("\r", "\n")
+
+inside_fence = false
+lines = []
+text.each_line do |raw_line|
+  line = raw_line.chomp.rstrip
+  if line.match?(/\A\s*(```|~~~)/)
+    inside_fence = !inside_fence
+    elsif !inside_fence
+      next if line.empty?
+      line = line.sub(/\A\s+/, "")
+      line = line.gsub("\t", "  ")
+      line = line.gsub(/\\\$/, "$")
+      line = line.gsub(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/) do |match|
+        visible, url = Regexp.last_match.captures
+        begin
+          uri = URI.parse(url)
+          host = uri.host.to_s.sub(/\Awww\./, "")
+          normalized_visible = visible.sub(/\Ahttps?:\/\//, "").sub(/\Awww\./, "")
+          if normalized_visible == host && [nil, "", "/"].include?(uri.path)
+            visible
+          elsif uri.host.to_s.match?(/\A[A-Za-z0-9._-]+\.md\z/) && [nil, "", "/"].include?(uri.path)
+            "[#{visible}](#{uri.host})"
+          else
+            match
+          end
+        rescue URI::InvalidURIError
+          match
+        end
+      end
+      line = line.gsub(/\[([^\]]+)\]\((?!https?:\/\/)([^)\s]+\.md(?:#[^)\s]+)?)\)/) do
+        visible, target = Regexp.last_match.captures
+        "[#{visible}](#{target.split('/').last})"
+      end
+    end
+  lines << line
+end
+
+lines.shift while lines.first == ""
+lines.pop while lines.last == ""
+print(lines.join("\n"))
+print("\n") unless lines.empty?
+RUBY
+}
+
+parse_frontmatter() {
+    "$RUBY_EXECUTABLE" - "$1" <<'RUBY'
+# encoding: UTF-8
+require "json"
+require "yaml"
+
+path = ARGV.fetch(0)
+text = File.read(path, encoding: "UTF-8")
+match = text.match(/\A---\r?\n(.*?)\r?\n---\r?\n?/m)
+raise "frontmatterがありません" unless match
+
+frontmatter = YAML.safe_load(match[1], permitted_classes: [], aliases: false)
+raise "frontmatterがMapではありません" unless frontmatter.is_a?(Hash)
+
+name = frontmatter["name"]
+raise "frontmatterのnameがありません" unless name.is_a?(String) && !name.empty?
+
+result = { "name" => name }
+if frontmatter.key?("description")
+  value = frontmatter["description"]
+  raise "descriptionが文字列ではありません" unless value.is_a?(String)
+  result["description"] = value
+end
+if frontmatter.key?("role")
+  value = frontmatter["role"]
+  raise "roleが文字列ではありません" unless value.is_a?(String)
+  result["role"] = value
+end
+if frontmatter.key?("tags")
+  value = frontmatter["tags"]
+  raise "tagsが配列ではありません" unless value.is_a?(Array) && value.all? { |item| item.is_a?(String) }
+  result["tags"] = value
+end
+
+puts JSON.generate(result)
+RUBY
+}
+
+is_excluded_codex_id() {
+    case "$1" in
+        gmail-to-calendar|reply-automatically)
+            return 0
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+}
+
+build_metadata_payload() {
+    local metadata=$1
+    "$JQ_EXECUTABLE" -cn --argjson metadata "$metadata" '
+      {properties: (
+        {}
+        + (if ($metadata | has("description")) then
+             {"Description": {"rich_text": [{"text": {"content": $metadata.description}}]}}
+           else {} end)
+        + (if ($metadata | has("role")) then
+             {"Role": {"select": {"name": $metadata.role}}}
+           else {} end)
+        + (if ($metadata | has("tags")) then
+             {"Tags": {"multi_select": [$metadata.tags[] | {"name": .}]}}
+           else {} end)
+      )}
+    '
+}
+
+verify_metadata() {
+    local page_json=$1
+    local metadata=$2
+    "$JQ_EXECUTABLE" -e --argjson metadata "$metadata" '
+      def rich_text_value:
+        ((.rich_text // .title // []) | map(.plain_text // .text.content // "") | join(""));
+      def property_value($name): (.properties[$name] // {});
+      (
+        (($metadata | has("description") | not) or
+          (property_value("Description") | rich_text_value) == $metadata.description)
+        and
+        (($metadata | has("role") | not) or
+          (property_value("Role").select.name // "") == $metadata.role)
+        and
+        (($metadata | has("tags") | not) or
+          ([property_value("Tags").multi_select[]?.name] | sort) == ($metadata.tags | sort))
+      )
+    ' "$page_json" >/dev/null
 }
 
 sync_page() {
     local label=$1
     local source_file=$2
     local page_id=$3
-    local state_file="$STATE_DIR/$label.sha256"
+    local metadata=${4:-"{}"}
+    local state_key
+    local state_file
     local source_hash
     local saved_hash=''
     local attempt
+    local expected_file="$temp_dir/${label}.expected"
+    local actual_file="$temp_dir/${label}.actual"
+    local normalized_file="$temp_dir/${label}.normalized"
+    local metadata_payload=''
+    local metadata_response="$temp_dir/${label}.metadata.json"
+    local page_response="$temp_dir/${label}.page.json"
+    local readback_wait_seconds="${NOTION_READBACK_WAIT_SECONDS:-1}"
 
     if [ ! -s "$source_file" ]; then
         printf '[ERROR] Notion同期用コピーが存在しないか空です: %s\n' "$source_file" >&2
@@ -112,6 +262,8 @@ sync_page() {
     fi
 
     source_hash=$(shasum -a 256 "$source_file" | awk '{print $1}')
+    state_key=$(printf '%s' "$label" | shasum -a 256 | awk '{print $1}')
+    state_file="$STATE_DIR/$state_key.sha256"
     if [ -f "$state_file" ]; then
         saved_hash=$(sed -n '1p' "$state_file")
     fi
@@ -120,22 +272,44 @@ sync_page() {
         return 0
     fi
 
-    normalize_markdown "$source_file" >"$temp_dir/$label.expected"
+    normalize_markdown "$source_file" >"$expected_file"
+    if [ "$metadata" != "{}" ] &&
+       "$JQ_EXECUTABLE" -e 'has("description") or has("role") or has("tags")' <<<"$metadata" >/dev/null; then
+        metadata_payload=$(build_metadata_payload "$metadata")
+    fi
 
     attempt=1
     while [ "$attempt" -le 3 ]; do
-        if "$NTN_EXECUTABLE" pages update "$page_id" <"$source_file" >"$temp_dir/$label.update" \
-            && "$NTN_EXECUTABLE" pages get "$page_id" >"$temp_dir/$label.actual"; then
-            normalize_markdown "$temp_dir/$label.actual" >"$temp_dir/$label.normalized"
-            if cmp -s "$temp_dir/$label.expected" "$temp_dir/$label.normalized"; then
-                printf '%s\n' "$source_hash" >"$temp_dir/$label.sha256"
-                install -m 600 "$temp_dir/$label.sha256" "$state_file"
-                printf '[SUCCESS] %s をNotionへ反映し、再読込で確認しました。\n' "$label"
+        if [ -n "$metadata_payload" ] &&
+           ! "$NTN_EXECUTABLE" api "/v1/pages/$page_id" -X PATCH --data "$metadata_payload" < /dev/null >"$metadata_response"; then
+            printf '[ERROR] %s のNotionプロパティ更新に失敗しました（%d/3）。\n' "$label" "$attempt" >&2
+        elif [ -n "$metadata_payload" ]; then
+            if "$NTN_EXECUTABLE" api "/v1/pages/$page_id" -X GET < /dev/null >"$page_response" &&
+               ! verify_metadata "$page_response" "$metadata"; then
+                printf '[ERROR] %s のNotionプロパティ再読込結果が正本と一致しません（%d/3）。\n' "$label" "$attempt" >&2
+            else
+                metadata_payload=''
+            fi
+        fi
+
+        if [ -z "$metadata_payload" ] &&
+           "$NTN_EXECUTABLE" pages edit "$page_id" <"$source_file" >"$temp_dir/${label}.update" &&
+           /bin/sleep "$readback_wait_seconds" &&
+           "$NTN_EXECUTABLE" pages get "$page_id" >"$actual_file"; then
+            normalize_markdown "$actual_file" >"$normalized_file"
+            if cmp -s "$expected_file" "$normalized_file" &&
+               { [ -z "$metadata" ] ||
+                 /bin/sleep "$readback_wait_seconds" &&
+                 "$NTN_EXECUTABLE" api "/v1/pages/$page_id" -X GET < /dev/null >"$page_response" &&
+                 verify_metadata "$page_response" "$metadata"; }; then
+                printf '%s\n' "$source_hash" >"$temp_dir/${label}.sha256"
+                install -m 600 "$temp_dir/${label}.sha256" "$state_file"
+                printf '[SUCCESS] %s をNotionへ反映し、本文とメタデータを再読込で確認しました。\n' "$label"
                 return 0
             fi
             printf '[ERROR] %s のNotion再読込結果が正本と一致しません（%d/3）。\n' "$label" "$attempt" >&2
-        else
-            printf '[ERROR] %s のNotion更新または再読込に失敗しました（%d/3）。\n' "$label" "$attempt" >&2
+        elif [ -z "$metadata_payload" ]; then
+            printf '[ERROR] %s のNotion本文更新または再読込に失敗しました（%d/3）。\n' "$label" "$attempt" >&2
         fi
         attempt=$((attempt + 1))
         [ "$attempt" -gt 3 ] || sleep 2
@@ -145,3 +319,107 @@ sync_page() {
 
 sync_page custom-instructions "$MIRROR_DIR/custom-instructions.md" "$custom_page_id"
 sync_page user-profile "$MIRROR_DIR/user-profile.md" "$profile_page_id"
+
+if [ ! -d "$SKILLS_MIRROR_DIR" ]; then
+    printf '[ERROR] Skills同期用ミラーが存在しません: %s\n' "$SKILLS_MIRROR_DIR" >&2
+    exit 1
+fi
+
+skills_manifest="$temp_dir/skills-manifest.tsv"
+: >"$skills_manifest"
+
+while IFS= read -r source_file; do
+    [ -n "$source_file" ] || continue
+    relative_path=${source_file#"$SKILLS_MIRROR_DIR"/}
+    case "$relative_path" in
+        */SKILL.md|writing-references/*.md) ;;
+        *) continue ;;
+    esac
+
+    if ! metadata=$(parse_frontmatter "$source_file" 2>"$temp_dir/frontmatter.err"); then
+        printf '[ERROR] frontmatterを解析できません: %s\n' "$relative_path" >&2
+        sed -n '1,20p' "$temp_dir/frontmatter.err" >&2
+        exit 1
+    fi
+    codex_id=$(printf '%s\n' "$metadata" | "$JQ_EXECUTABLE" -r '.name')
+    if is_excluded_codex_id "$codex_id"; then
+        printf '[INFO] Skills同期対象外のためスキップします: %s (%s)\n' "$codex_id" "$relative_path"
+        continue
+    fi
+    if awk -F '\t' -v id="$codex_id" '$1 == id {found=1} END {exit found ? 0 : 1}' "$skills_manifest"; then
+        printf '[ERROR] frontmatterのnameが重複しています: %s\n' "$codex_id" >&2
+        exit 1
+    fi
+    printf '%s\t%s\t%s\n' "$codex_id" "$source_file" "$metadata" >>"$skills_manifest"
+done < <(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' -print | sort)
+
+if [ ! -s "$skills_manifest" ]; then
+    printf '[ERROR] frontmatterを持つSkillsファイルが見つかりません。\n' >&2
+    exit 1
+fi
+
+page_rows="$temp_dir/page-rows.tsv"
+: >"$page_rows"
+cursor=''
+while :; do
+    query_json="$temp_dir/data-source-query.json"
+    query_args=(datasources query "$skills_data_source_id" --limit 100 --json)
+    if [ -n "$cursor" ]; then
+        query_args+=(--start-cursor "$cursor")
+    fi
+    if ! "$NTN_EXECUTABLE" "${query_args[@]}" >"$query_json"; then
+        printf '[ERROR] Skillsデータソースの照会に失敗しました。\n' >&2
+        exit 1
+    fi
+
+    "$JQ_EXECUTABLE" -r '
+      def prop_text:
+        ((.rich_text // .title // []) | map(.plain_text // .text.content // "") | join(""));
+      .results[]
+      | select(.object == "page")
+      | [(.properties["Codex ID"] // {} | prop_text), .id]
+      | @tsv
+    ' "$query_json" >>"$page_rows"
+
+    has_more=$($JQ_EXECUTABLE -r '.has_more // false' "$query_json")
+    [ "$has_more" = "true" ] || break
+    cursor=$($JQ_EXECUTABLE -r '.next_cursor // empty' "$query_json")
+    [ -n "$cursor" ] || {
+        printf '[ERROR] Skillsデータソースの次ページカーソルを取得できません。\n' >&2
+        exit 1
+    }
+done
+
+missing_file="$temp_dir/missing-skills.txt"
+duplicate_pages_file="$temp_dir/duplicate-pages.txt"
+: >"$missing_file"
+: >"$duplicate_pages_file"
+
+while IFS=$'\t' read -r codex_id source_file metadata; do
+    matches=$(awk -F '\t' -v id="$codex_id" '$1 == id {print $2}' "$page_rows")
+    match_count=$(printf '%s\n' "$matches" | awk 'NF {count++} END {print count + 0}')
+    if [ "$match_count" -eq 0 ]; then
+        printf '%s\n' "$codex_id" >>"$missing_file"
+    elif [ "$match_count" -gt 1 ]; then
+        printf '%s\n' "$codex_id" >>"$duplicate_pages_file"
+    fi
+done <"$skills_manifest"
+
+if [ -s "$missing_file" ]; then
+    printf '[ERROR] Notion Skillsデータソースに対応ページがありません。同期を停止します。\n' >&2
+    sed 's/^/  - /' "$missing_file" >&2
+    exit 1
+fi
+if [ -s "$duplicate_pages_file" ]; then
+    printf '[ERROR] Notion SkillsデータソースでCodex IDが重複しています。同期を停止します。\n' >&2
+    sed 's/^/  - /' "$duplicate_pages_file" >&2
+    exit 1
+fi
+
+while IFS=$'\t' read -r codex_id source_file metadata; do
+    page_id=$(awk -F '\t' -v id="$codex_id" '$1 == id {print $2; exit}' "$page_rows")
+    label="skills-$codex_id"
+    sync_page "$label" "$source_file" "$page_id" "$metadata"
+done <"$skills_manifest"
+
+printf '[SUCCESS] SkillsのNotion同期が完了しました（%s件）。\n' "$(wc -l <"$skills_manifest" | tr -d ' ')"

@@ -16,7 +16,7 @@ enum SyncError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .usage:
-            return "使い方: CustomInstructionsSync --authorize <.codexフォルダー> [正本フォルダー候補] | --sync | --status"
+            return "使い方: CustomInstructionsSync --authorize <.codexフォルダー> [custom-instructions候補] [skills候補] | --sync | --status"
         case .cancelled:
             return "フォルダー選択がキャンセルされました。"
         case .invalidSelection(let message), .bookmarkResolution(let message),
@@ -33,9 +33,11 @@ enum SyncError: LocalizedError {
 
 struct StoredAccess {
     static let sourceKey = "sourceFolderBookmark"
+    static let skillsKey = "skillsFolderBookmark"
     static let outputKey = "outputFolderBookmark"
 
     let sourceURL: URL
+    let skillsURL: URL
     let outputURL: URL
 }
 
@@ -46,6 +48,8 @@ struct CustomInstructionsSync {
     static let userProfileName = "user-profile.md"
     static let outputName = "AGENTS.md"
     static let mirrorDirectoryName = "custom-instructions-sync"
+    static let skillsMirrorDirectoryName = "skills-notion-sync"
+    static let writingReferencesDirectoryName = "writing-references"
 
     static func main() {
         do {
@@ -54,12 +58,16 @@ struct CustomInstructionsSync {
 
             switch command {
             case "--authorize":
-                guard arguments.count == 2 || arguments.count == 3 else { throw SyncError.usage }
-                let sourceHint = arguments.count == 3
+                guard (2...4).contains(arguments.count) else { throw SyncError.usage }
+                let sourceHint = arguments.count >= 3
                     ? URL(fileURLWithPath: arguments[2], isDirectory: true)
+                    : FileManager.default.homeDirectoryForCurrentUser
+                let skillsHint = arguments.count >= 4
+                    ? URL(fileURLWithPath: arguments[3], isDirectory: true)
                     : FileManager.default.homeDirectoryForCurrentUser
                 try authorize(
                     sourceHint: sourceHint,
+                    skillsHint: skillsHint,
                     expectedOutput: URL(fileURLWithPath: arguments[1], isDirectory: true)
                 )
             case "--sync":
@@ -69,6 +77,7 @@ struct CustomInstructionsSync {
                 guard arguments.count == 1 else { throw SyncError.usage }
                 let access = try resolveStoredAccess()
                 print("source=\(access.sourceURL.path)")
+                print("skills=\(access.skillsURL.path)")
                 print("output=\(access.outputURL.path)")
             default:
                 throw SyncError.usage
@@ -79,13 +88,20 @@ struct CustomInstructionsSync {
         }
     }
 
-    static func authorize(sourceHint: URL, expectedOutput: URL) throws {
+    static func authorize(sourceHint: URL, skillsHint: URL, expectedOutput: URL) throws {
         let sourceURL = try chooseFolder(
             title: "Custom Instructionsの正本フォルダーを選択",
             message: "custom-instructions.mdとuser-profile.mdがあるフォルダーを選択してください。",
             initialURL: sourceHint
         )
         try validateSources(in: sourceURL)
+
+        let skillsURL = try chooseFolder(
+            title: "Codex Skillsの正本フォルダーを選択",
+            message: "各スキルフォルダーとwriting-referencesがあるフォルダーを選択してください。",
+            initialURL: skillsHint
+        )
+        try validateSkills(in: skillsURL)
 
         let outputURL = try chooseFolder(
             title: "Codex設定フォルダーを選択",
@@ -99,6 +115,11 @@ struct CustomInstructionsSync {
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
+        let skillsBookmark = try skillsURL.bookmarkData(
+            options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
         let outputBookmark = try outputURL.bookmarkData(
             options: [.withSecurityScope],
             includingResourceValuesForKeys: nil,
@@ -107,6 +128,7 @@ struct CustomInstructionsSync {
 
         let defaults = UserDefaults.standard
         defaults.set(sourceBookmark, forKey: StoredAccess.sourceKey)
+        defaults.set(skillsBookmark, forKey: StoredAccess.skillsKey)
         defaults.set(outputBookmark, forKey: StoredAccess.outputKey)
         guard defaults.synchronize() else {
             throw SyncError.accessDenied("フォルダーアクセス権の保存に失敗しました。")
@@ -155,16 +177,62 @@ struct CustomInstructionsSync {
         }
     }
 
+    static func validateSkills(in folderURL: URL) throws {
+        let referenceURL = folderURL.appendingPathComponent(writingReferencesDirectoryName, isDirectory: true)
+        var hasSkill = false
+        let children = try FileManager.default.contentsOfDirectory(
+            at: folderURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+
+        for childURL in children.sorted(by: { $0.path < $1.path }) {
+            let isDirectory = try childURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
+            guard isDirectory else { continue }
+            let skillURL = childURL.appendingPathComponent("SKILL.md", isDirectory: false)
+            if FileManager.default.fileExists(atPath: skillURL.path) {
+                let data = try Data(contentsOf: skillURL)
+                guard !data.isEmpty else {
+                    throw SyncError.missingOrEmpty("スキル正本が空です: \(skillURL.path)")
+                }
+                hasSkill = true
+            }
+        }
+
+        guard hasSkill else {
+            throw SyncError.missingOrEmpty("SKILL.mdを持つスキルが見つかりません: \(folderURL.path)")
+        }
+
+        let isReferenceDirectory = try referenceURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
+        guard isReferenceDirectory else {
+            throw SyncError.missingOrEmpty("共有規範フォルダーが見つかりません: \(referenceURL.path)")
+        }
+
+        let references = try FileManager.default.contentsOfDirectory(
+            at: referenceURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
+        for fileURL in references where fileURL.pathExtension.lowercased() == "md" {
+            let data = try Data(contentsOf: fileURL)
+            guard !data.isEmpty else {
+                throw SyncError.missingOrEmpty("共有規範が空です: \(fileURL.path)")
+            }
+        }
+    }
+
     static func resolveStoredAccess() throws -> StoredAccess {
         let defaults = UserDefaults.standard
         guard let sourceData = defaults.data(forKey: StoredAccess.sourceKey),
+              let skillsData = defaults.data(forKey: StoredAccess.skillsKey),
               let outputData = defaults.data(forKey: StoredAccess.outputKey) else {
             throw SyncError.missingAuthorization
         }
 
         let sourceURL = try resolveBookmark(sourceData, key: StoredAccess.sourceKey)
+        let skillsURL = try resolveBookmark(skillsData, key: StoredAccess.skillsKey)
         let outputURL = try resolveBookmark(outputData, key: StoredAccess.outputKey)
-        return StoredAccess(sourceURL: sourceURL, outputURL: outputURL)
+        return StoredAccess(sourceURL: sourceURL, skillsURL: skillsURL, outputURL: outputURL)
     }
 
     static func resolveBookmark(_ data: Data, key: String) throws -> URL {
@@ -183,7 +251,7 @@ struct CustomInstructionsSync {
 
         if isStale {
             let refreshed = try url.bookmarkData(
-                options: key == StoredAccess.sourceKey
+                options: [StoredAccess.sourceKey, StoredAccess.skillsKey].contains(key)
                     ? [.withSecurityScope, .securityScopeAllowOnlyReadAccess]
                     : [.withSecurityScope],
                 includingResourceValuesForKeys: nil,
@@ -202,6 +270,12 @@ struct CustomInstructionsSync {
         }
         defer { access.sourceURL.stopAccessingSecurityScopedResource() }
 
+        let skillsGranted = access.skillsURL.startAccessingSecurityScopedResource()
+        guard skillsGranted else {
+            throw SyncError.accessDenied("Skills正本フォルダーへのアクセス権を開始できませんでした。setup.shを再実行してください。")
+        }
+        defer { access.skillsURL.stopAccessingSecurityScopedResource() }
+
         let outputGranted = access.outputURL.startAccessingSecurityScopedResource()
         guard outputGranted else {
             throw SyncError.accessDenied("出力フォルダーへのアクセス権を開始できませんでした。setup.shを再実行してください。")
@@ -209,10 +283,15 @@ struct CustomInstructionsSync {
         defer { access.outputURL.stopAccessingSecurityScopedResource() }
 
         let stablePair = try readStableSources(from: access.sourceURL)
+        let stableSkills = try readStableSkills(from: access.skillsURL)
         let outputData = try compose(custom: stablePair.custom, profile: stablePair.profile)
 
         let latestPair = try readSources(from: access.sourceURL)
         guard latestPair.custom == stablePair.custom, latestPair.profile == stablePair.profile else {
+            throw SyncError.unstableSources
+        }
+        let latestSkills = try readSkills(from: access.skillsURL)
+        guard latestSkills == stableSkills else {
             throw SyncError.unstableSources
         }
 
@@ -231,6 +310,7 @@ struct CustomInstructionsSync {
 
         let outputURL = access.outputURL.appendingPathComponent(outputName, isDirectory: false)
         let agentsUpdated = try writePrivatelyIfChanged(outputData, to: outputURL)
+        try replaceSkillsMirror(stableSkills, in: access.outputURL)
 
         if customUpdated || profileUpdated {
             print("[SUCCESS] Notion同期用のローカルコピーを更新しました。")
@@ -240,6 +320,7 @@ struct CustomInstructionsSync {
         print(agentsUpdated
             ? "[SUCCESS] AGENTS.mdを更新しました: \(outputURL.path)"
             : "[SUCCESS] AGENTS.mdは最新です。更新をスキップしました。")
+        print("[SUCCESS] SkillsのNotion同期用ミラーを更新しました（\(stableSkills.count)ファイル）。")
     }
 
     static func readStableSources(from folderURL: URL) throws -> (custom: Data, profile: Data) {
@@ -256,6 +337,106 @@ struct CustomInstructionsSync {
             writeError("[INFO] 正本の更新が継続中です（\(attempt)/\(attempts)）。")
         }
         throw SyncError.unstableSources
+    }
+
+    static func readStableSkills(from folderURL: URL) throws -> [String: Data] {
+        let attempts = 5
+        let waitSeconds = Double(ProcessInfo.processInfo.environment["CUSTOM_INSTRUCTIONS_STABILITY_WAIT"] ?? "1") ?? 1
+
+        for attempt in 1...attempts {
+            let before = try readSkills(from: folderURL)
+            if waitSeconds > 0 { Thread.sleep(forTimeInterval: waitSeconds) }
+            let after = try readSkills(from: folderURL)
+            if before == after {
+                return after
+            }
+            writeError("[INFO] Skills正本の更新が継続中です（\(attempt)/\(attempts)）。")
+        }
+        throw SyncError.unstableSources
+    }
+
+    static func readSkills(from folderURL: URL) throws -> [String: Data] {
+        let fileManager = FileManager.default
+        let children = try fileManager.contentsOfDirectory(
+            at: folderURL,
+            includingPropertiesForKeys: [.isDirectoryKey],
+            options: [.skipsHiddenFiles]
+        )
+        var result: [String: Data] = [:]
+
+        for childURL in children.sorted(by: { $0.path < $1.path }) {
+            let isDirectory = try childURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
+            guard isDirectory else { continue }
+
+            let skillURL = childURL.appendingPathComponent("SKILL.md", isDirectory: false)
+            guard fileManager.fileExists(atPath: skillURL.path) else { continue }
+            let relativePath = "\(childURL.lastPathComponent)/SKILL.md"
+            let data = try readValidUTF8File(skillURL, label: relativePath)
+            result[relativePath] = data
+        }
+
+        let referenceURL = folderURL.appendingPathComponent(writingReferencesDirectoryName, isDirectory: true)
+        let isReferenceDirectory = try referenceURL.resourceValues(forKeys: [.isDirectoryKey]).isDirectory == true
+        guard isReferenceDirectory else {
+            throw SyncError.missingOrEmpty("共有規範フォルダーが見つかりません: \(referenceURL.path)")
+        }
+
+        let references = try fileManager.contentsOfDirectory(
+            at: referenceURL,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles]
+        )
+        for fileURL in references.sorted(by: { $0.path < $1.path }) where fileURL.pathExtension.lowercased() == "md" {
+            let relativePath = "\(writingReferencesDirectoryName)/\(fileURL.lastPathComponent)"
+            result[relativePath] = try readValidUTF8File(fileURL, label: relativePath)
+        }
+
+        guard !result.isEmpty else {
+            throw SyncError.missingOrEmpty("同期対象のSkillsファイルが見つかりません: \(folderURL.path)")
+        }
+        return result
+    }
+
+    static func readValidUTF8File(_ url: URL, label: String) throws -> Data {
+        let data = try Data(contentsOf: url)
+        guard !data.isEmpty else {
+            throw SyncError.missingOrEmpty("Skills正本が空です: \(label)")
+        }
+        guard String(data: data, encoding: .utf8) != nil else {
+            throw SyncError.invalidUTF8("Skills正本がUTF-8ではありません: \(label)")
+        }
+        return data
+    }
+
+    static func replaceSkillsMirror(_ files: [String: Data], in outputFolderURL: URL) throws {
+        let fileManager = FileManager.default
+        let mirrorURL = outputFolderURL.appendingPathComponent(skillsMirrorDirectoryName, isDirectory: true)
+        let stagingURL = outputFolderURL.appendingPathComponent(".\(skillsMirrorDirectoryName).staging-\(UUID().uuidString)", isDirectory: true)
+
+        try fileManager.createDirectory(at: stagingURL, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        do {
+            for relativePath in files.keys.sorted() {
+                let targetURL = stagingURL.appendingPathComponent(relativePath, isDirectory: false)
+                try fileManager.createDirectory(
+                    at: targetURL.deletingLastPathComponent(),
+                    withIntermediateDirectories: true,
+                    attributes: [.posixPermissions: 0o700]
+                )
+                try files[relativePath]!.write(to: targetURL, options: .atomic)
+                try setPrivatePermissions(on: targetURL)
+            }
+            try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: stagingURL.path)
+            if fileManager.fileExists(atPath: mirrorURL.path) {
+                try fileManager.removeItem(at: mirrorURL)
+            }
+            try fileManager.moveItem(at: stagingURL, to: mirrorURL)
+            try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: mirrorURL.path)
+        } catch {
+            if fileManager.fileExists(atPath: stagingURL.path) {
+                try? fileManager.removeItem(at: stagingURL)
+            }
+            throw error
+        }
     }
 
     static func readSources(from folderURL: URL) throws -> (custom: Data, profile: Data) {

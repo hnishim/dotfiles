@@ -15,6 +15,7 @@
     <key>WatchPaths</key>
     <array>
         <string>__WATCH_PATH__</string>
+        <string>__SKILLS_WATCH_PATH__</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
