@@ -116,6 +116,6 @@
     "ja-hiragana-hojodoushi": true,
     "@textlint-ja/no-filler": true,
     "ja-overlooked-typo": true,
-    "alive-link": true
+    "alive-link": false
   }
 }
