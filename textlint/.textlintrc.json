@@ -55,9 +55,12 @@
         "before": true,
         "after": true
       },
-      "ja-space-around-link": true
+      "ja-space-around-link": {
+        "before": true,
+        "after": true
+      }
     },
-    "textlint-rule-preset-ai-writing": true,
+    "@textlint-ja/preset-ai-writing": true,
     "ja-no-successive-word": true,
     "ja-unnatural-alphabet": true,
     "ja-no-abusage": true,
@@ -98,7 +101,9 @@
     },
     "no-empty-section": true,
     "no-empty-element": true,
-    "terminology": true,
+    "terminology": {
+      "exclude": ["readme(s)?"]
+    },
     "period-in-header": true,
     "doubled-spaces": true,
     "spelling": {
