@@ -27,9 +27,9 @@ ENTITLEMENTS="$ASSET_DIR/CustomInstructionsSync.entitlements"
 SOURCE_PLIST="$ASSET_DIR/$LABEL.plist"
 SYNC_SOURCE="$ASSET_DIR/sync-custom-instructions"
 CODEX_HOME_DIR="${CODEX_HOME_DIR_OVERRIDE:-${CODEX_HOME:-$HOME/.codex}}"
-TEXTLINT_HOOK_SOURCE="$SCRIPT_DIR/hooks/textlint-stop-hook.py"
-TEXTLINT_HOOKS_FRAGMENT="$SCRIPT_DIR/hooks/textlint-hooks.json"
-TEXTLINT_HOOK_INSTALLER="$SCRIPT_DIR/hooks/install-textlint-hook.py"
+CODEX_HOOKS_DIR="$SCRIPT_DIR/hooks"
+CODEX_HOOKS_JSON="$SCRIPT_DIR/hooks.json"
+CODEX_HOOK_INSTALLER="$SCRIPT_DIR/install-codex-hooks.py"
 CUSTOM_INSTRUCTIONS_DIR_HINT="${CUSTOM_INSTRUCTIONS_DIR_HINT:-$HOME}"
 SKILLS_DIR_HINT="${SKILLS_DIR_HINT:-$HOME}"
 APPLICATIONS_DIR="${CUSTOM_INSTRUCTIONS_APPLICATIONS_DIR_OVERRIDE:-$HOME/Applications}"
@@ -54,12 +54,17 @@ DOMAIN="gui/$(id -u)"
 MODULE_CACHE_DIR="${CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE:-$HOME/Library/Caches/$LABEL/SwiftModuleCache}"
 
 for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$SYNC_SOURCE" \
-    "$TEXTLINT_HOOK_SOURCE" "$TEXTLINT_HOOKS_FRAGMENT" "$TEXTLINT_HOOK_INSTALLER"; do
+    "$CODEX_HOOKS_JSON" "$CODEX_HOOK_INSTALLER"; do
     if [ ! -f "$required_file" ]; then
         log_error "必要なファイルが見つかりません: $required_file"
         exit 1
     fi
 done
+
+if [ ! -d "$CODEX_HOOKS_DIR" ]; then
+    log_error "Codexフックの正本フォルダーが見つかりません: $CODEX_HOOKS_DIR"
+    exit 1
+fi
 
 if [ ! -d "$CUSTOM_INSTRUCTIONS_DIR_HINT" ] || [ ! -d "$SKILLS_DIR_HINT" ]; then
     log_error "正本フォルダー候補が見つかりません: custom=$CUSTOM_INSTRUCTIONS_DIR_HINT skills=$SKILLS_DIR_HINT"
@@ -175,7 +180,7 @@ log_info "Codex用AGENTS.mdの初期同期を実行します。"
 "$HELPER_EXECUTABLE" --sync
 
 install_textlint_hook() {
-    /usr/bin/python3 "$TEXTLINT_HOOK_INSTALLER" "$CODEX_HOME_DIR"
+    /usr/bin/python3 "$CODEX_HOOK_INSTALLER" "$CODEX_HOME_DIR"
 }
 
 install_textlint_hook || exit 1

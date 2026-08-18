@@ -1,0 +1,30 @@
+{
+  "description": "Require normal macOS context before judging GitHub CLI authentication.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 /Users/hnishim/.codex/hooks/gh_normal_context_guard.py",
+            "timeout": 5,
+            "statusMessage": "Checking GitHub CLI execution context"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 /Users/hnishim/.codex/hooks/textlint-stop-hook.py",
+            "timeout": 120,
+            "statusMessage": "textlint/prh で文章を校閲しています"
+          }
+        ]
+      }
+    ]
+  }
+}
