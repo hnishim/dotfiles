@@ -97,6 +97,78 @@ def clear_correction_state(path: Path | None) -> None:
         path.unlink(missing_ok=True)
 
 
+def source_line(message: str, line_number: int) -> str | None:
+    lines = message.splitlines()
+    if 1 <= line_number <= len(lines):
+        return lines[line_number - 1]
+    return None
+
+
+def format_findings(message: str, raw_findings: str) -> str:
+    """Return actionable diagnostics while retaining the original response context."""
+    try:
+        report = json.loads(raw_findings)
+    except json.JSONDecodeError:
+        return raw_findings
+
+    if not isinstance(report, list):
+        return raw_findings
+
+    formatted: list[str] = []
+    for file_report in report:
+        if not isinstance(file_report, dict):
+            continue
+        messages = file_report.get("messages")
+        if not isinstance(messages, list):
+            continue
+        file_path = file_report.get("filePath", "codex-response.md")
+        for finding in messages:
+            if not isinstance(finding, dict):
+                continue
+            line = finding.get("line")
+            column = finding.get("column")
+            message_text = finding.get("message")
+            rule_id = finding.get("ruleId")
+            if (
+                not isinstance(line, int)
+                or not isinstance(column, int)
+                or not isinstance(message_text, str)
+            ):
+                continue
+
+            location = f"{line}:{column}"
+            line_text = source_line(message, line)
+            formatted.append(
+                f"- {file_path} {location} {message_text}"
+                + (f" [{rule_id}]" if isinstance(rule_id, str) else "")
+            )
+            if line_text is not None:
+                formatted.append(f"  原文: {line_text}")
+
+            fix = finding.get("fix")
+            if isinstance(fix, dict) and isinstance(fix.get("text"), str):
+                fix_text = fix["text"]
+                formatted.append(
+                    "  textlintの自動修正候補: "
+                    + ("スペースを挿入" if fix_text == " " else repr(fix_text))
+                )
+
+    return "\n".join(formatted) if formatted else raw_findings
+
+
+def build_correction_reason(message: str, raw_findings: str) -> str:
+    diagnostics = format_findings(message, raw_findings)
+    return (
+        "textlint/prh で文章上の指摘が検出されました。"
+        "元の回答の内容・構成・固有名詞・ファイルパス・検証結果は保持し、"
+        "下記の表記上の指摘だけを最小限修正した回答を作成してください。"
+        "要約、削除、再調査、別タスクへの変更は禁止です。"
+        "修正後の回答本文だけを出力してください。\n\n"
+        "違反箇所と原文:\n"
+        f"{diagnostics}"
+    )
+
+
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -138,7 +210,7 @@ def main() -> int:
         "--stdin-filename",
         "codex-response.md",
         "--format",
-        "stylish",
+        "json",
         "--no-color",
     ]
 
@@ -193,11 +265,9 @@ def main() -> int:
 
     write_correction_passes(correction_state, correction_passes + 1)
 
-    reason = (
-        "textlint/prh で文章上の指摘が検出されました。"
-        "指摘を反映した修正版の応答を作成してください。\n\n"
-        f"{findings}"
-    )
+    reason = build_correction_reason(message, findings)
+    if len(reason) > MAX_REASON_LENGTH:
+        reason = reason[:MAX_REASON_LENGTH].rstrip() + "\n[…truncated]"
     emit({"decision": "block", "reason": reason})
     return 0
 
