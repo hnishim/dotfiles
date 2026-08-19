@@ -33,6 +33,7 @@ setup_scripts=(
     "karabiner-elements/karabiner-setup.sh"
     "gitignore/global-gitignore-setup.sh"
     "skills/skills-setup.sh"
+    "codex/agents-setup.sh"
     "codex/codex-setup.sh"
     "warp/warp-setup.sh"
     "espanso/espanso-setup.sh"
