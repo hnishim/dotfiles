@@ -423,6 +423,10 @@ set_user_dict_entry pbs NSServicesStatus \
   enabled_services_menu 0 '{ enabled_services_menu = 0; }'
 
 # --- ショートカットキーの変更 ---
+# FinderでGoogle Driveのルートを開くショートカットキーを設定 (⌘⌥G)
+set_user_dict_entry com.apple.finder NSUserKeyEquivalents \
+  "Google Drive" "" "@~g" "@~g" finder
+
 # FinderとPreviewでタブ移動のショートカットキーを設定 (⌥⌘→, ⌥⌘←)
 set_user_dict_entry com.apple.finder NSUserKeyEquivalents \
   "Show Next Tab" "" "@~\\U2192" "@~\\U2192" finder
