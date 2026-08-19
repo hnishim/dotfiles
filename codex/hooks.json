@@ -12,16 +12,28 @@
             "statusMessage": "Checking GitHub CLI execution context"
           }
         ]
-      }
-    ],
-    "Stop": [
+      },
       {
+        "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "/usr/bin/python3 /Users/hnishim/.codex/hooks/textlint-stop-hook.py",
+            "command": "/usr/bin/python3 /Users/hnishim/.codex/hooks/textlint-pretool-hook.py",
             "timeout": 120,
-            "statusMessage": "textlint/prh で文章を校閲しています"
+            "statusMessage": "Notionへ渡す文章をtextlintで整えています"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 /Users/hnishim/.codex/hooks/textlint-posttool-hook.py",
+            "timeout": 120,
+            "statusMessage": "ローカル文章ファイルをtextlintで整えています"
           }
         ]
       }
