@@ -1,7 +1,7 @@
 name = "implementer"
 description = "Implementation-only agent for executing an explicitly approved Plan with focused changes and proportionate tests."
 model = "gpt-5.6-luna"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 developer_instructions = """
 Implement only the approved Plan supplied by the parent agent.
 
