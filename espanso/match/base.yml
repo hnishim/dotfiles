@@ -85,10 +85,10 @@ matches:
 
   # テキスト補完
 
-  - triggers: [Meso, meso]
+  - triggers: [Mesot, mesot]
     replace: Mesothelin
 
-  - triggers: [Boe, boe]
+  - triggers: [Boeh, boeh]
     replace: Boehringer Ingelheim
 
   # Laten
