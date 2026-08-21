@@ -2,10 +2,12 @@
 
 formulae:
   - duti
+  - gh
   - jq # Google Drive File Locker スクリプト用
   - mas
   - nextdns
   - node
+  - pnpm
   - yq # brew-setup.sh スクリプト用（このYAMLファイルを処理するため）
   - yqrashawn/goku/goku
 
@@ -29,7 +31,6 @@ casks:
     - grammarly-desktop
     - iina
     - karabiner-elements
-    - logi-options+
     - meru
     - microsoft-auto-update
     - microsoft-teams
@@ -57,6 +58,8 @@ casks:
     # - languagetool-desktop
     # - muteme
     # - battery
+    # - logi-options+
+
   personal:
     - fujitsu-scansnap-home
 
