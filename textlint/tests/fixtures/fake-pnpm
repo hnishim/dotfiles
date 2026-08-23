@@ -1,7 +1,6 @@
 #!/bin/sh
 
 set -eu
-
 log_file=${FAKE_PNPM_LOG:?FAKE_PNPM_LOG is required}
 if [ "$#" -ne 4 ] || [ "$1" != "--dir" ] || [ "$3" != "install" ] || [ "$4" != "--frozen-lockfile" ]; then
     printf '%s\n' 'unexpected pnpm arguments' >>"$log_file"
@@ -10,6 +9,7 @@ fi
 
 runtime_dir=$2
 printf 'ARGC=%s\n' "$#" >>"$log_file"
+printf '%s\n' 'INSTALL_REACHED=1' >>"$log_file"
 index=0
 for argument in "$@"; do
     printf 'ARG_%s=%s\n' "$index" "$argument" >>"$log_file"
@@ -25,6 +25,19 @@ fi
 cat >"$runtime_dir/node_modules/.bin/textlint" <<'EOF'
 #!/bin/sh
 set -eu
+version_log=${FAKE_TEXTLINT_LOG:-}
+if [ -n "$version_log" ]; then
+    printf '%s\n' "TEXTLINT_INVOKED=$*" >>"$version_log"
+fi
+if [ "${FAKE_TEXTLINT_VERSION_FAIL:-0}" = 1 ] && [ "$#" -eq 1 ] && [ "$1" = "--version" ]; then
+    if [ -n "$version_log" ]; then
+        printf '%s\n' 'VERSION_CHECK_REACHED=1' >>"$version_log"
+    fi
+    exit 1
+fi
+if [ "$#" -eq 1 ] && [ "$1" = "--version" ] && [ -n "$version_log" ]; then
+    printf '%s\n' 'VERSION_CHECK_SUCCEEDED=1' >>"$version_log"
+fi
 printf 'ARG_COUNT=%s\n' "$#"
 index=0
 for argument in "$@"; do

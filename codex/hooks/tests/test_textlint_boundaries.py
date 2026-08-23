@@ -82,6 +82,72 @@ class TextlintBoundaryTests(unittest.TestCase):
                 enriched["tool_response"] = {"exit_code": 0}
         return self.run_hook(POST_HOOK, enriched)
 
+    def runtime_binary_fixture(self) -> tuple[Path, Path]:
+        runtime_binary = (
+            self.root
+            / "Library"
+            / "Application Support"
+            / "dotfiles"
+            / "textlint"
+            / "node_modules"
+            / ".bin"
+            / "textlint"
+        )
+        runtime_log = self.root / "runtime.log"
+        runtime_binary.parent.mkdir(parents=True)
+        runtime_binary.write_text(
+            "#!/bin/sh\n"
+            f"printf '%s\\n' \"$*\" >> \"{runtime_log}\"\n"
+            "printf '%s\\n' '[]'\n"
+            "exit 0\n",
+            encoding="utf-8",
+        )
+        runtime_binary.chmod(runtime_binary.stat().st_mode | stat.S_IXUSR)
+        return runtime_binary, runtime_log
+
+    def test_both_hook_entrypoints_execute_runtime_and_resolution_priority(self) -> None:
+        stop_path = HOOKS_DIR / "textlint-stop-hook.py"
+        post_path = HOOKS_DIR / "textlint-posttool-hook.py"
+        _, runtime_log = self.runtime_binary_fixture()
+        prose = self.root / "runtime-prose.md"
+        prose.write_text("MacOS", encoding="utf-8")
+        runtime_env = {
+            **os.environ,
+            "HOME": self.root.as_posix(),
+            "PATH": "/usr/bin:/bin",
+            "TEXTLINT_CONFIG": str(self.config),
+        }
+        runtime_env.pop("TEXTLINT_BIN", None)
+
+        stop_payload = {"last_assistant_message": "plain response"}
+        stop_result = subprocess.run(
+            ["/usr/bin/python3", str(stop_path)],
+            input=json.dumps(stop_payload), text=True, capture_output=True,
+            env=runtime_env, check=True,
+        )
+        self.assertTrue(json.loads(stop_result.stdout)["continue"])
+        self.assertTrue(runtime_log.exists(), "Stop hook did not invoke the runtime")
+        stop_invocations = runtime_log.read_text(encoding="utf-8").splitlines()
+        self.assertGreater(len(stop_invocations), 0)
+
+        post_payload = {
+            "tool_name": "Bash",
+            "tool_input": {"command": f"touch {prose}"},
+            "tool_response": {"exit_code": 0},
+            "cwd": str(self.root),
+        }
+        subprocess.run(
+            ["/usr/bin/python3", str(post_path)],
+            input=json.dumps(post_payload), text=True, capture_output=True,
+            env=runtime_env, check=True,
+        )
+        post_invocations = runtime_log.read_text(encoding="utf-8").splitlines()
+        self.assertGreater(
+            len(post_invocations),
+            len(stop_invocations),
+            "Post hook did not invoke the runtime after the Stop hook",
+        )
+
     def test_notion_create_pages_fixes_only_content(self) -> None:
         for tool_name in (
             "mcp__codex_apps__notion_notion_create_pages",

@@ -418,7 +418,18 @@ def find_textlint() -> str | None:
     configured_path = os.environ.get("TEXTLINT_BIN")
     if configured_path:
         candidates.append(configured_path)
-    candidates.append(str(Path(__file__).resolve().parents[2] / "bin" / "textlint"))
+    candidates.append(
+        str(
+            Path.home()
+            / "Library"
+            / "Application Support"
+            / "dotfiles"
+            / "textlint"
+            / "node_modules"
+            / ".bin"
+            / "textlint"
+        )
+    )
     discovered_path = shutil.which("textlint")
     if discovered_path:
         candidates.append(discovered_path)

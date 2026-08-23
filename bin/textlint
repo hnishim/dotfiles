@@ -1,7 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-RUNTIME_DIR="$HOME/Library/Application Support/dotfiles/textlint"
-
-exec "$RUNTIME_DIR/node_modules/.bin/textlint" "$@"
