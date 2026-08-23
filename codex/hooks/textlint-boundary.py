@@ -4,15 +4,23 @@
 from __future__ import annotations
 
 import os
+import hashlib
+import json
 import re
 import shutil
+import stat
 import subprocess
 import tempfile
+import time
 from pathlib import Path
+from typing import Any
 
 
 TEXTLINT_TIMEOUT_SECONDS = 120
 NATIVE_TEXTLINT_EXTENSIONS = {".md", ".txt"}
+STATE_TTL_SECONDS = 86400
+STATE_DIR_ENV = "TEXTLINT_HOOK_STATE_DIR"
+DIAGNOSTIC_LOG_ENV = "TEXTLINT_HOOK_DIAGNOSTIC_LOG"
 
 
 def parser_extension(filename: str) -> str:
@@ -413,6 +421,356 @@ def preserve_newlines(original: str, fixed: str) -> str | None:
     return "".join(output)
 
 
+def _field(payload: dict[str, Any], *names: str) -> str | None:
+    for name in names:
+        value = payload.get(name)
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def runtime_identity(payload: dict[str, Any]) -> tuple[str, str, str] | None:
+    """Return the official correlation fields when the client supplied them."""
+    session_id = _field(payload, "session_id", "sessionId")
+    turn_id = _field(payload, "turn_id", "turnId")
+    tool_use_id = _field(payload, "tool_use_id", "toolUseId")
+    if not all((session_id, turn_id, tool_use_id)):
+        return None
+    return session_id, turn_id, tool_use_id
+
+
+def _identity_key(identity: tuple[str, str, str]) -> str:
+    material = json.dumps(identity, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(material.encode("utf-8")).hexdigest()
+
+
+def _state_dir() -> Path:
+    configured = os.environ.get(STATE_DIR_ENV)
+    if configured:
+        return Path(configured).expanduser()
+    return Path.home() / ".cache" / "codex-textlint-hook"
+
+
+def _diagnostic(event: str, reason: str, payload: dict[str, Any] | None = None) -> None:
+    """Write a body-free diagnostic record when explicitly requested."""
+    destination = os.environ.get(DIAGNOSTIC_LOG_ENV)
+    if not destination:
+        return
+    record: dict[str, str] = {"event": event, "reason": reason}
+    if payload is not None:
+        identity = runtime_identity(payload)
+        if identity is not None:
+            record["correlation"] = _identity_key(identity)
+    try:
+        path = Path(destination).expanduser()
+        path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        if path.exists() and path.stat().st_uid != os.getuid():
+            return
+        with path.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(record, ensure_ascii=False) + "\n")
+        path.chmod(0o600)
+    except (OSError, UnicodeError):
+        return
+
+
+def _fingerprint(path: Path) -> dict[str, int | str] | None:
+    try:
+        info = path.stat()
+        with path.open("rb") as stream:
+            digest = hashlib.sha256(stream.read()).hexdigest()
+        return {
+            "dev": info.st_dev,
+            "ino": info.st_ino,
+            "nlink": info.st_nlink,
+            "size": info.st_size,
+            "mtime_ns": info.st_mtime_ns,
+            "sha256": digest,
+        }
+    except (OSError, UnicodeError):
+        return None
+
+
+def _metadata_snapshot(path: Path) -> dict[str, Any] | None:
+    """Capture metadata that an atomic replacement must preserve."""
+    try:
+        info = path.stat()
+        list_xattr = getattr(os, "listxattr", None)
+        get_xattr = getattr(os, "getxattr", None)
+        xattrs: dict[str, bytes] | None
+        if list_xattr is not None and get_xattr is not None:
+            names = list_xattr(path, follow_symlinks=False)
+            xattrs = {
+                name: get_xattr(path, name, follow_symlinks=False)
+                for name in names
+            }
+        else:
+            names = _xattr_list(path)
+            if names is None:
+                return None
+            xattrs = {}
+            for name in names:
+                value = _xattr_get(path, name)
+                if value is None:
+                    return None
+                xattrs[name] = value
+        acl_marker = _acl_marker(path)
+        if acl_marker is None:
+            return None
+        acl_xattr = xattrs.get("com.apple.acl.text")
+        # macOS can report an ACL in `ls -lde` while omitting the ACL xattr
+        # from the xattr listing when normal xattrs coexist with it.  An ACL
+        # without its serialized value cannot be restored or verified.
+        if acl_marker and acl_xattr is None:
+            return None
+        acl_present = acl_marker or acl_xattr is not None
+        return {
+            "source": str(path),
+            "mode": stat.S_IMODE(info.st_mode),
+            "uid": info.st_uid,
+            "gid": info.st_gid,
+            "flags": getattr(info, "st_flags", 0),
+            "xattrs": xattrs,
+            "acl": acl_xattr if acl_present else b"",
+        }
+    except (OSError, TypeError, UnicodeError):
+        return None
+
+
+def _apply_metadata(path: Path, metadata: dict[str, Any]) -> bool:
+    try:
+        path.chmod(metadata["mode"])
+        if hasattr(os, "chown"):
+            info = path.stat()
+            if (info.st_uid, info.st_gid) != (metadata["uid"], metadata["gid"]):
+                os.chown(path, metadata["uid"], metadata["gid"])
+        if metadata["xattrs"] is not None:
+            list_xattr = getattr(os, "listxattr", None)
+            set_xattr = getattr(os, "setxattr", None)
+            if list_xattr is not None and set_xattr is not None:
+                existing = set(list_xattr(path, follow_symlinks=False))
+                expected = set(metadata["xattrs"])
+                for name in existing - expected:
+                    os.removexattr(path, name, follow_symlinks=False)
+                for name, value in metadata["xattrs"].items():
+                    set_xattr(path, name, value, follow_symlinks=False)
+            else:
+                if not _xattr_replace(path, metadata["xattrs"]):
+                    return False
+        else:
+            return False
+        flags = metadata["flags"]
+        if flags:
+            chflags = getattr(os, "chflags", None)
+            if chflags is None:
+                return False
+            chflags(path, flags)
+        acl_marker = _acl_marker(path)
+        acl_xattr = metadata["xattrs"].get("com.apple.acl.text")
+        acl_present = bool(acl_marker) or acl_xattr is not None
+        if acl_marker is None and acl_xattr is None:
+            return False
+        if metadata["acl"] and (not acl_present or acl_xattr != metadata["acl"]):
+            return False
+        if not metadata["acl"] and acl_present:
+            return False
+        return _same_metadata(_metadata_snapshot(path), metadata)
+    except (OSError, TypeError, UnicodeError, KeyError):
+        return False
+
+
+def _xattr_command() -> str | None:
+    configured = os.environ.get("TEXTLINT_XATTR_BIN")
+    candidates = [configured] if configured else []
+    candidates.append("/usr/bin/xattr")
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file() and os.access(candidate, os.X_OK):
+            return candidate
+    return None
+
+
+def _acl_marker(path: Path) -> bool | None:
+    """Detect a macOS ACL from its mode marker or serialized ACL entries."""
+    try:
+        result = subprocess.run(
+            ["/bin/ls", "-lde", str(path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=False,
+        )
+        if result.returncode != 0 or not isinstance(result.stdout, bytes):
+            return None
+        lines = result.stdout.splitlines()
+        if not lines:
+            return None
+        mode = lines[0].decode("utf-8").split()[0]
+        if len(mode) >= 11 and mode[10] == "+":
+            return True
+        # With an ACL and ordinary xattrs, macOS may show `@` in the mode
+        # string and print the ACL entries below it instead of listing
+        # com.apple.acl.text through xattr(1).
+        return any(re.match(rb"^\s*\d+:", line) for line in lines[1:])
+    except (OSError, UnicodeError, IndexError):
+        return None
+
+
+def _xattr_list(path: Path) -> list[str] | None:
+    command = _xattr_command()
+    if command is None:
+        return None
+    try:
+        result = subprocess.run(
+            [command, str(path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False
+        )
+        if result.returncode != 0 or not isinstance(result.stdout, bytes):
+            return None
+        return result.stdout.decode("utf-8").splitlines()
+    except (OSError, UnicodeError):
+        return None
+
+
+def _xattr_get(path: Path, name: str) -> bytes | None:
+    command = _xattr_command()
+    if command is None:
+        return None
+    try:
+        result = subprocess.run(
+            [command, "-p", "-x", name, str(path)],
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+        )
+        if result.returncode != 0 or not isinstance(result.stdout, bytes):
+            return None
+        return bytes.fromhex(b"".join(result.stdout.split()).decode("ascii"))
+    except (OSError, UnicodeError, ValueError):
+        return None
+
+
+def _xattr_replace(path: Path, expected: dict[str, bytes]) -> bool:
+    command = _xattr_command()
+    if command is None:
+        return False
+    existing = _xattr_list(path)
+    if existing is None:
+        return False
+    try:
+        for name in set(existing) - set(expected):
+            result = subprocess.run(
+                [command, "-d", name, str(path)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if result.returncode != 0:
+                return False
+        for name, value in expected.items():
+            result = subprocess.run(
+                [command, "-w", "-x", name, value.hex(), str(path)],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=False,
+            )
+            if result.returncode != 0:
+                return False
+        return all(_xattr_get(path, name) == value for name, value in expected.items()) \
+            and set(_xattr_list(path) or ()) == set(expected)
+    except (OSError, UnicodeError):
+        return False
+
+
+def _same_metadata(left: dict[str, Any] | None, right: dict[str, Any] | None) -> bool:
+    if left is None or right is None:
+        return False
+    return {key: value for key, value in left.items() if key != "source"} == {
+        key: value for key, value in right.items() if key != "source"
+    }
+
+
+def _safe_state_dir() -> Path | None:
+    directory = _state_dir()
+    try:
+        directory.mkdir(mode=0o700, parents=True, exist_ok=True)
+        directory.chmod(0o700)
+        if directory.stat().st_uid != os.getuid():
+            return None
+        return directory
+    except OSError:
+        return None
+
+
+def _cleanup_state(directory: Path, now: float | None = None) -> None:
+    cutoff = (time.time() if now is None else now) - STATE_TTL_SECONDS
+    try:
+        for path in directory.glob("*.json"):
+            try:
+                if path.stat().st_mtime < cutoff and path.stat().st_uid == os.getuid():
+                    path.unlink()
+            except OSError:
+                continue
+    except OSError:
+        return
+
+
+def _write_state(identity: tuple[str, str, str], paths: list[Path]) -> bool:
+    directory = _safe_state_dir()
+    if directory is None:
+        return False
+    _cleanup_state(directory)
+    records = []
+    for path in paths:
+        fingerprint = _fingerprint(path)
+        records.append({"path": str(path), "fingerprint": fingerprint})
+    if not records:
+        return False
+    target = directory / f"{_identity_key(identity)}.json"
+    try:
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", dir=directory, prefix=".state-", suffix=".tmp", delete=False
+        ) as stream:
+            temporary = Path(stream.name)
+            json.dump({"created": time.time(), "files": records}, stream)
+            stream.flush()
+            os.fsync(stream.fileno())
+        temporary.chmod(0o600)
+        os.replace(temporary, target)
+        return True
+    except (OSError, TypeError, ValueError):
+        try:
+            temporary.unlink()
+        except (OSError, UnboundLocalError):
+            pass
+        return False
+
+
+def _read_and_consume_state(identity: tuple[str, str, str]) -> dict[str, Any] | None:
+    directory = _safe_state_dir()
+    if directory is None:
+        return None
+    _cleanup_state(directory)
+    path = directory / f"{_identity_key(identity)}.json"
+    try:
+        if path.stat().st_uid != os.getuid():
+            return None
+        with path.open(encoding="utf-8") as stream:
+            state = json.load(stream)
+        path.unlink()
+        return state if isinstance(state, dict) else None
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+
+
+def prepare_runtime_state(payload: dict[str, Any], paths: list[Path]) -> None:
+    identity = runtime_identity(payload)
+    if identity is None:
+        return
+    if not _write_state(identity, paths):
+        _diagnostic("pre_state", "no-safe-file-snapshot", payload)
+
+
+def consume_runtime_state(payload: dict[str, Any]) -> dict[str, Any] | None:
+    identity = runtime_identity(payload)
+    if identity is None:
+        return None
+    state = _read_and_consume_state(identity)
+    if state is None:
+        _diagnostic("post_state", "missing-or-invalid-correlation", payload)
+    return state
+
+
 def find_textlint() -> str | None:
     candidates: list[str] = []
     configured_path = os.environ.get("TEXTLINT_BIN")
@@ -525,14 +883,56 @@ def fix_text(text: str, filename: str = "codex-artifact.md") -> str:
 
 def fix_file(path: Path) -> bool:
     """Fix a local file in place; return whether its contents changed."""
+    temporary: Path | None = None
     try:
+        # Snapshot before opening the file. The same fingerprint is checked
+        # after reading, after textlint, and immediately before replacement.
+        before = _fingerprint(path)
+        metadata = _metadata_snapshot(path)
+        if before is None or before.get("nlink") != 1 or metadata is None:
+            _diagnostic("fix_file", "hardlink-or-metadata-unsafe")
+            return False
         with path.open("r", encoding="utf-8", newline="") as stream:
             original = stream.read()
+        if _fingerprint(path) != before or not _same_metadata(_metadata_snapshot(path), metadata):
+            _diagnostic("fix_file", "external-change-during-read")
+            return False
         fixed = fix_text(original, path.name)
         if fixed == original:
             return False
-        with path.open("w", encoding="utf-8", newline="") as stream:
+        # Re-check after the external process has run. This prevents an edit
+        # made concurrently with textlint from being overwritten.
+        if _fingerprint(path) != before:
+            _diagnostic("fix_file", "external-change-before-write")
+            return False
+        directory = path.parent
+        with tempfile.NamedTemporaryFile(
+            "w", encoding="utf-8", newline="", dir=directory,
+            prefix=f".{path.name}.", suffix=".tmp", delete=False,
+        ) as stream:
+            temporary = Path(stream.name)
             stream.write(fixed)
+            stream.flush()
+            os.fsync(stream.fileno())
+        if not _apply_metadata(temporary, metadata):
+            _diagnostic("fix_file", "metadata-preservation-failed")
+            temporary.unlink(missing_ok=True)
+            return False
+        # Recheck immediately before atomic replace; a residual scheduling
+        # window remains and is intentionally not claimed to be eliminated.
+        if _fingerprint(path) != before or not _same_metadata(_metadata_snapshot(path), metadata):
+            temporary.unlink(missing_ok=True)
+            _diagnostic("fix_file", "external-change-at-atomic-replace")
+            return False
+        os.replace(temporary, path)
+        if not _same_metadata(_metadata_snapshot(path), metadata):
+            _diagnostic("fix_file", "metadata-verification-failed")
+            return False
         return True
     except (OSError, UnicodeError):
+        if temporary is not None:
+            try:
+                temporary.unlink(missing_ok=True)
+            except OSError:
+                pass
         return False

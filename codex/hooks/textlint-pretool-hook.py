@@ -23,6 +23,18 @@ def load_helpers() -> Any:
     return module
 
 
+def load_post_hook_module() -> Any:
+    spec = importlib.util.spec_from_file_location(
+        "textlint_posttool_hook",
+        Path(__file__).with_name("textlint-posttool-hook.py"),
+    )
+    if spec is None or spec.loader is None:
+        raise ImportError("textlint-posttool-hook.py could not be loaded")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
 CREATE_PAGE_TOOLS = {
     "mcp__codex_apps__notion_notion_create_pages",
     "mcp__notion_molcure__notion_create_pages",
@@ -53,6 +65,10 @@ def input_location(payload: dict[str, Any]) -> tuple[str, dict[str, Any]] | None
         value = payload.get(key)
         if isinstance(value, dict):
             return key, value
+        if isinstance(value, str):
+            name = tool_name(payload)
+            if name == "apply_patch" or name.endswith("__apply_patch"):
+                return key, {"patch": value}
     return None
 
 
@@ -96,7 +112,7 @@ def fix_operation(data: dict[str, Any], operation_name: str, helpers: Any) -> bo
     return changed
 
 
-def main() -> int:
+def _main() -> int:
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, OSError):
@@ -111,6 +127,10 @@ def main() -> int:
     _, original_input = selected
     operation_name = operation(tool_name(payload), original_input)
     if operation_name is None:
+        post_hook = load_post_hook_module()
+        helpers = load_helpers()
+        paths = post_hook.candidate_paths(payload, require_success=False)
+        helpers.prepare_runtime_state(payload, paths)
         return 0
 
     updated_input = copy.deepcopy(original_input)
@@ -128,6 +148,15 @@ def main() -> int:
         }
     )
     return 0
+
+
+def main() -> int:
+    try:
+        return _main()
+    except Exception:
+        # PreToolUse must fail open with no output if a runtime envelope,
+        # state file, or dynamically loaded helper is malformed.
+        return 0
 
 
 if __name__ == "__main__":
