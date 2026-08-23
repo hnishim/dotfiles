@@ -180,7 +180,7 @@ edit_count() {
 }
 
 skill_count=$(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' | wc -l | tr -d ' ')
-syncable_skill_count=$((skill_count - 2))
+syncable_skill_count=$((skill_count - 5))
 if ! run_sync >"$TMP_ROOT/first.log" 2>&1; then
     /bin/cat "$TMP_ROOT/first.log" >&2
     exit 1

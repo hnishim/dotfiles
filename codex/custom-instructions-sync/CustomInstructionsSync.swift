@@ -45,6 +45,7 @@ struct StoredAccess {
 @MainActor
 struct CustomInstructionsSync {
     static let customInstructionsName = "custom-instructions.md"
+    static let openaiInstructionsName = "openai-instructions.md"
     static let userProfileName = "user-profile.md"
     static let outputName = "AGENTS.md"
     static let mirrorDirectoryName = "custom-instructions-sync"
@@ -91,7 +92,7 @@ struct CustomInstructionsSync {
     static func authorize(sourceHint: URL, skillsHint: URL, expectedOutput: URL) throws {
         let sourceURL = try chooseFolder(
             title: "Custom Instructionsの正本フォルダーを選択",
-            message: "custom-instructions.mdとuser-profile.mdがあるフォルダーを選択してください。",
+            message: "custom-instructions.md、openai-instructions.md、user-profile.mdがあるフォルダーを選択してください。",
             initialURL: sourceHint
         )
         try validateSources(in: sourceURL)
@@ -168,12 +169,9 @@ struct CustomInstructionsSync {
     }
 
     static func validateSources(in folderURL: URL) throws {
-        for name in [customInstructionsName, userProfileName] {
+        for name in [customInstructionsName, openaiInstructionsName, userProfileName] {
             let fileURL = folderURL.appendingPathComponent(name, isDirectory: false)
-            let data = try Data(contentsOf: fileURL)
-            guard !data.isEmpty else {
-                throw SyncError.missingOrEmpty("正本が存在しないか空です: \(fileURL.path)")
-            }
+            _ = try readRequiredSource(fileURL, label: name)
         }
     }
 
@@ -282,12 +280,18 @@ struct CustomInstructionsSync {
         }
         defer { access.outputURL.stopAccessingSecurityScopedResource() }
 
-        let stablePair = try readStableSources(from: access.sourceURL)
+        let stableSources = try readStableSources(from: access.sourceURL)
         let stableSkills = try readStableSkills(from: access.skillsURL)
-        let outputData = try compose(custom: stablePair.custom, profile: stablePair.profile)
+        let outputData = try compose(
+            custom: stableSources.custom,
+            openai: stableSources.openai,
+            profile: stableSources.profile
+        )
 
         let latestPair = try readSources(from: access.sourceURL)
-        guard latestPair.custom == stablePair.custom, latestPair.profile == stablePair.profile else {
+        guard latestPair.custom == stableSources.custom,
+              latestPair.openai == stableSources.openai,
+              latestPair.profile == stableSources.profile else {
             throw SyncError.unstableSources
         }
         let latestSkills = try readSkills(from: access.skillsURL)
@@ -305,8 +309,12 @@ struct CustomInstructionsSync {
 
         let customMirror = mirrorDirectory.appendingPathComponent(customInstructionsName, isDirectory: false)
         let profileMirror = mirrorDirectory.appendingPathComponent(userProfileName, isDirectory: false)
-        let customUpdated = try writePrivatelyIfChanged(stablePair.custom, to: customMirror)
-        let profileUpdated = try writePrivatelyIfChanged(stablePair.profile, to: profileMirror)
+        let customMirrorData = try composeCustomMirror(
+            custom: stableSources.custom,
+            openai: stableSources.openai
+        )
+        let customUpdated = try writePrivatelyIfChanged(customMirrorData, to: customMirror)
+        let profileUpdated = try writePrivatelyIfChanged(stableSources.profile, to: profileMirror)
 
         let outputURL = access.outputURL.appendingPathComponent(outputName, isDirectory: false)
         let agentsUpdated = try writePrivatelyIfChanged(outputData, to: outputURL)
@@ -323,7 +331,7 @@ struct CustomInstructionsSync {
         print("[SUCCESS] SkillsのNotion同期用ミラーを更新しました（\(stableSkills.count)ファイル）。")
     }
 
-    static func readStableSources(from folderURL: URL) throws -> (custom: Data, profile: Data) {
+    static func readStableSources(from folderURL: URL) throws -> (custom: Data, openai: Data, profile: Data) {
         let attempts = 5
         let waitSeconds = Double(ProcessInfo.processInfo.environment["CUSTOM_INSTRUCTIONS_STABILITY_WAIT"] ?? "1") ?? 1
 
@@ -331,7 +339,9 @@ struct CustomInstructionsSync {
             let before = try readSources(from: folderURL)
             if waitSeconds > 0 { Thread.sleep(forTimeInterval: waitSeconds) }
             let after = try readSources(from: folderURL)
-            if before.custom == after.custom, before.profile == after.profile {
+            if before.custom == after.custom,
+               before.openai == after.openai,
+               before.profile == after.profile {
                 return after
             }
             writeError("[INFO] 正本の更新が継続中です（\(attempt)/\(attempts)）。")
@@ -439,19 +449,38 @@ struct CustomInstructionsSync {
         }
     }
 
-    static func readSources(from folderURL: URL) throws -> (custom: Data, profile: Data) {
+    static func readSources(from folderURL: URL) throws -> (custom: Data, openai: Data, profile: Data) {
         let customURL = folderURL.appendingPathComponent(customInstructionsName, isDirectory: false)
+        let openaiURL = folderURL.appendingPathComponent(openaiInstructionsName, isDirectory: false)
         let profileURL = folderURL.appendingPathComponent(userProfileName, isDirectory: false)
-        let custom = try Data(contentsOf: customURL)
-        let profile = try Data(contentsOf: profileURL)
-        guard !custom.isEmpty else { throw SyncError.missingOrEmpty("正本が存在しないか空です: \(customURL.path)") }
-        guard !profile.isEmpty else { throw SyncError.missingOrEmpty("正本が存在しないか空です: \(profileURL.path)") }
-        return (custom, profile)
+        let custom = try readRequiredSource(customURL, label: customInstructionsName)
+        let openai = try readRequiredSource(openaiURL, label: openaiInstructionsName)
+        let profile = try readRequiredSource(profileURL, label: userProfileName)
+        return (custom, openai, profile)
     }
 
-    static func compose(custom: Data, profile: Data) throws -> Data {
+    static func readRequiredSource(_ url: URL, label: String) throws -> Data {
+        let data: Data
+        do {
+            data = try Data(contentsOf: url)
+        } catch {
+            throw SyncError.missingOrEmpty("正本が存在しないか読み込めません: \(url.path)")
+        }
+        guard !data.isEmpty else {
+            throw SyncError.missingOrEmpty("正本が存在しないか空です: \(url.path)")
+        }
+        guard String(data: data, encoding: .utf8) != nil else {
+            throw SyncError.invalidUTF8("\(label)がUTF-8ではありません。")
+        }
+        return data
+    }
+
+    static func compose(custom: Data, openai: Data, profile: Data) throws -> Data {
         guard String(data: custom, encoding: .utf8) != nil else {
             throw SyncError.invalidUTF8("custom-instructions.mdがUTF-8ではありません。")
+        }
+        guard String(data: openai, encoding: .utf8) != nil else {
+            throw SyncError.invalidUTF8("openai-instructions.mdがUTF-8ではありません。")
         }
         guard String(data: profile, encoding: .utf8) != nil else {
             throw SyncError.invalidUTF8("user-profile.mdがUTF-8ではありません。")
@@ -460,7 +489,26 @@ struct CustomInstructionsSync {
         var result = custom
         if result.last != 0x0A { result.append(0x0A) }
         result.append(0x0A)
+        result.append(openai)
+        if result.last != 0x0A { result.append(0x0A) }
+        result.append(0x0A)
         result.append(profile)
+        if result.last != 0x0A { result.append(0x0A) }
+        return result
+    }
+
+    static func composeCustomMirror(custom: Data, openai: Data) throws -> Data {
+        guard String(data: custom, encoding: .utf8) != nil else {
+            throw SyncError.invalidUTF8("custom-instructions.mdがUTF-8ではありません。")
+        }
+        guard String(data: openai, encoding: .utf8) != nil else {
+            throw SyncError.invalidUTF8("openai-instructions.mdがUTF-8ではありません。")
+        }
+
+        var result = custom
+        if result.last != 0x0A { result.append(0x0A) }
+        result.append(0x0A)
+        result.append(openai)
         if result.last != 0x0A { result.append(0x0A) }
         return result
     }
