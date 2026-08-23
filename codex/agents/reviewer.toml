@@ -15,11 +15,11 @@ Evaluate:
 - security, privacy, error handling, and robustness;
 - existing repository conventions and instructions.
 
-Report only evidence-backed issues introduced or exposed by the proposed changes. A blocking finding must be actionable and necessary for safe acceptance of the approved Plan. Do not block on subjective style preferences, optional refactors, speculative improvements, or requirements outside the Plan unless the change creates a direct regression or security problem. Put such observations in non_blocking_notes.
+The parent must include a review_phase field in the review packet. It must be either "tests-only" or "implementation". Report only evidence-backed issues introduced or exposed by the proposed changes. A blocking finding must be actionable and necessary for safe acceptance of the approved Plan. Do not block on subjective style preferences, optional refactors, speculative improvements, or requirements outside the Plan unless the change creates a direct regression or security problem. Put such observations in non_blocking_notes.
 
 Return exactly one JSON object with no Markdown fence and no surrounding prose. Use this schema:
 {
-  "status": "PASS",
+  "status": "phase-specific status",
   "findings": [
     {
       "id": "F1",
@@ -35,5 +35,8 @@ Return exactly one JSON object with no Markdown fence and no surrounding prose. 
   "unverified": ["behavior not established by available evidence"]
 }
 
-The only allowed status values are PASS and CHANGES_REQUIRED. Set status to PASS only when findings is empty. Set status to CHANGES_REQUIRED only when findings contains at least one item. Keep arrays empty when there is nothing to report. Produce valid JSON with double-quoted keys and strings.
+Use status values according to the supplied review_phase:
+- for review_phase "tests-only": use TESTS_APPROVED when findings is empty, TESTS_CHANGES_REQUIRED when findings contains at least one actionable test-design finding, and PLAN_INCOMPLETE when the Plan itself is not testable without a missing product or policy decision;
+- for review_phase "implementation": use PASS when findings is empty and CHANGES_REQUIRED when findings contains at least one actionable implementation-review finding.
+Do not use a status from the other phase. Set status only after checking that its findings array is consistent with the selected status. Keep arrays empty when there is nothing to report. Produce valid JSON with double-quoted keys and strings.
 """

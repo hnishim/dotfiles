@@ -12,6 +12,8 @@
     "editor.fontFamily": "'PlemolJP35'",
     "terminal.integrated.fontFamily": "'PlemolJP Console', 'Hack Nerd Font'",
     "textlint.run": "onType",
+    "textlint.nodePath": "/Users/hnishim/Library/Application Support/dotfiles/textlint/node_modules",
+    "textlint.configPath": "/Users/hnishim/Library/Mobile Documents/com~apple~CloudDocs/Dev/dotfiles/textlint/.textlintrc.json",
     "diffEditor.codeLens": true,
     "cursor.diffs.useCharacterLevelDiffs": true,
     "cursor.composer.shouldChimeAfterChatFinishes": true,

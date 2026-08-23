@@ -29,6 +29,8 @@ def find_textlint() -> str | None:
     if configured_path:
         candidates.append(configured_path)
 
+    candidates.append(str(Path(__file__).resolve().parents[2] / "bin" / "textlint"))
+
     discovered_path = shutil.which("textlint")
     if discovered_path:
         candidates.append(discovered_path)
@@ -45,6 +47,23 @@ def find_textlint() -> str | None:
         if path.is_file() and os.access(path, os.X_OK):
             return str(path)
     return None
+
+
+def textlint_environment() -> dict[str, str]:
+    """Provide GUI-launched hooks with common pnpm installation paths."""
+    environment = os.environ.copy()
+    path_entries = [
+        environment.get("PNPM_HOME"),
+        str(Path.home() / ".local" / "share" / "pnpm"),
+        str(Path.home() / "Library" / "pnpm"),
+        "/opt/homebrew/bin",
+        "/usr/local/bin",
+    ]
+    current_path = environment.get("PATH", "")
+    environment["PATH"] = os.pathsep.join(
+        entry for entry in (*path_entries, current_path) if entry
+    )
+    return environment
 
 
 def continue_without_blocking(system_message: str | None = None) -> None:
@@ -221,6 +240,7 @@ def main() -> int:
             text=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
+            env=textlint_environment(),
             timeout=TEXTLINT_TIMEOUT_SECONDS,
             check=False,
         )

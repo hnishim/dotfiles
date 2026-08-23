@@ -1,0 +1,38 @@
+#!/bin/sh
+
+set -eu
+
+log_file=${FAKE_PNPM_LOG:?FAKE_PNPM_LOG is required}
+if [ "$#" -ne 4 ] || [ "$1" != "--dir" ] || [ "$3" != "install" ] || [ "$4" != "--frozen-lockfile" ]; then
+    printf '%s\n' 'unexpected pnpm arguments' >>"$log_file"
+    exit 2
+fi
+
+runtime_dir=$2
+printf 'ARGC=%s\n' "$#" >>"$log_file"
+index=0
+for argument in "$@"; do
+    printf 'ARG_%s=%s\n' "$index" "$argument" >>"$log_file"
+    index=$((index + 1))
+done
+
+mkdir -p "$runtime_dir/node_modules/.bin"
+if [ "${FAKE_PNPM_FAIL_AFTER_INSTALL:-0}" = 1 ]; then
+    printf '%s\n' 'changed by failed install' >"$runtime_dir/node_modules/changed-by-install"
+else
+    printf '%s\n' 'changed by successful install' >"$runtime_dir/node_modules/changed-by-install"
+fi
+cat >"$runtime_dir/node_modules/.bin/textlint" <<'EOF'
+#!/bin/sh
+set -eu
+printf 'ARG_COUNT=%s\n' "$#"
+index=0
+for argument in "$@"; do
+    printf 'ARG_%s=<%s>\n' "$index" "$argument"
+    index=$((index + 1))
+done
+EOF
+chmod +x "$runtime_dir/node_modules/.bin/textlint"
+if [ "${FAKE_PNPM_FAIL_AFTER_INSTALL:-0}" = 1 ]; then
+    exit 1
+fi

@@ -1,129 +1,87 @@
 #!/bin/bash
 
-# textlintと関連ルールのセットアップ、設定ファイルの同期を行うスクリプト
-
-# 共通ライブラリを読み込み
+# Application Supportにpnpm管理のtextlint runtimeを構築する。
+# 既存のdotfiles/textlint/node_modules、ホーム設定、シェル設定は変更しない。
 source "$(dirname "$0")/../lib/common.sh"
 
-# --- 変数定義 ---
-# このスクリプトが存在するディレクトリ
-SCRIPT_DIR=$(get_script_dir)
-# 設定ファイル
-ICLOUD_TEXTLINT_CONFIG="$SCRIPT_DIR/.textlintrc.json"
-ICLOUD_PRH_CONFIG="$SCRIPT_DIR/my-prh.yml"
-# ホームディレクトリのリンク先
-HOME_TEXTLINT_CONFIG="$HOME/.textlintrc.json"
-HOME_PRH_CONFIG="$HOME/my-prh.yml"
-# バックアップ用ディレクトリ
-BACKUP_DIR="$HOME/.config_backup/textlint"
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+DOTFILES_ROOT=$(cd "$SCRIPT_DIR/.." && pwd -P)
+PACKAGE_JSON="$SCRIPT_DIR/package.json"
+LOCKFILE="$SCRIPT_DIR/pnpm-lock.yaml"
+TEXTLINT_CONFIG="$SCRIPT_DIR/.textlintrc.json"
+PRH_CONFIG="$SCRIPT_DIR/my-prh.yml"
+WRAPPER="$DOTFILES_ROOT/bin/textlint"
+RUNTIME_PARENT="$HOME/Library/Application Support/dotfiles"
+RUNTIME_DIR="$RUNTIME_PARENT/textlint"
+RUNTIME_NODE_MODULES="$RUNTIME_DIR/node_modules"
 
-# --- 前提条件チェック ---
-log_info "前提条件をチェックしています..."
+ensure_directory_shape() {
+    local path="$1"
+    local label="$2"
 
-# Node.jsのチェック (ご指定の `brew list | grep node` よりも確実な `command -v` を使用)
-check_command "node" "'brew install node' またはリポジトリの 'brew-setup.sh' を実行してインストールしてください。" || exit 1
-
-# npmのチェック
-check_command "npm" "Node.jsのインストール状況を確認してください。" || exit 1
-
-# jqのチェック (ルールのパースに必要)
-check_command "jq" "'brew install jq' を実行してインストールしてください。" || exit 1
-
-# 設定ファイルの存在チェック
-check_path "$ICLOUD_TEXTLINT_CONFIG" "textlint設定ファイル" "file" || exit 1
-# .textlintrc.json で prh が有効になっているため、辞書ファイルもチェック
-check_path "$ICLOUD_PRH_CONFIG" "prh辞書ファイル" "file" || exit 1
-
-echo ""
-log_info "--- textlint本体のインストールを開始します ---"
-
-# textlint本体のインストールチェック (ご指定の grep よりも正確な `npm list` を使用)
-if npm list -g --depth=0 textlint &>/dev/null; then
-    log_success "textlint は既にインストール済みです。"
-else
-    log_info "textlint をグローバルにインストールします..."
-    if npm install -g textlint; then
-        log_success "textlint のインストールに成功しました。"
-    else
-        log_error "textlint のインストールに失敗しました。"
-        exit 1
+    if [ -L "$path" ]; then
+        log_error "$labelがsymlinkのため変更しません: $path"
+        return 1
     fi
+    if [ -e "$path" ] && [ ! -d "$path" ]; then
+        log_error "$labelがディレクトリではないため変更しません: $path"
+        return 1
+    fi
+}
+
+ensure_manifest_link() {
+    local link_path="$1"
+    local target_path="$2"
+    local label="$3"
+
+    if [ -L "$link_path" ] && [ "$(readlink "$link_path")" = "$target_path" ]; then
+        return 0
+    fi
+    if [ -e "$link_path" ] || [ -L "$link_path" ]; then
+        log_error "$labelが想定されたsymlinkではないため変更しません: $link_path"
+        return 1
+    fi
+    ln -s "$target_path" "$link_path"
+}
+
+log_info "textlint runtimeの前提条件を確認しています..."
+check_command "node" "Node.jsをインストールしてください。" || exit 1
+check_command "pnpm" "pnpmをインストールしてください。" || exit 1
+check_path "$PACKAGE_JSON" "package.json" "file" || exit 1
+check_path "$LOCKFILE" "pnpm-lock.yaml" "file" || exit 1
+check_path "$TEXTLINT_CONFIG" ".textlintrc.json" "file" || exit 1
+check_path "$PRH_CONFIG" "my-prh.yml" "file" || exit 1
+check_path "$WRAPPER" "textlint wrapper" "file" || exit 1
+
+ensure_directory_shape "$HOME/Library" "Library" || exit 1
+ensure_directory_shape "$HOME/Library/Application Support" "Application Support" || exit 1
+ensure_directory_shape "$RUNTIME_PARENT" "runtime親ディレクトリ" || exit 1
+ensure_directory_shape "$RUNTIME_DIR" "runtimeディレクトリ" || exit 1
+
+if [ -L "$RUNTIME_NODE_MODULES" ]; then
+    log_error "runtimeのnode_modulesは物理ディレクトリである必要があります: $RUNTIME_NODE_MODULES"
+    exit 1
 fi
 
-echo ""
-log_info "--- textlintルールのインストールを開始します ---"
-log_info "設定ファイル (.textlintrc.json) を解析しています..."
+mkdir -p "$RUNTIME_DIR"
+ensure_manifest_link "$RUNTIME_DIR/package.json" "$PACKAGE_JSON" "runtimeのpackage.json" || exit 1
+ensure_manifest_link "$RUNTIME_DIR/pnpm-lock.yaml" "$LOCKFILE" "runtimeのpnpm-lock.yaml" || exit 1
 
-# .textlintrc.jsonからルールキーを抽出 (値がfalseのものは除外)
-rule_keys=$(get_json_value "$ICLOUD_TEXTLINT_CONFIG" '.rules | to_entries[] | select(.value != false) | .key')
-
-if [ -z "$rule_keys" ]; then
-    log_info "インストール対象のルールが見つかりませんでした。"
-else
-    # インストール済みnpmパッケージリストを一度だけ取得して高速化
-    if ! installed_packages=$(npm list -g --depth=0 --json); then
-        log_error "インストール済みnpmパッケージの取得に失敗しました。"
-        exit 1
-    fi
-
-    rule_install_failures=0
-    while IFS= read -r key; do
-        # prhはtextlint本体に同梱されているためスキップ
-        if [ "$key" = "prh" ]; then
-            continue
-        fi
-
-        # ルールキーからnpmパッケージ名を決定
-        package_name=""
-        if [[ "$key" == textlint-rule-* ]]; then
-            package_name="$key"
-        elif [[ "$key" == preset-* ]]; then
-            package_name="textlint-rule-$key"
-        elif [[ "$key" == @* ]]; then
-            # Scoped package: @scope/name -> @scope/textlint-rule-name
-            scope=$(echo "$key" | cut -d'/' -f1)
-            name=$(echo "$key" | cut -d'/' -f2)
-            if [[ "$name" == textlint-rule-* ]]; then
-                package_name="$key"
-            else
-                package_name="$scope/textlint-rule-$name"
-            fi
-        else
-            package_name="textlint-rule-$key"
-        fi
-
-        # 既にインストールされているかチェック
-        if echo "$installed_packages" | jq -e ".dependencies[\"$package_name\"]" &>/dev/null; then
-            log_success "ルール '$package_name' は既にインストール済みです。"
-        else
-            log_info "ルール '$package_name' をインストールします..."
-            if npm install -g "$package_name"; then
-                log_success "ルール '$package_name' のインストールに成功しました。"
-            else
-                log_error "ルール '$package_name' のインストールに失敗しました。"
-                rule_install_failures=$((rule_install_failures + 1))
-            fi
-        fi
-    done <<< "$rule_keys"
-
-    if [ "$rule_install_failures" -gt 0 ]; then
-        log_error "$rule_install_failures 件のtextlintルールをインストールできませんでした。"
-        exit 1
-    fi
+log_info "Application Support側に依存関係をインストールしています..."
+if ! pnpm --dir "$RUNTIME_DIR" install --frozen-lockfile; then
+    log_error "pnpm installに失敗しました。lockfileとpnpmのバージョンを確認してください。"
+    exit 1
 fi
 
-echo ""
-log_info "--- 設定ファイルのシンボリックリンクを作成します ---"
+if [ ! -d "$RUNTIME_NODE_MODULES" ] || [ -L "$RUNTIME_NODE_MODULES" ]; then
+    log_error "runtimeのnode_modulesが物理ディレクトリとして作成されませんでした: $RUNTIME_NODE_MODULES"
+    exit 1
+fi
 
-# バックアップディレクトリの作成
-create_backup_dir "$BACKUP_DIR"
+if ! "$RUNTIME_NODE_MODULES/.bin/textlint" --version >/dev/null; then
+    log_error "Application Support側のtextlintを実行できません。"
+    exit 1
+fi
 
-create_symlink "$ICLOUD_TEXTLINT_CONFIG" "$HOME_TEXTLINT_CONFIG" "$BACKUP_DIR" ".textlintrc.json" ".textlintrc.json" || exit 1
-create_symlink "$ICLOUD_PRH_CONFIG" "$HOME_PRH_CONFIG" "$BACKUP_DIR" "my-prh.yml" "my-prh.yml" || exit 1
-
-# 完了メッセージの表示
-symlinks_info="  .textlintrc.json: $HOME_TEXTLINT_CONFIG -> $ICLOUD_TEXTLINT_CONFIG
-  my-prh.yml: $HOME_PRH_CONFIG -> $ICLOUD_PRH_CONFIG"
-
-show_completion_message "textlintのセットアップ" "$symlinks_info" "$BACKUP_DIR"
-log_info "VSCodeやCursorで 'textlint' 拡張機能をインストールすると、エディタ上でリアルタイムに校正が実行されます。"
+log_success "textlint runtimeを構築しました: $RUNTIME_DIR"
+log_info "既存のdotfiles/textlint/node_modules、ホーム設定、.zprofileは変更していません。"
