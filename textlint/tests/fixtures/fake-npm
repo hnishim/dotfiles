@@ -1,7 +1,0 @@
-#!/bin/sh
-
-set -eu
-
-log_file=${FAKE_NPM_LOG:?FAKE_NPM_LOG is required}
-printf 'npm invoked: %s\n' "$*" >>"$log_file"
-exit 99
