@@ -82,6 +82,7 @@ matches:
 
   - trigger: '\git'
     replace: 'git add . && git commit -m "$|$" && git push'
+    force_mode: clipboard
 
   # テキスト補完
 
