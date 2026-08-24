@@ -37,8 +37,8 @@ casks:
     - monitorcontrol
     - notion
     - pearcleaner
-    - shottr
     - slack
+    - snapzy
     - warp
     - zoom
     - y3owk1n/tap/mimi
@@ -59,6 +59,7 @@ casks:
     # - muteme
     # - battery
     # - logi-options+
+    # - shottr
 
   personal:
     - fujitsu-scansnap-home
