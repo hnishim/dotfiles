@@ -80,7 +80,7 @@
       ;;h
       [:!!i [:launch "ChatGPT"]] ;; aI
       [:!!j [:launch "Dictionaries"]] ;;Jisho
-      ;;k
+      [:!!k [:launch "Linear"]] ;;tasK
       ;;l
       [:!!m [:launch "Meru"]] ;; Mail
       [:!!n [:launch "Notion"]]
