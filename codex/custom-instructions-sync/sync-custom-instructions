@@ -191,7 +191,7 @@ RUBY
 
 is_excluded_codex_id() {
     case "$1" in
-        gmail-to-calendar|reply-automatically|git-add-commit-push|implementation-loop|reflect-textlint-findings|linear-issue-plan-review)
+        gmail-to-calendar|reply-automatically|git-add-commit-push|implementation-loop|reflect-textlint-findings|linear-issue-plan-review|initial-plan)
             return 0
             ;;
         *)
