@@ -14,7 +14,6 @@ SCRIPT_DIR=$(get_script_dir)
 LOCAL_USER_DIR="$HOME/Library/Application Support/Cursor/User"
 LOCAL_SETTINGS_JSON="$LOCAL_USER_DIR/settings.json"
 LOCAL_KEYBINDINGS_JSON="$LOCAL_USER_DIR/keybindings.json"
-LOCAL_BACKUP_DIR="$LOCAL_USER_DIR/_backup"
 
 # Repository path
 ICLOUD_CURSOR_DIR="$SCRIPT_DIR"
@@ -44,17 +43,14 @@ check_path "$LOCAL_USER_DIR" "ローカルCursorユーザーディレクトリ" 
 
 log_success "前提条件チェック完了"
 
-# バックアップディレクトリの作成
-create_backup_dir "$LOCAL_BACKUP_DIR"
-
 echo ""
 log_info "シンボリックリンクの状態を確認・作成します..."
 
 # --- settings.json の同期 ---
-create_symlink "$ICLOUD_SETTINGS_JSON" "$LOCAL_SETTINGS_JSON" "$LOCAL_BACKUP_DIR" "settings" "settings.json" || exit 1
+create_symlink "$ICLOUD_SETTINGS_JSON" "$LOCAL_SETTINGS_JSON" "settings.json" || exit 1
 
 # --- keybindings.json の同期 ---
-create_symlink "$ICLOUD_KEYBINDINGS_JSON" "$LOCAL_KEYBINDINGS_JSON" "$LOCAL_BACKUP_DIR" "keybindings" "keybindings.json" || exit 1
+create_symlink "$ICLOUD_KEYBINDINGS_JSON" "$LOCAL_KEYBINDINGS_JSON" "keybindings.json" || exit 1
 
 # --- Cursor拡張機能のインストール ---
 echo ""
@@ -95,4 +91,4 @@ fi
 symlinks_info="  settings.json: $LOCAL_SETTINGS_JSON -> $ICLOUD_SETTINGS_JSON
   keybindings.json: $LOCAL_KEYBINDINGS_JSON -> $ICLOUD_KEYBINDINGS_JSON"
 
-show_completion_message "Cursor設定ファイル同期" "$symlinks_info" "$LOCAL_BACKUP_DIR"
+show_completion_message "Cursor設定ファイル同期" "$symlinks_info" ""

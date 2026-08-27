@@ -54,31 +54,14 @@ for skill_path in "${skill_paths[@]}"; do
     skill_name=$(basename "$skill_path")
     link_path="$LOCAL_CODEX_SKILLS_DIR/$skill_name"
 
-    if [ -L "$link_path" ]; then
-        current_target=$(readlink "$link_path")
-        if [ "$current_target" = "$skill_path" ]; then
-            log_success "$skill_name は既に正しくリンクされています。スキップします。"
-            skip_count=$((skip_count + 1))
-        else
-            log_error "$skill_name には別のシンボリックリンクがあります: $link_path -> $current_target"
-            error_count=$((error_count + 1))
-        fi
+    if check_symlink "$link_path" "$skill_path"; then
+        log_success "$skill_name は既に正しくリンクされています。スキップします。"
+        skip_count=$((skip_count + 1))
         continue
     fi
 
-    if [ -e "$link_path" ]; then
-        log_error "$skill_name と同名のファイルまたはディレクトリが存在します。上書きしません: $link_path"
-        error_count=$((error_count + 1))
-        continue
-    fi
-
-    if ln -s "$skill_path" "$link_path"; then
-        log_success "$skill_name のシンボリックリンクを作成しました: $link_path -> $skill_path"
-        link_count=$((link_count + 1))
-    else
-        log_error "$skill_name のシンボリックリンク作成に失敗しました: $link_path"
-        error_count=$((error_count + 1))
-    fi
+    create_symlink "$skill_path" "$link_path" "$skill_name" || exit 1
+    link_count=$((link_count + 1))
 done
 
 if [ "$error_count" -gt 0 ]; then

@@ -19,7 +19,6 @@ LOCAL_CONFIG_DIR="$LOCAL_ESPANSO_DIR/config"
 LOCAL_MATCH_DIR="$LOCAL_ESPANSO_DIR/match"
 LOCAL_DEFAULT_YML="$LOCAL_CONFIG_DIR/default.yml"
 LOCAL_BASE_YML="$LOCAL_MATCH_DIR/base.yml"
-LOCAL_BACKUP_DIR="$LOCAL_ESPANSO_DIR/_backup"
 
 echo "=== Espanso設定ファイル同期スクリプト ==="
 
@@ -36,18 +35,15 @@ for directory in "$LOCAL_CONFIG_DIR" "$LOCAL_MATCH_DIR"; do
     ensure_directory "$directory" "Espanso設定ディレクトリ" || exit 1
 done
 
-# 3. バックアップディレクトリの作成
-create_backup_dir "$LOCAL_BACKUP_DIR"
-
 echo ""
 log_info "シンボリックリンクの状態を確認・作成します..."
 
 # 4. シンボリックリンクの確認・作成
-create_symlink "$ICLOUD_DEFAULT_YML" "$LOCAL_DEFAULT_YML" "$LOCAL_BACKUP_DIR" "default.yml" "default.yml" || exit 1
-create_symlink "$ICLOUD_BASE_YML" "$LOCAL_BASE_YML" "$LOCAL_BACKUP_DIR" "base.yml" "base.yml" || exit 1
+create_symlink "$ICLOUD_DEFAULT_YML" "$LOCAL_DEFAULT_YML" "default.yml" || exit 1
+create_symlink "$ICLOUD_BASE_YML" "$LOCAL_BASE_YML" "base.yml" || exit 1
 
 # 完了メッセージの表示
 symlinks_info="  default.yml: $LOCAL_DEFAULT_YML -> $ICLOUD_DEFAULT_YML
   base.yml: $LOCAL_BASE_YML -> $ICLOUD_BASE_YML"
 
-show_completion_message "Espanso設定ファイル同期" "$symlinks_info" "$LOCAL_BACKUP_DIR"
+show_completion_message "Espanso設定ファイル同期" "$symlinks_info" ""

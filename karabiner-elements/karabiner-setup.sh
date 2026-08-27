@@ -23,7 +23,6 @@ SCRIPT_DIR=$(get_script_dir)
 LOCAL_KARABINER_DIR="$HOME/.config/karabiner"
 LOCAL_KARABINER_JSON="$LOCAL_KARABINER_DIR/karabiner.json"
 LOCAL_KARABINER_EDN="$HOME/.config/karabiner.edn"
-LOCAL_BACKUP_DIR="$LOCAL_KARABINER_DIR/_backup"
 LOCAL_ASSETS_DIR="$LOCAL_KARABINER_DIR/.local"
 TWO_PANES_FINDER_NAME="two-panes-finder.applescript"
 TWO_PANES_FINDER_LINK="$LOCAL_ASSETS_DIR/$TWO_PANES_FINDER_NAME"
@@ -60,17 +59,14 @@ check_path "$LOCAL_KARABINER_DIR" "ローカルKarabinerディレクトリ" "dir
 
 log_success "前提条件チェック完了"
 
-# バックアップディレクトリの作成
-create_backup_dir "$LOCAL_BACKUP_DIR"
-
 echo ""
 log_info "シンボリックリンクの状態を確認・作成します..."
 
 # --- karabiner.json の同期 ---
-create_symlink "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON" "$LOCAL_BACKUP_DIR" "karabiner" "karabiner.json" || exit 1
+create_symlink "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON" "karabiner.json" || exit 1
 
 # --- karabiner.edn (goku) の同期 ---
-create_symlink "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN" "$LOCAL_BACKUP_DIR" "karabiner" "karabiner.edn" || exit 1
+create_symlink "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN" "karabiner.edn" || exit 1
 
 # --- ローカル依存スクリプトの検出・リンク ---
 log_info "ローカル依存スクリプトを確認します..."
@@ -143,4 +139,4 @@ fi
 symlinks_info="  karabiner.json: $LOCAL_KARABINER_JSON -> $ICLOUD_KARABINER_JSON
   karabiner.edn:  $LOCAL_KARABINER_EDN -> $ICLOUD_KARABINER_EDN"
 
-show_completion_message "Karabiner-Elements設定ファイル同期" "$symlinks_info" "$LOCAL_BACKUP_DIR"
+show_completion_message "Karabiner-Elements設定ファイル同期" "$symlinks_info" ""

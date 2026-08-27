@@ -15,7 +15,6 @@ ICLOUD_IGNORE_FILE="$SCRIPT_DIR/ignore"
 # ローカルのGit設定パス
 LOCAL_GIT_CONFIG_DIR="$HOME/.config/git"
 LOCAL_GIT_IGNORE_FILE="$LOCAL_GIT_CONFIG_DIR/ignore"
-LOCAL_BACKUP_DIR="$LOCAL_GIT_CONFIG_DIR/_backup"
 
 echo "=== Git ignore設定ファイル同期スクリプト ==="
 
@@ -29,14 +28,11 @@ log_success "前提条件チェック完了"
 # 2. ローカルGit設定ディレクトリの作成
 ensure_directory "$LOCAL_GIT_CONFIG_DIR" "ローカルGit設定ディレクトリ" || exit 1
 
-# 3. バックアップディレクトリの作成
-create_backup_dir "$LOCAL_BACKUP_DIR"
-
 echo ""
 log_info "シンボリックリンクの状態を確認・作成します..."
 
 # 4. シンボリックリンクの確認・作成
-create_symlink "$ICLOUD_IGNORE_FILE" "$LOCAL_GIT_IGNORE_FILE" "$LOCAL_BACKUP_DIR" "ignore" "ignore ファイル" || exit 1
+create_symlink "$ICLOUD_IGNORE_FILE" "$LOCAL_GIT_IGNORE_FILE" "ignore ファイル" || exit 1
 
 # 5. Gitグローバル設定の更新
 current_excludes_file=$(git config --global --get core.excludesfile || true)
@@ -51,4 +47,4 @@ fi
 # 完了メッセージの表示
 symlinks_info="  ignore: $LOCAL_GIT_IGNORE_FILE -> $ICLOUD_IGNORE_FILE"
 
-show_completion_message "Git ignore設定ファイル同期" "$symlinks_info" "$LOCAL_BACKUP_DIR"
+show_completion_message "Git ignore設定ファイル同期" "$symlinks_info" ""

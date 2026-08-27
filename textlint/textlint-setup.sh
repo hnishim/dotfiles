@@ -30,21 +30,6 @@ ensure_directory_shape() {
     fi
 }
 
-ensure_manifest_link() {
-    local link_path="$1"
-    local target_path="$2"
-    local label="$3"
-
-    if [ -L "$link_path" ] && [ "$(readlink "$link_path")" = "$target_path" ]; then
-        return 0
-    fi
-    if [ -e "$link_path" ] || [ -L "$link_path" ]; then
-        log_error "$labelが想定されたsymlinkではないため変更しません: $link_path"
-        return 1
-    fi
-    ln -s "$target_path" "$link_path"
-}
-
 log_info "textlint runtimeの前提条件を確認しています..."
 check_command "node" "Node.jsをインストールしてください。" || exit 1
 check_command "pnpm" "pnpmをインストールしてください。" || exit 1
@@ -64,8 +49,8 @@ if [ -L "$RUNTIME_NODE_MODULES" ]; then
 fi
 
 mkdir -p "$RUNTIME_DIR"
-ensure_manifest_link "$RUNTIME_DIR/package.json" "$PACKAGE_JSON" "runtimeのpackage.json" || exit 1
-ensure_manifest_link "$RUNTIME_DIR/pnpm-lock.yaml" "$LOCKFILE" "runtimeのpnpm-lock.yaml" || exit 1
+create_symlink "$PACKAGE_JSON" "$RUNTIME_DIR/package.json" "runtimeのpackage.json" || exit 1
+create_symlink "$LOCKFILE" "$RUNTIME_DIR/pnpm-lock.yaml" "runtimeのpnpm-lock.yaml" || exit 1
 
 log_info "Application Support側に依存関係をインストールしています..."
 if ! pnpm --dir "$RUNTIME_DIR" install --frozen-lockfile; then

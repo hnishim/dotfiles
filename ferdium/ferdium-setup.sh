@@ -16,7 +16,6 @@ ICLOUD_WEBVIEW_JS="$ICLOUD_GCAL_DIR/webview.js"
 LOCAL_GCAL_DIR="$HOME/Library/Application Support/Ferdium/recipes/google-calendar"
 LOCAL_USER_JS="$LOCAL_GCAL_DIR/user.js"
 LOCAL_WEBVIEW_JS="$LOCAL_GCAL_DIR/webview.js"
-LOCAL_BACKUP_DIR="$LOCAL_GCAL_DIR/_backup"
 
 echo "=== Ferdium カスタムレシピ同期スクリプト ==="
 
@@ -29,18 +28,15 @@ log_success "前提条件チェック完了"
 # --- ローカルディレクトリの作成 ---
 ensure_directory "$LOCAL_GCAL_DIR" "ローカルFerdiumレシピディレクトリ" || exit 1
 
-# --- バックアップディレクトリの作成 ---
-create_backup_dir "$LOCAL_BACKUP_DIR"
-
 echo ""
 log_info "シンボリックリンクの状態を確認・作成します..."
 
 # --- シンボリックリンクの確認・作成 ---
-create_symlink "$ICLOUD_USER_JS" "$LOCAL_USER_JS" "$LOCAL_BACKUP_DIR" "user" "user.js" || exit 1
-create_symlink "$ICLOUD_WEBVIEW_JS" "$LOCAL_WEBVIEW_JS" "$LOCAL_BACKUP_DIR" "webview" "webview.js" || exit 1
+create_symlink "$ICLOUD_USER_JS" "$LOCAL_USER_JS" "user.js" || exit 1
+create_symlink "$ICLOUD_WEBVIEW_JS" "$LOCAL_WEBVIEW_JS" "webview.js" || exit 1
 
 # --- 完了メッセージ ---
 symlinks_info="  user.js: $LOCAL_USER_JS -> $ICLOUD_USER_JS
   webview.js: $LOCAL_WEBVIEW_JS -> $ICLOUD_WEBVIEW_JS"
 
-show_completion_message "Ferdium カスタムレシピ同期" "$symlinks_info" "$LOCAL_BACKUP_DIR"
+show_completion_message "Ferdium カスタムレシピ同期" "$symlinks_info" ""

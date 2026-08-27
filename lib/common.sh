@@ -6,10 +6,6 @@
 # --- エラーハンドリング設定 ---
 set -euo pipefail
 
-# --- 共通変数 ---
-# バックアップ用の日付（_YYYYMMDD形式）を取得
-BACKUP_DATE=$(date +%Y%m%d)
-
 # --- ログ出力関数 ---
 log_header() {
     echo "" >&2
@@ -62,28 +58,6 @@ ensure_directory() {
     fi
 }
 
-# --- バックアップ処理関数 ---
-
-# バックアップディレクトリを作成
-create_backup_dir() {
-    local backup_dir="$1"
-    ensure_directory "$backup_dir" "バックアップディレクトリ"
-}
-
-# 既存ファイルをバックアップ
-backup_existing_file() {
-    local source_file="$1"
-    local backup_dir="$2"
-    local backup_name="$3"
-    
-    if [ -e "$source_file" ] || [ -L "$source_file" ]; then
-        mv "$source_file" "$backup_dir/${backup_name}_${BACKUP_DATE}"
-        log_success "既存のファイルをバックアップしました: ${backup_name}_${BACKUP_DATE}"
-        return 0
-    fi
-    return 1
-}
-
 # --- シンボリックリンク処理関数 ---
 
 # シンボリックリンクの状態を確認
@@ -98,13 +72,11 @@ check_symlink() {
     fi
 }
 
-# シンボリックリンクを作成（既存ファイルはバックアップ）
+# シンボリックリンクを作成（既存の競合対象は変更しない）
 create_symlink() {
     local source_file="$1"
     local link_path="$2"
-    local backup_dir="$3"
-    local backup_name="$4"
-    local file_label="$5"
+    local file_label="$3"
     
     if check_symlink "$link_path" "$source_file"; then
         log_success "$file_label は既に正しくリンクされています。スキップします。"
@@ -112,25 +84,24 @@ create_symlink() {
     fi
     
     log_info "$file_label の設定を開始します..."
-    
-    # 既存ファイルのバックアップ
-    if backup_existing_file "$link_path" "$backup_dir" "$backup_name"; then
-        log_info "既存ファイルのバックアップが完了しました"
+
+    if [ -e "$link_path" ] || [ -L "$link_path" ]; then
+        log_error "$file_label のリンク先に既存の競合があるため変更しません: $link_path"
+        return 1
     fi
-    
-    # シンボリックリンクの作成
-    if ln -sf "$source_file" "$link_path"; then
-        if [ -L "$link_path" ]; then
-            log_success "$file_label のシンボリックリンクを作成しました"
-            return 0
-        else
-            log_error "$file_label のシンボリックリンク作成に失敗しました"
-            return 1
-        fi
-    else
+
+    if ! ln -s "$source_file" "$link_path"; then
         log_error "$file_label のシンボリックリンク作成に失敗しました"
         return 1
     fi
+
+    if check_symlink "$link_path" "$source_file"; then
+        log_success "$file_label のシンボリックリンクを作成しました"
+        return 0
+    fi
+
+    log_error "$file_label のシンボリックリンク作成結果を確認できません"
+    return 1
 }
 
 # --- 前提条件チェック関数 ---
