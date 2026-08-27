@@ -30,6 +30,7 @@ setup_scripts=(
     "defaults/defaults-setup.sh"
     "nextdns/nextdns-setup.sh"
     "duti/duti-setup.sh"
+    "app/snapzy/snapzy-setup.sh"
     "karabiner-elements/karabiner-setup.sh"
     "gitignore/global-gitignore-setup.sh"
     "skills/skills-setup.sh"
