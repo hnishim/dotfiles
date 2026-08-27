@@ -7,53 +7,79 @@ DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/skills-setup-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
-run_conflict_test() {
+run_missing_target_test() {
     source_dir="$TMP_ROOT/source"
-    local_dir="$TMP_ROOT/local"
-    mkdir -p "$source_dir/a-conflict" "$source_dir/b-later" "$local_dir"
-    printf '%s\n' a >"$source_dir/a-conflict/SKILL.md"
-    printf '%s\n' b >"$source_dir/b-later/SKILL.md"
-    printf '%s\n' preserve >"$local_dir/a-conflict"
-    conflict_inode=$(stat -f '%i' "$local_dir/a-conflict")
+    local_parent="$TMP_ROOT/local"
+    local_dir="$local_parent/skills"
+    mkdir -p "$source_dir/example" "$local_parent"
+    printf '%s\n' example >"$source_dir/example/SKILL.md"
+
+    ICLOUD_SKILLS_DIR_OVERRIDE="$source_dir" \
+    LOCAL_CODEX_SKILLS_DIR_OVERRIDE="$local_dir" \
+        /bin/bash "$DOTFILES_ROOT/skills/skills-setup.sh" >"$TMP_ROOT/missing-output" 2>&1
+
+    if [ ! -L "$local_dir" ] || [ "$(readlink "$local_dir")" != "$source_dir" ]; then
+        printf '%s\n' '[UNEXPECTED_FAIL] skills directory was not linked through create_symlink' >&2
+        return 1
+    fi
+    printf '%s\n' '[PASS] missing skills directory linked'
+}
+
+run_conflict_test() {
+    source_dir="$TMP_ROOT/conflict-source"
+    local_parent="$TMP_ROOT/conflict-local"
+    local_dir="$local_parent/skills"
+    mkdir -p "$source_dir/example" "$local_dir/local-only"
+    printf '%s\n' source >"$source_dir/example/SKILL.md"
+    printf '%s\n' local >"$local_dir/local-only/SKILL.md"
+    conflict_inode=$(stat -f '%i' "$local_dir")
 
     set +e
     ICLOUD_SKILLS_DIR_OVERRIDE="$source_dir" \
     LOCAL_CODEX_SKILLS_DIR_OVERRIDE="$local_dir" \
-        /bin/bash "$DOTFILES_ROOT/skills/skills-setup.sh" >"$TMP_ROOT/output" 2>&1
+        /bin/bash "$DOTFILES_ROOT/skills/skills-setup.sh" >"$TMP_ROOT/conflict-output" 2>&1
     status=$?
     set -e
 
     if [ "$status" -eq 0 ]; then
-        printf '%s\n' '[UNEXPECTED_FAIL] skills setup succeeded despite the conflict' >&2
+        printf '%s\n' '[UNEXPECTED_FAIL] setup succeeded despite an existing directory conflict' >&2
         return 1
     fi
-    if ! grep -Eq 'a-conflict|競合|同名|既存|変更しません|上書き|ERROR|error' "$TMP_ROOT/output"; then
-        printf '%s\n' '[UNEXPECTED_FAIL] skills fixture did not reach the conflict' >&2
+    if ! grep -Eq '競合|変更しません|ERROR|error' "$TMP_ROOT/conflict-output"; then
+        printf '%s\n' '[UNEXPECTED_FAIL] conflict was not reported by create_symlink' >&2
         return 1
     fi
-    if [ ! -f "$local_dir/a-conflict" ] || [ "$(cat "$local_dir/a-conflict")" != preserve ] || [ "$(stat -f '%i' "$local_dir/a-conflict")" != "$conflict_inode" ]; then
-        printf '%s\n' '[UNEXPECTED_FAIL] skills conflict state was not preserved' >&2
+    if [ ! -d "$local_dir" ] || [ -L "$local_dir" ] || [ ! -d "$local_dir/local-only" ]; then
+        printf '%s\n' '[UNEXPECTED_FAIL] existing directory conflict was changed' >&2
         return 1
     fi
-    if [ -L "$local_dir/b-later" ] && [ "$(readlink "$local_dir/b-later")" = "$source_dir/b-later" ]; then
-        printf '%s\n' '[EXPECTED_FAIL] skills old implementation continued after conflict and created the later link' >&2
-        return 2
-    fi
-    if [ -e "$local_dir/b-later" ] || [ -L "$local_dir/b-later" ]; then
-        printf '%s\n' '[UNEXPECTED_FAIL] skills later-link state is unexpected' >&2
+    if [ "$(stat -f '%i' "$local_dir")" != "$conflict_inode" ]; then
+        printf '%s\n' '[UNEXPECTED_FAIL] existing directory conflict was replaced' >&2
         return 1
     fi
-    printf '%s\n' '[PASS] skills conflict preserved and setup stopped before later link'
+    printf '%s\n' '[PASS] existing directory conflict preserved'
 }
 
-set +e
-(set -e; run_conflict_test)
-run_status=$?
-set -e
-if [ "$run_status" -eq 2 ]; then
-    exit 1
-fi
-if [ "$run_status" -ne 0 ]; then
-    printf '%s\n' "[UNEXPECTED_FAIL] skills conflict test failed (rc=$run_status)" >&2
-    exit 1
-fi
+run_correct_link_test() {
+    source_dir="$TMP_ROOT/correct-source"
+    local_parent="$TMP_ROOT/correct-local"
+    local_dir="$local_parent/skills"
+    mkdir -p "$source_dir/example" "$local_parent"
+    printf '%s\n' source >"$source_dir/example/SKILL.md"
+    ln -s "$source_dir" "$local_dir"
+    link_inode=$(stat -f '%i' "$local_dir")
+
+    ICLOUD_SKILLS_DIR_OVERRIDE="$source_dir" \
+    LOCAL_CODEX_SKILLS_DIR_OVERRIDE="$local_dir" \
+        /bin/bash "$DOTFILES_ROOT/skills/skills-setup.sh" >"$TMP_ROOT/correct-output" 2>&1
+
+    if [ "$(readlink "$local_dir")" != "$source_dir" ] || [ "$(stat -f '%i' "$local_dir")" != "$link_inode" ]; then
+        printf '%s\n' '[UNEXPECTED_FAIL] correct existing link was changed' >&2
+        return 1
+    fi
+    printf '%s\n' '[PASS] correct existing link preserved'
+}
+
+run_missing_target_test
+run_conflict_test
+run_correct_link_test
