@@ -237,4 +237,19 @@ if CODEX_SYSTEM_SKILLS_EXPECTED_MARKER=plugin \
 fi
 [ ! -e "$bad_system/local/example" ]
 
+archive_default="$TMP_ROOT/dev/Archives/git-reorg/2026-08-28/skills"
+archive_default_system="$archive_default/.system"
+archive_default_source="$TMP_ROOT/archive-default-source"
+archive_default_local="$TMP_ROOT/archive-default-local"
+mkdir -p "$TMP_ROOT/dev/harness" "$archive_default_system" "$archive_default_source/example"
+printf '%s\n' archive >"$archive_default_source/example/SKILL.md"
+printf '%s\n' archive >"$archive_default_system/marker"
+printf '%s\n' archive >"$archive_default_system/.codex-system-skills.marker"
+CODEX_HARNESS_ROOT_OVERRIDE="$TMP_ROOT/dev/harness" \
+ICLOUD_SKILLS_DIR_OVERRIDE="$archive_default_source" \
+LOCAL_CODEX_SKILLS_DIR_OVERRIDE="$archive_default_local" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/archive-default.log"
+[ "$(readlink "$archive_default_local/.system")" = "$archive_default_system" ]
+[ "$(readlink "$archive_default_local/example")" = "$archive_default_source/example" ]
+
 printf '%s\n' '[PASS] skills setup scenarios'
