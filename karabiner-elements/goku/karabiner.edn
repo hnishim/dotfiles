@@ -58,9 +58,6 @@
 
   :templates {
     :launch "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=%s'"
-    :mimi-resize "$HOME/.config/karabiner/.local/mimi-resize.sh %s %s %s"
-    :osascript "/usr/bin/osascript \"$HOME/.config/karabiner/.local/%s\""
-    :title-case-chicago "\"$HOME/.config/karabiner/.local/title-case-chicago.sh\""
   }
 
   ;; ------------------------------------------------------------
@@ -113,63 +110,6 @@
 
       ;; Slack
       [:!CCe :!CSc :slack];; コード ⌘ E -> ⌘⇧ C (Notion's shortcut)
-    ]}
-
-    {:des "Mimiでウィンドウを配置"
-     :rules [
-      ;; Bottom: 1/2 → 1/3 → 2/3
-      [:!CCTTt [[:mimi-resize "100" "33.333333" "bl"] ["mimi-window-cycle" 2]]
-               [["mimi-window-direction" 1] ["mimi-window-cycle" 1]]]
-      [:!CCTTt [[:mimi-resize "100" "66.666667" "bl"] ["mimi-window-cycle" 0]]
-               [["mimi-window-direction" 1] ["mimi-window-cycle" 2]]]
-      [:!CCTTt [[:mimi-resize "100" "50" "bl"]
-                ["mimi-window-direction" 1] ["mimi-window-cycle" 1]]]
-
-      ;; Center: 1/2 → 1/3 → 2/3
-      [:!CCTTc [[:mimi-resize "33.333333" "100" "cc"] ["mimi-window-cycle" 2]]
-               [["mimi-window-direction" 2] ["mimi-window-cycle" 1]]]
-      [:!CCTTc [[:mimi-resize "66.666667" "100" "cc"] ["mimi-window-cycle" 0]]
-               [["mimi-window-direction" 2] ["mimi-window-cycle" 2]]]
-      [:!CCTTc [[:mimi-resize "50" "100" "cc"]
-                ["mimi-window-direction" 2] ["mimi-window-cycle" 1]]]
-
-      ;; Left: 1/2 → 1/3 → 2/3
-      [:!CCTTg [[:mimi-resize "33.333333" "100" "tl"] ["mimi-window-cycle" 2]]
-               [["mimi-window-direction" 3] ["mimi-window-cycle" 1]]]
-      [:!CCTTg [[:mimi-resize "66.666667" "100" "tl"] ["mimi-window-cycle" 0]]
-               [["mimi-window-direction" 3] ["mimi-window-cycle" 2]]]
-      [:!CCTTg [[:mimi-resize "50" "100" "tl"]
-                ["mimi-window-direction" 3] ["mimi-window-cycle" 1]]]
-
-      ;; Maximize ⌃⌘F
-      [:!CCTTf [[:mimi-resize "100" "100" "tl"]
-                ["mimi-window-direction" 0] ["mimi-window-cycle" 0]]]
-
-      ;; Right: 1/2 → 1/3 → 2/3
-      [:!CCTTr [[:mimi-resize "33.333333" "100" "tr"] ["mimi-window-cycle" 2]]
-               [["mimi-window-direction" 4] ["mimi-window-cycle" 1]]]
-      [:!CCTTr [[:mimi-resize "66.666667" "100" "tr"] ["mimi-window-cycle" 0]]
-               [["mimi-window-direction" 4] ["mimi-window-cycle" 2]]]
-      [:!CCTTr [[:mimi-resize "50" "100" "tr"]
-                ["mimi-window-direction" 4] ["mimi-window-cycle" 1]]]
-
-      ;; Top: 1/2 → 1/3 → 2/3
-      [:!CCTTn [[:mimi-resize "100" "33.333333" "tl"] ["mimi-window-cycle" 2]]
-               [["mimi-window-direction" 5] ["mimi-window-cycle" 1]]]
-      [:!CCTTn [[:mimi-resize "100" "66.666667" "tl"] ["mimi-window-cycle" 0]]
-               [["mimi-window-direction" 5] ["mimi-window-cycle" 2]]]
-      [:!CCTTn [[:mimi-resize "100" "50" "tl"]
-                ["mimi-window-direction" 5] ["mimi-window-cycle" 1]]]
-    ]}
-
-    {:des "Two-panes Finder"
-     :rules [
-      [:!CCOOSSf [:osascript "two-panes-finder.applescript"]]
-    ]}
-
-    {:des "Title Case (Chicago)"
-     :rules [
-      [:!CCOOSSc [:title-case-chicago]]
     ]}
 
     {:des "Comboで括弧を自動的に閉じてカーソルを中に移動"
