@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install Codex hooks as symlinks to the dotfiles source of truth."""
+"""Install the harness Hooks with preflight checks and rollback."""
 
 from __future__ import annotations
 
@@ -12,112 +12,188 @@ from pathlib import Path
 from typing import Any
 
 
-def load_json(path: Path) -> dict[str, Any]:
-    with path.open(encoding="utf-8") as stream:
-        value = json.load(stream)
-    if not isinstance(value, dict):
-        raise SystemExit(f"JSONのトップレベルがオブジェクトではありません: {path}")
-    return value
+HOOK_FILES = (
+    "gh_normal_context_guard.py",
+    "textlint-boundary.py",
+    "textlint-pretool-hook.py",
+    "textlint-posttool-hook.py",
+)
 
 
-def unique_backup_path(backup_dir: Path, name: str) -> Path:
+def same_target(left: Path, right: Path) -> bool:
+    return os.path.realpath(left) == os.path.realpath(right)
+
+
+def unique_backup_path(directory: Path, name: str) -> Path:
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-    candidate = backup_dir / f"{name}.symlink-install.{timestamp}"
+    candidate = directory / f"{name}.symlink-install.{timestamp}.{os.getpid()}"
     counter = 1
     while candidate.exists() or candidate.is_symlink():
-        candidate = backup_dir / (
-            f"{name}.symlink-install.{timestamp}.{counter}"
+        candidate = directory / (
+            f"{name}.symlink-install.{timestamp}.{os.getpid()}.{counter}"
         )
         counter += 1
     return candidate
 
 
-def move_to_backup(path: Path, backup_dir: Path, name: str) -> Path:
-    backup_dir.mkdir(parents=True, exist_ok=True)
-    backup_path = unique_backup_path(backup_dir, name)
-    shutil.move(str(path), str(backup_path))
-    return backup_path
+def read_template(path: Path, runtime: Path) -> dict[str, Any]:
+    raw = path.read_text(encoding="utf-8")
+    rendered = raw.replace("__HOOKS_RUNTIME__", str(runtime.resolve()))
+    value = json.loads(rendered)
+    if not isinstance(value, dict) or not isinstance(value.get("hooks"), dict):
+        raise ValueError(f"Hooks template must contain a hooks object: {path}")
+    if "__HOOKS_RUNTIME__" in rendered:
+        raise ValueError(f"Hooks template contains an unresolved placeholder: {path}")
+    return value
 
 
-def points_to(path: Path, target: Path) -> bool:
-    if not path.is_symlink():
-        return False
-    try:
-        return path.resolve(strict=True) == target.resolve(strict=True)
-    except OSError:
-        return False
+def validate_source(source_root: Path) -> tuple[Path, Path, dict[str, Any]]:
+    runtime = source_root / "runtime"
+    template = Path(
+        os.environ.get("HOOKS_TEMPLATE_OVERRIDE", str(source_root / "hooks.json.tmpl"))
+    ).expanduser()
+    if not runtime.is_dir() or runtime.is_symlink():
+        raise ValueError(f"Hooks runtime source is missing: {runtime}")
+    for name in HOOK_FILES:
+        path = runtime / name
+        if not path.is_file() or path.is_symlink():
+            raise ValueError(f"Hooks runtime file is missing or not regular: {path}")
+    if (runtime / "textlint-stop-hook.py").exists():
+        raise ValueError("Archived textlint stop hook is present in runtime")
+    if not template.is_file() or template.is_symlink():
+        raise ValueError(f"Hooks template is missing or not regular: {template}")
+    return runtime, template, read_template(template, runtime)
 
 
-def ensure_symlink(
-    source: Path,
-    destination: Path,
-    backup_dir: Path,
-    backup_name: str,
-) -> tuple[bool, Path | None]:
-    source = source.resolve(strict=True)
-    if points_to(destination, source):
+def classify(destination: Path, current: Path, legacy: Path) -> str:
+    if not destination.exists() and not destination.is_symlink():
+        return "missing"
+    if destination.is_symlink() and same_target(destination, current):
+        return "correct"
+    if destination.is_symlink() and same_target(destination, legacy):
+        return "legacy"
+    return "conflict"
+
+
+def generated_snapshot(path: Path) -> tuple[bool, Path | None]:
+    if not path.exists() and not path.is_symlink():
         return False, None
+    if path.is_symlink() or not path.is_file():
+        raise ValueError(f"Generated Hooks config is not a regular file: {path}")
+    snapshot = path.with_name(f".{path.name}.rollback-{os.getpid()}")
+    if snapshot.exists() or snapshot.is_symlink():
+        raise ValueError(f"Generated Hooks snapshot already exists: {snapshot}")
+    os.link(path, snapshot)
+    return True, snapshot
 
-    backup_path: Path | None = None
-    if destination.is_symlink() or destination.exists():
-        backup_path = move_to_backup(destination, backup_dir, backup_name)
 
-    temporary_path = destination.with_name(
-        f".{destination.name}.symlink-install-{os.getpid()}"
-    )
-    if temporary_path.exists() or temporary_path.is_symlink():
-        raise SystemExit(f"一時リンクが既に存在します: {temporary_path}")
-
-    os.symlink(source, temporary_path)
-    os.replace(temporary_path, destination)
-    return True, backup_path
+def write_generated(path: Path, content: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if path.exists() and path.is_file() and not path.is_symlink():
+        if path.read_bytes() == content and (path.stat().st_mode & 0o777) == 0o600:
+            return
+    temporary = path.with_name(f".{path.name}.install-{os.getpid()}")
+    if temporary.exists() or temporary.is_symlink():
+        raise ValueError(f"Temporary Hooks config already exists: {temporary}")
+    temporary.write_bytes(content)
+    temporary.chmod(0o600)
+    os.replace(temporary, path)
 
 
 def main() -> int:
-    repository_codex_dir = Path(__file__).resolve().parent
-    source_hooks_dir = repository_codex_dir / "hooks"
-    source_hooks_json = repository_codex_dir / "hooks.json"
-    codex_home = Path(
+    harness_root = Path(
+        os.environ.get(
+            "CODEX_HARNESS_ROOT_OVERRIDE",
+            str(Path(__file__).resolve().parents[2] / "harness"),
+        )
+    ).expanduser()
+    source_root = Path(
+        os.environ.get("HOOKS_SOURCE_ROOT_OVERRIDE", str(harness_root / "hooks"))
+    ).expanduser()
+    runtime, _, config = validate_source(source_root)
+    rendered = (json.dumps(config, ensure_ascii=False, indent=2) + "\n").encode("utf-8")
+    generated = source_root / ".runtime" / "hooks.json"
+    home = Path(
         sys.argv[1]
         if len(sys.argv) > 1
         else os.environ.get("CODEX_HOME", str(Path.home() / ".codex"))
     ).expanduser()
+    if len(sys.argv) > 2:
+        raise SystemExit("使い方: install-hooks.py [codex-home]")
 
-    if not source_hooks_dir.is_dir():
-        raise SystemExit(f"正本のhooksフォルダーが見つかりません: {source_hooks_dir}")
-    if not source_hooks_json.is_file():
-        raise SystemExit(f"正本のhooks.jsonが見つかりません: {source_hooks_json}")
-    load_json(source_hooks_json)
-
-    codex_home.mkdir(parents=True, exist_ok=True)
-    backups_dir = codex_home / "backups"
-    changed_json, backup_json = ensure_symlink(
-        source_hooks_json,
-        codex_home / "hooks.json",
-        backups_dir,
-        "hooks.json",
+    legacy_root = Path(__file__).resolve().parents[2] / "dotfiles" / "codex"
+    targets = (
+        (home / "hooks", runtime, legacy_root / "hooks"),
+        (home / "hooks.json", generated, legacy_root / "hooks.json"),
     )
-    changed_dir, backup_dir = ensure_symlink(
-        source_hooks_dir,
-        codex_home / "hooks",
-        backups_dir,
-        "hooks",
-    )
+    states = [classify(destination, current, legacy) for destination, current, legacy in targets]
+    if "conflict" in states:
+        conflict = targets[states.index("conflict")][0]
+        raise SystemExit(f"既存のHooks宛先が競合しています: {conflict}")
 
-    if changed_json:
-        print(f"[SUCCESS] hooks.jsonを正本へリンクしました: {codex_home / 'hooks.json'}")
-        if backup_json:
-            print(f"[INFO] 既存のhooks.jsonを退避しました: {backup_json}")
-    else:
-        print(f"[INFO] hooks.jsonは既に正本へリンクされています: {codex_home / 'hooks.json'}")
+    had_generated, generated_snapshot_path = generated_snapshot(generated)
+    backup_directory = home / "backups"
+    changed_destinations: list[Path] = []
+    moved_destinations: list[Path] = []
+    moved_backups: list[Path] = []
+    created_backup_directory = False
+    try:
+        home.mkdir(parents=True, exist_ok=True)
+        if any(state == "legacy" for state in states):
+            if os.environ.get("HOOKS_INSTALL_FAIL_BACKUP") == "1":
+                raise RuntimeError("injected Hooks backup failure")
+            if not backup_directory.exists():
+                backup_directory.mkdir(parents=True)
+                created_backup_directory = True
 
-    if changed_dir:
-        print(f"[SUCCESS] hooksフォルダーを正本へリンクしました: {codex_home / 'hooks'}")
-        if backup_dir:
-            print(f"[INFO] 既存のhooksフォルダーを退避しました: {backup_dir}")
-    else:
-        print(f"[INFO] hooksフォルダーは既に正本へリンクされています: {codex_home / 'hooks'}")
+        write_generated(generated, rendered)
+        for (destination, current, _), state in zip(targets, states):
+            if state == "correct":
+                continue
+            if state == "legacy":
+                backup = unique_backup_path(backup_directory, destination.name)
+                shutil.move(str(destination), str(backup))
+                moved_destinations.append(destination)
+                moved_backups.append(backup)
+            temporary = destination.with_name(
+                f".{destination.name}.symlink-install-{os.getpid()}"
+            )
+            if temporary.exists() or temporary.is_symlink():
+                raise RuntimeError(f"temporary Hooks link already exists: {temporary}")
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            os.symlink(current.resolve(), temporary)
+            os.replace(temporary, destination)
+            changed_destinations.append(destination)
+            if os.environ.get("HOOKS_INSTALL_FAIL_AFTER") == "1":
+                raise RuntimeError("injected Hooks install failure")
 
+        if not same_target(home / "hooks", runtime) or not same_target(home / "hooks.json", generated):
+            raise RuntimeError("Hooks link verification failed")
+        if generated_snapshot_path is not None:
+            generated_snapshot_path.unlink()
+    except Exception as error:
+        for destination in reversed(changed_destinations):
+            if destination.exists() or destination.is_symlink():
+                destination.unlink()
+        for destination, backup in reversed(list(zip(moved_destinations, moved_backups))):
+            if backup.exists() or backup.is_symlink():
+                if destination.exists() or destination.is_symlink():
+                    destination.unlink()
+                shutil.move(str(backup), str(destination))
+        if generated_snapshot_path is not None and generated_snapshot_path.exists():
+            if generated.exists() or generated.is_symlink():
+                generated.unlink()
+            os.replace(generated_snapshot_path, generated)
+        elif not had_generated and (generated.exists() or generated.is_symlink()):
+            generated.unlink()
+        if created_backup_directory:
+            try:
+                backup_directory.rmdir()
+            except OSError:
+                pass
+        raise SystemExit(f"Hooks install failed and was rolled back: {error}")
+
+    print(f"[SUCCESS] Hooks installed: {home}")
     return 0
 
 

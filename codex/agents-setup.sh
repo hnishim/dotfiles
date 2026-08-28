@@ -1,68 +1,173 @@
 #!/bin/bash
 
-# dotfiles内のCustom Agent定義をローカルのCodex設定へシンボリックリンクで同期する
+set -euo pipefail
 
-# 共通ライブラリを読み込み
-source "$(dirname "$0")/../lib/common.sh"
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/../.." && pwd)/harness}"
+SOURCE_DIR="${CODEX_AGENTS_SOURCE_DIR_OVERRIDE:-$HARNESS_ROOT/agents}"
+TARGET_DIR="${LOCAL_CODEX_AGENTS_DIR_OVERRIDE:-$HOME/.codex/agents}"
+LEGACY_SOURCE_DIR="${CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE:-$SCRIPT_DIR/agents}"
+BACKUP_DIR="${CODEX_AGENTS_BACKUP_DIR_OVERRIDE:-$(dirname "$TARGET_DIR")/backups}"
+FAIL_AFTER="${AGENTS_SETUP_FAIL_AFTER:-0}"
+PYTHON_EXECUTABLE="${PYTHON_EXECUTABLE:-$(command -v python3 2>/dev/null || true)}"
 
-# --- 変数定義 ---
+agent_names=(planner plan-reviewer implementer reviewer git-actions)
 
-SCRIPT_DIR=$(get_script_dir)
+[ -d "$SOURCE_DIR" ] || { printf '[ERROR] Agent source is missing: %s\n' "$SOURCE_DIR" >&2; exit 1; }
+[ -n "$LEGACY_SOURCE_DIR" ] || { printf '%s\n' '[ERROR] legacy Agent source is not resolvable' >&2; exit 1; }
 
-# テスト時のみ環境変数で差し替え可能。通常はcodex/agentsを正本として使用する。
-CODEX_AGENTS_SOURCE_DIR="${CODEX_AGENTS_SOURCE_DIR_OVERRIDE:-$SCRIPT_DIR/agents}"
-LOCAL_CODEX_AGENTS_DIR="${LOCAL_CODEX_AGENTS_DIR_OVERRIDE:-$HOME/.codex/agents}"
+same_target() {
+    local left="$1"
+    local right="$2"
+    [ "$(/usr/bin/python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$left")" = \
+      "$(/usr/bin/python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$right")" ]
+}
 
-echo "=== Codex Custom Agent同期スクリプト ==="
+validate_agent() {
+    local path="$1"
+    local name="$2"
+    [ -f "$path" ] && [ ! -L "$path" ] || {
+        printf '[ERROR] Agent definition is not a regular file: %s\n' "$path" >&2
+        return 1
+    }
+    [ -n "$PYTHON_EXECUTABLE" ] && [ -x "$PYTHON_EXECUTABLE" ] || {
+        printf '%s\n' '[ERROR] python3 is required to validate Agent TOML' >&2
+        return 1
+    }
+    "$PYTHON_EXECUTABLE" - "$path" "$name" <<'PY'
+import sys
 
-# --- メイン処理 ---
+try:
+    import tomllib
+except ImportError:
+    raise SystemExit("python3 with tomllib is required to validate Agent TOML")
 
-log_info "前提条件をチェック中..."
-check_path "$CODEX_AGENTS_SOURCE_DIR" "Custom Agent正本ディレクトリ" "directory" || exit 1
+path, expected_name = sys.argv[1:]
+with open(path, "rb") as stream:
+    data = tomllib.load(stream)
 
-agent_count=0
-link_count=0
-skip_count=0
-error_count=0
+required_strings = (
+    "name",
+    "description",
+    "model",
+    "model_reasoning_effort",
+    "developer_instructions",
+)
+for key in required_strings:
+    value = data.get(key)
+    if not isinstance(value, str) or not value.strip():
+        raise SystemExit(f"missing or invalid Agent field: {key}")
+if data["name"] != expected_name:
+    raise SystemExit("Agent name does not match filename")
+if expected_name in {"planner", "plan-reviewer", "reviewer"}:
+    if data.get("sandbox_mode") != "read-only":
+        raise SystemExit("read-only Agent lacks sandbox_mode = read-only")
+PY
+}
 
-agent_paths=("$CODEX_AGENTS_SOURCE_DIR"/*.toml)
+sources=()
+states=()
+destinations=()
+for name in "${agent_names[@]}"; do
+    source="$SOURCE_DIR/$name.toml"
+    destination="$TARGET_DIR/$name.toml"
+    validate_agent "$source" "$name"
+    sources+=("$source")
+    destinations+=("$destination")
 
-for agent_path in "${agent_paths[@]}"; do
-    if [ ! -f "$agent_path" ]; then
-        continue
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        if [ -L "$destination" ] && same_target "$destination" "$source"; then
+            states+=(correct)
+        elif [ -L "$destination" ] && same_target "$destination" "$LEGACY_SOURCE_DIR/$name.toml"; then
+            states+=(legacy)
+        else
+            printf '[ERROR] Agent destination conflict: %s\n' "$destination" >&2
+            exit 1
+        fi
+    else
+        states+=(missing)
     fi
-
-    agent_count=$((agent_count + 1))
 done
 
-if [ "$agent_count" -eq 0 ]; then
-    log_error "TOML形式のCustom Agent定義が見つかりません: $CODEX_AGENTS_SOURCE_DIR"
-    exit 1
+target_created=false
+mkdir -p "$(dirname "$TARGET_DIR")"
+if [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; then
+    [ -d "$TARGET_DIR" ] && [ ! -L "$TARGET_DIR" ] || {
+        printf '[ERROR] Agent target is not a directory: %s\n' "$TARGET_DIR" >&2
+        exit 1
+    }
+else
+    mkdir "$TARGET_DIR"
+    target_created=true
 fi
 
-ensure_directory "$LOCAL_CODEX_AGENTS_DIR" "ローカルCodex Custom Agentディレクトリ" || exit 1
+rollback_needed=true
+created_links=()
+moved_destinations=()
+moved_backups=()
+rollback() {
+    [ "$rollback_needed" = true ] || return 0
+    local index
+    for ((index=${#created_links[@]}-1; index>=0; index--)); do
+        rm -f -- "${created_links[$index]}"
+    done
+    for ((index=${#moved_destinations[@]}-1; index>=0; index--)); do
+        destination="${moved_destinations[$index]}"
+        backup="${moved_backups[$index]}"
+        if [ -e "$backup" ] || [ -L "$backup" ]; then
+            [ ! -e "$destination" ] && [ ! -L "$destination" ] || rm -f -- "$destination"
+            mv "$backup" "$destination"
+        fi
+    done
+    if [ "$target_created" = true ] && [ -d "$TARGET_DIR" ]; then
+        rmdir "$TARGET_DIR" 2>/dev/null || true
+    fi
+}
+trap rollback EXIT
 
-for agent_path in "${agent_paths[@]}"; do
-    if [ ! -f "$agent_path" ]; then
+changed=0
+skipped=0
+for index in "${!agent_names[@]}"; do
+    state="${states[$index]}"
+    destination="${destinations[$index]}"
+    source="${sources[$index]}"
+    if [ "$state" = correct ]; then
+        skipped=$((skipped + 1))
         continue
     fi
 
-    agent_filename=$(basename "$agent_path")
-    link_path="$LOCAL_CODEX_AGENTS_DIR/$agent_filename"
-
-    if check_symlink "$link_path" "$agent_path"; then
-        log_success "$agent_filename は既に正しくリンクされています。スキップします。"
-        skip_count=$((skip_count + 1))
-        continue
+    if [ "$state" = legacy ]; then
+        mkdir -p "$BACKUP_DIR"
+        [ "${AGENTS_SETUP_FAIL_BACKUP:-0}" = 1 ] && {
+            printf '%s\n' '[ERROR] injected Agent backup failure' >&2
+            exit 1
+        }
+        backup="$BACKUP_DIR/$(basename "$destination").symlink-install.$(date '+%Y%m%d-%H%M%S').$$"
+        counter=1
+        while [ -e "$backup" ] || [ -L "$backup" ]; do
+            backup="$BACKUP_DIR/$(basename "$destination").symlink-install.$(date '+%Y%m%d-%H%M%S').$$.$counter"
+            counter=$((counter + 1))
+        done
+        mv "$destination" "$backup"
+        moved_destinations+=("$destination")
+        moved_backups+=("$backup")
     fi
 
-    create_symlink "$agent_path" "$link_path" "$agent_filename" || exit 1
-    link_count=$((link_count + 1))
+    temporary="$TARGET_DIR/.$(basename "$destination").symlink-install-$$"
+    [ ! -e "$temporary" ] && [ ! -L "$temporary" ] || {
+        printf '[ERROR] temporary Agent link already exists: %s\n' "$temporary" >&2
+        exit 1
+    }
+    ln -s "$source" "$temporary"
+    mv "$temporary" "$destination"
+    created_links+=("$destination")
+    changed=$((changed + 1))
+    if [ "$FAIL_AFTER" -gt 0 ] && [ "$changed" -ge "$FAIL_AFTER" ]; then
+        printf '%s\n' '[ERROR] injected Agent setup failure' >&2
+        exit 1
+    fi
 done
 
-if [ "$error_count" -gt 0 ]; then
-    log_error "$error_count 件のCustom Agent定義を同期できませんでした。"
-    exit 1
-fi
-
-log_success "Codex Custom Agent同期完了（対象: ${agent_count}、作成: ${link_count}、既存: ${skip_count}）"
+rollback_needed=false
+trap - EXIT
+printf '[SUCCESS] Agents installed (changed: %s, existing: %s)\n' "$changed" "$skipped"

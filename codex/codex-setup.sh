@@ -16,6 +16,7 @@ export LANG=C
 umask 077
 
 SCRIPT_DIR=$(get_script_dir)
+HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/../.." && pwd)/harness}"
 ASSET_DIR="$SCRIPT_DIR/custom-instructions-sync"
 
 LABEL='com.hnishim.custom-instructions-sync'
@@ -27,11 +28,11 @@ ENTITLEMENTS="$ASSET_DIR/CustomInstructionsSync.entitlements"
 SOURCE_PLIST="$ASSET_DIR/$LABEL.plist"
 SYNC_SOURCE="$ASSET_DIR/sync-custom-instructions"
 CODEX_HOME_DIR="${CODEX_HOME_DIR_OVERRIDE:-${CODEX_HOME:-$HOME/.codex}}"
-CODEX_HOOKS_DIR="$SCRIPT_DIR/hooks"
-CODEX_HOOKS_JSON="$SCRIPT_DIR/hooks.json"
+CODEX_HOOKS_DIR="$HARNESS_ROOT/hooks/runtime"
+CODEX_HOOKS_JSON="$HARNESS_ROOT/hooks/hooks.json.tmpl"
 CODEX_HOOK_INSTALLER="$SCRIPT_DIR/install-codex-hooks.py"
-CUSTOM_INSTRUCTIONS_DIR_HINT="${CUSTOM_INSTRUCTIONS_DIR_HINT:-$HOME}"
-SKILLS_DIR_HINT="${SKILLS_DIR_HINT:-$HOME}"
+CUSTOM_INSTRUCTIONS_DIR_HINT="${CUSTOM_INSTRUCTIONS_DIR_HINT:-$HARNESS_ROOT/custom-instructions}"
+SKILLS_DIR_HINT="${SKILLS_DIR_HINT:-$HARNESS_ROOT/skills}"
 APPLICATIONS_DIR="${CUSTOM_INSTRUCTIONS_APPLICATIONS_DIR_OVERRIDE:-$HOME/Applications}"
 APP_PATH="$APPLICATIONS_DIR/$APP_NAME"
 HELPER_EXECUTABLE="$APP_PATH/Contents/MacOS/$EXECUTABLE_NAME"
@@ -69,6 +70,37 @@ fi
 if [ ! -d "$CUSTOM_INSTRUCTIONS_DIR_HINT" ] || [ ! -d "$SKILLS_DIR_HINT" ]; then
     log_error "正本フォルダー候補が見つかりません: custom=$CUSTOM_INSTRUCTIONS_DIR_HINT skills=$SKILLS_DIR_HINT"
     exit 1
+fi
+
+if [ "${CODEX_HARNESS_TRANSACTION_CHILD:-0}" != "1" ]; then
+    TRANSACTION="$HARNESS_ROOT/transaction.py"
+    if [ ! -f "$TRANSACTION" ]; then
+        log_error "harness transactionが見つかりません: $TRANSACTION"
+        exit 1
+    fi
+    exec /usr/bin/python3 "$TRANSACTION" \
+        --real \
+        --codex-home "$CODEX_HOME_DIR" \
+        --launchagent-domain "$DOMAIN" \
+        --launchagent-label "$LABEL" \
+        --launchagent-plist "$TARGET_PLIST" \
+        --bookmark-domain com.hnishim.custom-instructions-sync-helper \
+        --path "$CODEX_HOME_DIR/AGENTS.md" \
+        --path "$CODEX_HOME_DIR/custom-instructions-sync" \
+        --path "$CODEX_HOME_DIR/skills-notion-sync" \
+        --path "$CODEX_HOME_DIR/hooks" \
+        --path "$CODEX_HOME_DIR/hooks.json" \
+        --path "$CODEX_HOME_DIR/agents" \
+        --path "$CODEX_HOME_DIR/skills" \
+        --path "$CODEX_HOME_DIR/backups" \
+        --path "$TARGET_PLIST" \
+        --path "$APP_PATH" \
+        --path "$APPLICATION_SUPPORT_DIR" \
+        --path "$STDOUT_PATH" \
+        --path "$STDERR_PATH" \
+        --path "$MODULE_CACHE_DIR" \
+        --evidence-dir "$HARNESS_ROOT/.local-state/transaction-evidence" \
+        --command /bin/bash "$SCRIPT_DIR/codex-setup.sh" "$@"
 fi
 
 if ! SWIFTC=$(xcrun --find swiftc 2>/dev/null); then
@@ -151,6 +183,17 @@ custom_instructions_dir=$(printf '%s\n' "$status_output" | sed -n 's/^source=//p
 skills_dir=$(printf '%s\n' "$status_output" | sed -n 's/^skills=//p')
 authorized_output_dir=$(printf '%s\n' "$status_output" | sed -n 's/^output=//p')
 
+if [ "$custom_instructions_dir" != "$CUSTOM_INSTRUCTIONS_DIR_HINT" ] ||
+   [ "$skills_dir" != "$SKILLS_DIR_HINT" ]; then
+    log_info "保存済みの正本フォルダーがharnessと異なるため、明示的に再認可します。"
+    "$HELPER_EXECUTABLE" --authorize "$CODEX_HOME_DIR" "$CUSTOM_INSTRUCTIONS_DIR_HINT" "$SKILLS_DIR_HINT"
+    status_output=$("$HELPER_EXECUTABLE" --status)
+    printf '%s\n' "$status_output"
+    custom_instructions_dir=$(printf '%s\n' "$status_output" | sed -n 's/^source=//p')
+    skills_dir=$(printf '%s\n' "$status_output" | sed -n 's/^skills=//p')
+    authorized_output_dir=$(printf '%s\n' "$status_output" | sed -n 's/^output=//p')
+fi
+
 if [ -z "$custom_instructions_dir" ] || [ ! -d "$custom_instructions_dir" ] ||
    [ -z "$skills_dir" ] || [ ! -d "$skills_dir" ]; then
     log_error "保存済みの正本フォルダーを確認できません。"
@@ -178,6 +221,49 @@ fi
 
 log_info "Codex用AGENTS.mdの初期同期を実行します。"
 "$HELPER_EXECUTABLE" --sync
+
+log_info "harnessのAgentsとSkills runtimeを準備します。"
+CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
+    /bin/bash "$SCRIPT_DIR/agents-setup.sh"
+CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
+    /bin/bash "$SCRIPT_DIR/../skills/skills-setup.sh"
+
+verify_system_skills_gate() {
+    local system_runtime="$CODEX_HOME_DIR/skills/.system"
+    local recognition_command="${CODEX_SYSTEM_SKILLS_RECOGNITION_COMMAND:-}"
+    local codex_executable
+    local probe_output
+
+    if [ ! -e "$system_runtime" ] || [ ! -s "$system_runtime/.codex-system-skills.marker" ]; then
+        log_error "Codex plugin-managed .systemの認識を確認できません: $system_runtime"
+        return 1
+    fi
+    if [ -n "$recognition_command" ]; then
+        if ! CODEX_HOME_DIR="$CODEX_HOME_DIR" CODEX_SYSTEM_SKILLS_DIR="$system_runtime" \
+            /bin/bash -c "$recognition_command"; then
+            log_error "Codex plugin-managed .systemの明示的認識gateに失敗しました。"
+            return 1
+        fi
+        return 0
+    fi
+    codex_executable="${CODEX_EXECUTABLE_OVERRIDE:-$(command -v codex 2>/dev/null || true)}"
+    if [ -z "$codex_executable" ] || [ ! -x "$codex_executable" ]; then
+        log_error "Codex CLIが見つからないため.system認識gateを実行できません。"
+        return 1
+    fi
+    probe_output="$build_root/codex-system-skills-probe.txt"
+    if ! CODEX_HOME="$CODEX_HOME_DIR" "$codex_executable" debug prompt-input \
+        'Load the available Codex system skills for this recognition probe.' >"$probe_output" 2>&1; then
+        log_error "Codex CLIの.system認識probeに失敗しました。"
+        return 1
+    fi
+    if ! grep -Eq 'skill-creator|openai-docs|plugin-creator' "$probe_output"; then
+        log_error "Codex CLIのprobe出力にplugin-managed system skillがありません。"
+        return 1
+    fi
+}
+
+verify_system_skills_gate || exit 1
 
 install_textlint_hook() {
     /usr/bin/python3 "$CODEX_HOOK_INSTALLER" "$CODEX_HOME_DIR"
@@ -209,11 +295,27 @@ install_sync_launch_agent() {
         launchctl bootout "$DOMAIN/$LABEL"
     fi
     install -m 600 "$temp_plist" "$TARGET_PLIST"
+    if [ "${CODEX_HARNESS_PREPARE_ONLY:-0}" = "1" ]; then
+        log_info "harness準備モードのためLaunchAgentは有効化しません。"
+        return 0
+    fi
     launchctl bootstrap "$DOMAIN" "$TARGET_PLIST"
-    job_state=$(launchctl print "$DOMAIN/$LABEL" 2>/dev/null || true)
-    previous_runs=$(printf '%s\n' "$job_state" | sed -n 's/^[[:space:]]*runs = \([0-9][0-9]*\).*$/\1/p' | head -n 1)
-    previous_runs=${previous_runs:-0}
-    launchctl kickstart -k "$DOMAIN/$LABEL"
+    attempt=1
+    while [ "$attempt" -le 40 ]; do
+        job_state=$(launchctl print "$DOMAIN/$LABEL" 2>/dev/null || true)
+        current_runs=$(printf '%s\n' "$job_state" | sed -n 's/^[[:space:]]*runs = \([0-9][0-9]*\).*$/\1/p' | head -n 1)
+        if [ -n "$current_runs" ] && [ "$current_runs" -gt "$previous_runs" ]; then
+            run_observed=true
+            break
+        fi
+        sleep 0.25
+        attempt=$((attempt + 1))
+    done
+
+    if [ "$run_observed" = false ]; then
+        log_info "RunAtLoadによるLaunchAgent実行を確認できないため、一度だけkickstartします。"
+        launchctl kickstart -k "$DOMAIN/$LABEL"
+    fi
 
     attempt=1
     while [ "$attempt" -le 240 ]; do
@@ -300,7 +402,10 @@ printf 'workspace_id=%s\ncustom_instructions_page_id=%s\nuser_profile_page_id=%s
     "$workspace_id" "$custom_page_id" "$profile_page_id" "$skills_data_source_id" >"$notion_config_temp"
 install -m 600 "$notion_config_temp" "$NOTION_CONFIG"
 
-log_info "MOLCURE Notionへの初期同期を実行します。"
-"$SYNC_EXECUTABLE" "$HELPER_EXECUTABLE" "$NTN_EXECUTABLE" "$CODEX_HOME_DIR" "$NOTION_CONFIG"
+if [ "${CODEX_HARNESS_PREPARE_ONLY:-0}" = "1" ]; then
+    log_info "harness準備モードのためNotion remote syncを実行しません。"
+else
+    log_info "MOLCURE Notion同期はLaunchAgentの通常起動で一度だけ実行します。"
+fi
 
 install_sync_launch_agent || exit 1
