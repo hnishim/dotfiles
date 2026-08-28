@@ -90,6 +90,7 @@ esac
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 DEV_ROOT=$(cd -- "$SCRIPT_DIR/../../../.." && pwd)
+HARNESS_ROOT=${CODEX_HARNESS_ROOT_OVERRIDE:-$DEV_ROOT/harness}
 SYNC_SCRIPT="$DEV_ROOT/dotfiles/codex/custom-instructions-sync/sync-custom-instructions"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/skills-notion-sync-test.XXXXXX")
 case "${TMP_ROOT:?}" in
@@ -121,16 +122,27 @@ cp "$0" "$HELPER"
 cp "$0" "$NTN"
 chmod 755 "$HELPER" "$NTN"
 
-cp "$DEV_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
-cp "$DEV_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
+for source_file in \
+    "$HARNESS_ROOT/custom-instructions/custom-instructions.md" \
+    "$HARNESS_ROOT/custom-instructions/user-profile.md" \
+    "$HARNESS_ROOT"/skills/*/SKILL.md \
+    "$HARNESS_ROOT"/skills/writing-references/*.md; do
+    if [ ! -f "$source_file" ]; then
+        printf '[ERROR] 必須ソースが存在しません: %s\n' "$source_file" >&2
+        exit 1
+    fi
+done
 
-for source_file in "$DEV_ROOT"/skills/*/SKILL.md; do
+cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
+cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
+
+for source_file in "$HARNESS_ROOT"/skills/*/SKILL.md; do
     skill_name=$(basename "$(dirname "$source_file")")
     mkdir -p "$SKILLS_MIRROR_DIR/$skill_name"
     cp "$source_file" "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md"
 done
 mkdir -p "$SKILLS_MIRROR_DIR/writing-references"
-cp "$DEV_ROOT"/skills/writing-references/*.md "$SKILLS_MIRROR_DIR/writing-references/"
+cp "$HARNESS_ROOT"/skills/writing-references/*.md "$SKILLS_MIRROR_DIR/writing-references/"
 
 cat >"$CONFIG" <<'EOF'
 workspace_id=11111111111111111111111111111111
