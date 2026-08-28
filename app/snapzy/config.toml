@@ -269,7 +269,7 @@ modifiers = []
 [shortcuts.quick_access.edit_latest_capture]
 enabled = true
 key = "↩"
-modifiers = ["command"]
+modifiers = ["command", "shift"]
 
 [shortcuts.quick_access.card_actions]
 enabled = false
