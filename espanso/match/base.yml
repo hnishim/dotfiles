@@ -81,7 +81,7 @@ matches:
   # Shell Commands
 
   - trigger: '\git'
-    replace: 'git add . && git commit -m "$|$" && git push'
+    replace: 'git switch main && git add . && git commit -m "$|$" && git push'
     force_mode: clipboard
 
   # テキスト補完
