@@ -56,10 +56,6 @@
     :ja {:language "ja"}
   }
 
-  :templates {
-    :launch "open 'raycast-x://extensions/raycast/script-commands/launch-apps?arguments=%s'"
-  }
-
   ;; ------------------------------------------------------------
   ;; メイン設定
   ;; ------------------------------------------------------------
@@ -67,31 +63,13 @@
     {:des "CAPSハイパーキー: Caps_lockを Shift, Command, Control, Option に置換する"
      :rules [
       [:caps_lock [:!CTOleft_shift]]
-      [:!!a [:launch "Microsoft Teams"]] ;; teAms
-      [:!!b [:launch "Arc"]] ;; Browser
-      [:!!c [:launch "Ferdium"]] ;; Calendar
-      [:!!d [:launch "Cogito"]];;markDown
-      [:!!e [:launch "Cursor"]] ;; Editor
-      [:!!f [:launch "Finder"]] ;; Files
       ;;g
       ;;h
-      [:!!i [:launch "ChatGPT"]] ;; aI
-      [:!!j [:launch "Dictionaries"]] ;;Jisho
-      [:!!k [:launch "Linear"]] ;;tasK
       ;;l
-      [:!!m [:launch "Meru"]] ;; Mail
-      [:!!n [:launch "Notion"]]
       ;;o
-      [:!!p [:launch "Microsoft PowerPoint"]]
       ;;q
-      [:!!r [:launch "Reminders"]] ;; Reminders
-      [:!!s [:launch "Slack"]] ;; Slack
-      [:!!t [:launch "Warp"]] ;; Terminal
       ;;u
       ;;v
-      [:!!w [:launch "1Password"]] ;; passWord
-      [:!!x [:launch "Microsoft Excel"]] ;; eXcel
-      [:!!z [:launch "zoom.us"]] ;; Zoom
     ]}
 
     {:des "英かな：左右⌘キーを単独で押したときは英数・かなキーとして扱う"
