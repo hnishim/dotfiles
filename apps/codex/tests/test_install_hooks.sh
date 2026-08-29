@@ -3,9 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../.." && pwd)
 HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$DOTFILES_ROOT/.." && pwd)/harness}"
-INSTALLER="$DOTFILES_ROOT/codex/install-codex-hooks.py"
+INSTALLER="$DOTFILES_ROOT/apps/codex/install-codex-hooks.py"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/install-hooks-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 

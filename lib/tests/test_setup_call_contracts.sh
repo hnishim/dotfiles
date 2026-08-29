@@ -46,15 +46,15 @@ run_contract() {
     fi
 }
 
-run_contract cursor/cursor-setup.sh 2
-run_contract espanso/espanso-setup.sh 2
-run_contract ferdium/ferdium-setup.sh 2
+run_contract apps/cursor/cursor-setup.sh 2
+run_contract apps/espanso/espanso-setup.sh 2
+run_contract apps/ferdium/ferdium-setup.sh 2
 run_contract gitignore/global-gitignore-setup.sh 1
 run_contract karabiner-elements/karabiner-setup.sh 2
-run_contract warp/warp-setup.sh 1
-run_contract app/snapzy/snapzy-setup.sh 1
+run_contract apps/warp/warp-setup.sh 1
+run_contract apps/snapzy/snapzy-setup.sh 1
 run_contract skills/skills-setup.sh 1
-run_contract codex/agents-setup.sh 1
+run_contract apps/codex/agents-setup.sh 1
 run_contract textlint/textlint-setup.sh 2
 run_contract hammerspoon/hammerspoon-setup.sh 1
 

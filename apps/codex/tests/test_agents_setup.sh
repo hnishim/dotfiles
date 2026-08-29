@@ -3,9 +3,9 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../.." && pwd)
+DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../.." && pwd)
 HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$DOTFILES_ROOT/.." && pwd)/harness}"
-SETUP="$DOTFILES_ROOT/codex/agents-setup.sh"
+SETUP="$DOTFILES_ROOT/apps/codex/agents-setup.sh"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/agents-setup-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 

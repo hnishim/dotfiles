@@ -4,7 +4,7 @@
 # iCloud上のkeybindings.yamlをローカルのWarp設定ディレクトリにシンボリックリンクで同期する
 
 # 共通ライブラリを読み込み
-source "$(dirname "$0")/../lib/common.sh"
+source "$(dirname "$0")/../../lib/common.sh"
 
 # --- 変数定義 ---
 

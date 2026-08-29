@@ -8,7 +8,7 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../../.." && pwd)
-SYNC_SCRIPT="$DOTFILES_ROOT/dotfiles/codex/custom-instructions-sync/sync-custom-instructions"
+SYNC_SCRIPT="$DOTFILES_ROOT/apps/codex/custom-instructions-sync/sync-custom-instructions"
 FIXTURE="$SCRIPT_DIR/fixtures/openai-helper-fixture.sh"
 
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/openai-instructions-contract.XXXXXX")

@@ -89,9 +89,9 @@ case "${1:-}" in
 esac
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-DEV_ROOT=$(cd -- "$SCRIPT_DIR/../../../.." && pwd)
+DEV_ROOT=$(cd -- "$SCRIPT_DIR/../../../../../" && pwd)
 HARNESS_ROOT=${CODEX_HARNESS_ROOT_OVERRIDE:-$DEV_ROOT/harness}
-SYNC_SCRIPT="$DEV_ROOT/dotfiles/codex/custom-instructions-sync/sync-custom-instructions"
+SYNC_SCRIPT="$DEV_ROOT/dotfiles/apps/codex/custom-instructions-sync/sync-custom-instructions"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/skills-notion-sync-test.XXXXXX")
 case "${TMP_ROOT:?}" in
     "${TMPDIR:-/tmp}"/skills-notion-sync-test.*) ;;

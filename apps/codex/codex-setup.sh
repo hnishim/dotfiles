@@ -9,14 +9,14 @@ fi
 set -euo pipefail
 
 # 共通ライブラリを読み込み
-source "$(dirname "$0")/../lib/common.sh"
+source "$(dirname "$0")/../../lib/common.sh"
 
 export LC_ALL=C
 export LANG=C
 umask 077
 
 SCRIPT_DIR=$(get_script_dir)
-HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/../.." && pwd)/harness}"
+HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/../../.." && pwd)/harness}"
 ASSET_DIR="$SCRIPT_DIR/custom-instructions-sync"
 
 LABEL='com.hnishim.custom-instructions-sync'
@@ -226,7 +226,7 @@ log_info "harnessのAgentsとSkills runtimeを準備します。"
 CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
     /bin/bash "$SCRIPT_DIR/agents-setup.sh"
 CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
-    /bin/bash "$SCRIPT_DIR/../skills/skills-setup.sh"
+    /bin/bash "$SCRIPT_DIR/../../skills/skills-setup.sh"
 
 verify_system_skills_gate() {
     local system_runtime="$CODEX_HOME_DIR/skills/.system"
