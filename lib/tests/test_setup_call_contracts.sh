@@ -17,6 +17,15 @@ assert_single_api_contract() {
     ' "$DOTFILES_ROOT/$script"
 }
 
+assert_setup_script_registered() {
+    awk '
+        /^setup_scripts=\(/ { inside=1; next }
+        inside && /^\)[[:space:]]*$/ { inside=0 }
+        inside && $0 == "    \"hammerspoon/hammerspoon-setup.sh\"" { count++ }
+        END { exit count == 1 ? 0 : 1 }
+    ' "$DOTFILES_ROOT/setup-macos.sh"
+}
+
 failures=0
 run_contract() {
     local script="$1"
@@ -47,5 +56,21 @@ run_contract app/snapzy/snapzy-setup.sh 1
 run_contract skills/skills-setup.sh 1
 run_contract codex/agents-setup.sh 1
 run_contract textlint/textlint-setup.sh 2
+run_contract hammerspoon/hammerspoon-setup.sh 1
+
+set +e
+assert_setup_script_registered
+registration_status=$?
+set -e
+if [ "$registration_status" -eq 0 ]; then
+    printf '%s\n' "[PASS] setup-macos.sh registers hammerspoon/hammerspoon-setup.sh"
+else
+    if ! grep -Fqx '    "hammerspoon/hammerspoon-setup.sh"' "$DOTFILES_ROOT/setup-macos.sh"; then
+        printf '%s\n' '[EXPECTED_FAIL] setup-macos.sh (Hammerspoon setup registration is absent)'
+    else
+        printf '%s\n' '[UNEXPECTED_FAIL] setup-macos.sh (Hammerspoon setup registration is duplicated or misplaced)'
+        failures=$((failures + 1))
+    fi
+fi
 
 [ "$failures" -eq 0 ]

@@ -41,6 +41,7 @@ setup_scripts=(
     "cursor/cursor-setup.sh"
     "ferdium/ferdium-setup.sh"
     "textlint/textlint-setup.sh"
+    "hammerspoon/hammerspoon-setup.sh"
 )
 
 for script in "${setup_scripts[@]}"; do
