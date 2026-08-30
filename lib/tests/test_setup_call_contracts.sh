@@ -53,7 +53,7 @@ run_contract gitignore/global-gitignore-setup.sh 1
 run_contract karabiner-elements/karabiner-setup.sh 2
 run_contract apps/warp/warp-setup.sh 1
 run_contract apps/snapzy/snapzy-setup.sh 1
-run_contract skills/skills-setup.sh 1
+run_contract apps/codex/skills/skills-setup.sh 0
 run_contract apps/codex/agents-setup.sh 1
 run_contract textlint/textlint-setup.sh 2
 run_contract hammerspoon/hammerspoon-setup.sh 1
@@ -71,6 +71,13 @@ else
         printf '%s\n' '[UNEXPECTED_FAIL] setup-macos.sh (Hammerspoon setup registration is duplicated or misplaced)'
         failures=$((failures + 1))
     fi
+fi
+
+if grep -Fqx '    "apps/codex/skills/skills-setup.sh"' "$DOTFILES_ROOT/setup-macos.sh"; then
+    printf '%s\n' '[UNEXPECTED_FAIL] setup-macos.sh runs Skills setup standalone'
+    failures=$((failures + 1))
+else
+    printf '%s\n' '[PASS] setup-macos.sh delegates Skills migration to codex-setup transaction'
 fi
 
 [ "$failures" -eq 0 ]

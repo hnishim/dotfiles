@@ -33,7 +33,6 @@ setup_scripts=(
     "apps/snapzy/snapzy-setup.sh"
     "karabiner-elements/karabiner-setup.sh"
     "gitignore/global-gitignore-setup.sh"
-    "skills/skills-setup.sh"
     "apps/codex/agents-setup.sh"
     "apps/codex/codex-setup.sh"
     "apps/warp/warp-setup.sh"

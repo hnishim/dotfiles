@@ -226,7 +226,7 @@ log_info "harnessのAgentsとSkills runtimeを準備します。"
 CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
     /bin/bash "$SCRIPT_DIR/agents-setup.sh"
 CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
-    /bin/bash "$SCRIPT_DIR/../../skills/skills-setup.sh"
+    /bin/bash "$SCRIPT_DIR/skills/skills-setup.sh"
 
 verify_system_skills_gate() {
     local system_runtime="$CODEX_HOME_DIR/skills/.system"
@@ -246,7 +246,28 @@ verify_system_skills_gate() {
         fi
         return 0
     fi
-    codex_executable="${CODEX_EXECUTABLE_OVERRIDE:-$(command -v codex 2>/dev/null || true)}"
+
+    resolve_codex_executable() {
+        local candidate
+
+        if [ -n "${CODEX_EXECUTABLE_OVERRIDE:-}" ]; then
+            printf '%s\n' "$CODEX_EXECUTABLE_OVERRIDE"
+            return 0
+        fi
+
+        for candidate in \
+            "/Applications/ChatGPT.app/Contents/Resources/codex" \
+            "$HOME/Applications/ChatGPT.app/Contents/Resources/codex"; do
+            if [ -x "$candidate" ]; then
+                printf '%s\n' "$candidate"
+                return 0
+            fi
+        done
+
+        command -v codex 2>/dev/null || true
+    }
+
+    codex_executable="$(resolve_codex_executable)"
     if [ -z "$codex_executable" ] || [ ! -x "$codex_executable" ]; then
         log_error "Codex CLIが見つからないため.system認識gateを実行できません。"
         return 1
