@@ -65,109 +65,145 @@ if expected_name in {"planner", "plan-reviewer", "reviewer"}:
 PY
 }
 
-sources=()
-states=()
-destinations=()
-for name in "${agent_names[@]}"; do
-    source="$SOURCE_DIR/$name.toml"
-    destination="$TARGET_DIR/$name.toml"
-    validate_agent "$source" "$name"
-    sources+=("$source")
-    destinations+=("$destination")
+is_managed_agent_child() {
+    case "$1" in
+        planner.toml|plan-reviewer.toml|implementer.toml|reviewer.toml|git-actions.toml) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
-    if [ -e "$destination" ] || [ -L "$destination" ]; then
-        if [ -L "$destination" ] && same_target "$destination" "$source"; then
-            states+=(correct)
-        elif [ -L "$destination" ] && same_target "$destination" "$LEGACY_SOURCE_DIR/$name.toml"; then
-            states+=(legacy)
-        else
-            printf '[ERROR] Agent destination conflict: %s\n' "$destination" >&2
-            exit 1
-        fi
-    else
-        states+=(missing)
-    fi
+for name in "${agent_names[@]}"; do
+    validate_agent "$SOURCE_DIR/$name.toml" "$name"
 done
 
-target_created=false
-mkdir -p "$(dirname "$TARGET_DIR")"
-if [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; then
-    [ -d "$TARGET_DIR" ] && [ ! -L "$TARGET_DIR" ] || {
+target_state=missing
+if [ -L "$TARGET_DIR" ]; then
+    if same_target "$TARGET_DIR" "$SOURCE_DIR"; then
+        target_state=correct
+    elif same_target "$TARGET_DIR" "$LEGACY_SOURCE_DIR"; then
+        target_state=legacy-root
+    else
+        printf '[ERROR] unknown Agent root conflict: %s\n' "$TARGET_DIR" >&2
+        exit 1
+    fi
+elif [ -e "$TARGET_DIR" ]; then
+    [ -d "$TARGET_DIR" ] || {
         printf '[ERROR] Agent target is not a directory: %s\n' "$TARGET_DIR" >&2
         exit 1
     }
-else
-    mkdir "$TARGET_DIR"
-    target_created=true
+    target_state=physical
+    while IFS= read -r -d '' child; do
+        child_name=$(basename "$child")
+        is_managed_agent_child "$child_name" || {
+            printf '[ERROR] unknown Agent directory entry: %s\n' "$child" >&2
+            exit 1
+        }
+        [ -L "$child" ] || {
+            printf '[ERROR] unmanaged Agent directory entry: %s\n' "$child" >&2
+            exit 1
+        }
+        child_name=${child_name%.toml}
+        if ! same_target "$child" "$SOURCE_DIR/$child_name.toml" &&
+           ! same_target "$child" "$LEGACY_SOURCE_DIR/$child_name.toml"; then
+            printf '[ERROR] unknown Agent child target: %s\n' "$child" >&2
+            exit 1
+        fi
+    done < <(find "$TARGET_DIR" -mindepth 1 -maxdepth 1 -print0)
+fi
+
+if [ "$target_state" = correct ]; then
+    printf '%s\n' '[SUCCESS] Agents root already points to the harness source (changed: 0, existing: 1)'
+    exit 0
+fi
+
+parent=$(dirname -- "$TARGET_DIR")
+parent_created=false
+if [ ! -d "$parent" ]; then
+    mkdir -p "$parent"
+    parent_created=true
 fi
 
 rollback_needed=true
-created_links=()
-moved_destinations=()
-moved_backups=()
+backup_dir_created=false
+backup_moved=false
+target_installed=false
+temporary_created=false
+temporary=""
+backup=""
+
 rollback() {
-    [ "$rollback_needed" = true ] || return 0
-    local index
-    for ((index=${#created_links[@]}-1; index>=0; index--)); do
-        rm -f -- "${created_links[$index]}"
-    done
-    for ((index=${#moved_destinations[@]}-1; index>=0; index--)); do
-        destination="${moved_destinations[$index]}"
-        backup="${moved_backups[$index]}"
-        if [ -e "$backup" ] || [ -L "$backup" ]; then
-            [ ! -e "$destination" ] && [ ! -L "$destination" ] || rm -f -- "$destination"
-            mv "$backup" "$destination"
+    local status=$?
+    if [ "$rollback_needed" = true ]; then
+        set +e
+        if [ "$temporary_created" = true ] && [ -n "$temporary" ] &&
+           { [ -e "$temporary" ] || [ -L "$temporary" ]; }; then
+            rm -f -- "$temporary"
         fi
-    done
-    if [ "$target_created" = true ] && [ -d "$TARGET_DIR" ]; then
-        rmdir "$TARGET_DIR" 2>/dev/null || true
+        if [ "$target_installed" = true ] && { [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; }; then
+            rm -f -- "$TARGET_DIR"
+        fi
+        if [ "$backup_moved" = true ] && { [ -e "$backup" ] || [ -L "$backup" ]; }; then
+            mv -- "$backup" "$TARGET_DIR"
+        fi
+        if [ "$backup_dir_created" = true ]; then
+            rmdir "$BACKUP_DIR" 2>/dev/null || true
+        fi
+        if [ "$parent_created" = true ]; then
+            rmdir "$parent" 2>/dev/null || true
+        fi
+        return "$status"
     fi
+    return 0
 }
 trap rollback EXIT
 
-changed=0
-skipped=0
-for index in "${!agent_names[@]}"; do
-    state="${states[$index]}"
-    destination="${destinations[$index]}"
-    source="${sources[$index]}"
-    if [ "$state" = correct ]; then
-        skipped=$((skipped + 1))
-        continue
-    fi
-
-    if [ "$state" = legacy ]; then
+if [ "$target_state" = physical ] || [ "$target_state" = legacy-root ]; then
+    if [ ! -d "$BACKUP_DIR" ]; then
         mkdir -p "$BACKUP_DIR"
-        [ "${AGENTS_SETUP_FAIL_BACKUP:-0}" = 1 ] && {
-            printf '%s\n' '[ERROR] injected Agent backup failure' >&2
-            exit 1
-        }
-        backup="$BACKUP_DIR/$(basename "$destination").symlink-install.$(date '+%Y%m%d-%H%M%S').$$"
-        counter=1
-        while [ -e "$backup" ] || [ -L "$backup" ]; do
-            backup="$BACKUP_DIR/$(basename "$destination").symlink-install.$(date '+%Y%m%d-%H%M%S').$$.$counter"
-            counter=$((counter + 1))
-        done
-        mv "$destination" "$backup"
-        moved_destinations+=("$destination")
-        moved_backups+=("$backup")
+        backup_dir_created=true
     fi
-
-    temporary="$TARGET_DIR/.$(basename "$destination").symlink-install-$$"
-    [ ! -e "$temporary" ] && [ ! -L "$temporary" ] || {
-        printf '[ERROR] temporary Agent link already exists: %s\n' "$temporary" >&2
+    [ -d "$BACKUP_DIR" ] || {
+        printf '[ERROR] Agent backup path is not a directory: %s\n' "$BACKUP_DIR" >&2
         exit 1
     }
-    ln -s "$source" "$temporary"
-    mv "$temporary" "$destination"
-    created_links+=("$destination")
-    changed=$((changed + 1))
-    if [ "$FAIL_AFTER" -gt 0 ] && [ "$changed" -ge "$FAIL_AFTER" ]; then
-        printf '%s\n' '[ERROR] injected Agent setup failure' >&2
+    [ "${AGENTS_SETUP_FAIL_BACKUP:-0}" = 1 ] && {
+        printf '%s\n' '[ERROR] injected Agent backup failure' >&2
         exit 1
-    fi
-done
+    }
+    backup_timestamp="${AGENTS_SETUP_BACKUP_TIMESTAMP_OVERRIDE:-$(date '+%Y%m%d-%H%M%S')}"
+    backup_pid="${AGENTS_SETUP_BACKUP_PID_OVERRIDE:-${AGENTS_SETUP_INSTALL_ID_OVERRIDE:-$$}}"
+    backup="$BACKUP_DIR/$(basename "$TARGET_DIR").symlink-install.$backup_timestamp.$backup_pid"
+    counter=1
+    while [ -e "$backup" ] || [ -L "$backup" ]; do
+        backup="$BACKUP_DIR/$(basename "$TARGET_DIR").symlink-install.$backup_timestamp.$backup_pid.$counter"
+        counter=$((counter + 1))
+    done
+    mv -- "$TARGET_DIR" "$backup"
+    backup_moved=true
+fi
+
+temporary="$parent/.$(basename "$TARGET_DIR").symlink-install-${AGENTS_SETUP_INSTALL_ID_OVERRIDE:-$$}"
+[ ! -e "$temporary" ] && [ ! -L "$temporary" ] || {
+    printf '[ERROR] temporary Agent root link already exists: %s\n' "$temporary" >&2
+    exit 1
+}
+ln -s "$SOURCE_DIR" "$temporary"
+temporary_created=true
+if [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; then
+    printf '[ERROR] Agent target appeared during installation: %s\n' "$TARGET_DIR" >&2
+    exit 1
+fi
+mv -- "$temporary" "$TARGET_DIR"
+temporary=""
+temporary_created=false
+target_installed=true
+
+changed=1
+if [ "$FAIL_AFTER" -gt 0 ] && [ "$changed" -ge "$FAIL_AFTER" ]; then
+    printf '%s\n' '[ERROR] injected Agent setup failure' >&2
+    exit 1
+fi
 
 rollback_needed=false
 trap - EXIT
-printf '[SUCCESS] Agents installed (changed: %s, existing: %s)\n' "$changed" "$skipped"
+printf '[SUCCESS] Agents root installed (changed: %s, existing: 0)\n' "$changed"

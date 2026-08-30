@@ -10,6 +10,7 @@ TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/agents-setup-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
 agent_names=(planner plan-reviewer implementer reviewer git-actions)
+read_only_agents=(planner plan-reviewer reviewer)
 
 snapshot_state() {
     /usr/bin/python3 - "$@" <<'PY'
@@ -20,6 +21,7 @@ import sys
 from pathlib import Path
 
 rows = []
+
 def add(label, path, relative):
     info = path.lstat()
     mode = stat.S_IMODE(info.st_mode)
@@ -47,8 +49,33 @@ print("\n".join(rows))
 PY
 }
 
+write_agent_set() {
+    local directory="$1"
+    local value="${2:-test}"
+    mkdir -p "$directory"
+    for name in "${agent_names[@]}"; do
+        local sandbox_line='sandbox_mode = "workspace-write"'
+        for read_only in "${read_only_agents[@]}"; do
+            if [ "$name" = "$read_only" ]; then
+                sandbox_line='sandbox_mode = "read-only"'
+            fi
+        done
+        printf 'name = "%s"\ndescription = "%s"\nmodel = "test"\nmodel_reasoning_effort = "low"\n%s\ndeveloper_instructions = "test"\n' \
+            "$name" "$value" "$sandbox_line" >"$directory/$name.toml"
+    done
+}
+
+assert_root_link() {
+    local target="$1"
+    local source="$2"
+    [ -L "$target" ]
+    [ "$(readlink "$target")" = "$source" ]
+    for name in "${agent_names[@]}"; do
+        [ -f "$target/$name.toml" ]
+    done
+}
+
 python3 - "$HARNESS_ROOT" <<'PY'
-import hashlib
 import sys
 import tomllib
 from pathlib import Path
@@ -61,229 +88,284 @@ for name in names:
     assert path.is_file() and not path.is_symlink(), path
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     assert data["name"] == name
-    assert data["description"]
-    assert data["model"]
-    assert data["model_reasoning_effort"]
-    assert data["developer_instructions"]
+    for field in ("description", "model", "model_reasoning_effort", "developer_instructions"):
+        assert isinstance(data[field], str) and data[field].strip(), (name, field)
     if name in read_only:
         assert data.get("sandbox_mode") == "read-only", name
 PY
 
 source_dir="$TMP_ROOT/source"
-local_dir="$TMP_ROOT/local/agents"
-mkdir -p "$source_dir" "$local_dir"
-for name in "${agent_names[@]}"; do
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$source_dir/$name.toml"
-done
+legacy_dir="$TMP_ROOT/legacy"
+write_agent_set "$source_dir" current
+write_agent_set "$legacy_dir" legacy
 
+fresh_target="$TMP_ROOT/fresh-home/.codex/agents"
 CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$local_dir" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/success.log"
-for name in "${agent_names[@]}"; do
-    [ -L "$local_dir/$name.toml" ]
-    [ "$(readlink "$local_dir/$name.toml")" = "$source_dir/$name.toml" ]
-done
-planner_inode=$(stat -f '%i' "$local_dir/planner.toml")
-AGENTS_SETUP_FAIL_AFTER=0 \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$fresh_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/fresh.log"
+assert_root_link "$fresh_target" "$source_dir"
+fresh_inode=$(stat -f '%i' "$fresh_target")
+fresh_before=$(snapshot_state "target=$fresh_target")
 CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$local_dir" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/success-repeat.log"
-[ "$(stat -f '%i' "$local_dir/planner.toml")" = "$planner_inode" ]
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$fresh_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/repeat.log"
+assert_root_link "$fresh_target" "$source_dir"
+[ "$(stat -f '%i' "$fresh_target")" = "$fresh_inode" ]
+[ "$fresh_before" = "$(snapshot_state "target=$fresh_target")" ]
+[ ! -e "$TMP_ROOT/fresh-home/.codex/backups" ]
 
-conflict_source="$TMP_ROOT/conflict-source"
-conflict_local="$TMP_ROOT/conflict-local"
-mkdir -p "$conflict_source" "$conflict_local"
+temporary_collision_parent="$TMP_ROOT/temporary-collision/.codex"
+temporary_collision_target="$temporary_collision_parent/agents"
+temporary_collision_backups="$temporary_collision_parent/backups"
+temporary_collision_link="$temporary_collision_parent/.agents.symlink-install-f1"
+mkdir -p "$temporary_collision_backups"
+ln -s "$source_dir" "$temporary_collision_link"
+printf '%s\n' existing >"$temporary_collision_backups/existing"
+temporary_collision_before=$(snapshot_state \
+    "parent=$temporary_collision_parent" \
+    "target=$temporary_collision_target" \
+    "backups=$temporary_collision_backups")
+set +e
+AGENTS_SETUP_INSTALL_ID_OVERRIDE=f1 \
+CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$temporary_collision_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$temporary_collision_backups" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/temporary-collision.log" 2>&1
+status=$?
+set -e
+[ "$status" -ne 0 ]
+[ ! -e "$temporary_collision_target" ]
+[ ! -L "$temporary_collision_target" ]
+[ "$temporary_collision_before" = "$(snapshot_state \
+    "parent=$temporary_collision_parent" \
+    "target=$temporary_collision_target" \
+    "backups=$temporary_collision_backups")" ]
+
+current_target="$TMP_ROOT/current/.codex/agents"
+mkdir -p "$current_target"
 for name in "${agent_names[@]}"; do
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$conflict_source/$name.toml"
+    ln -s "$source_dir/$name.toml" "$current_target/$name.toml"
 done
-printf '%s\n' preserve >"$conflict_local/reviewer.toml"
-inode=$(stat -f '%i' "$conflict_local/reviewer.toml")
-if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$conflict_source" \
-   LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$conflict_local" \
-   /bin/bash "$SETUP" >"$TMP_ROOT/conflict.log" 2>&1; then
-    printf '%s\n' '[FAIL] agents conflict unexpectedly succeeded' >&2
-    exit 1
-fi
-[ "$(cat "$conflict_local/reviewer.toml")" = preserve ]
-[ "$(stat -f '%i' "$conflict_local/reviewer.toml")" = "$inode" ]
-[ ! -e "$conflict_local/planner.toml" ]
+CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$current_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$TMP_ROOT/current-backups" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/current.log"
+assert_root_link "$current_target" "$source_dir"
+current_backup=$(find "$TMP_ROOT/current-backups" -mindepth 1 -maxdepth 1 -name 'agents.symlink-install.*' -print -quit)
+[ -n "$current_backup" ]
+[ -d "$current_backup" ]
+for name in "${agent_names[@]}"; do
+    [ "$(readlink "$current_backup/$name.toml")" = "$source_dir/$name.toml" ]
+done
 
-for kind in file directory differing broken; do
+legacy_children_target="$TMP_ROOT/legacy-children/.codex/agents"
+mkdir -p "$legacy_children_target"
+for name in "${agent_names[@]}"; do
+    ln -s "$legacy_dir/$name.toml" "$legacy_children_target/$name.toml"
+done
+CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$legacy_children_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$TMP_ROOT/legacy-children-backups" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/legacy-children.log"
+assert_root_link "$legacy_children_target" "$source_dir"
+legacy_children_backup=$(find "$TMP_ROOT/legacy-children-backups" -mindepth 1 -maxdepth 1 -name 'agents.symlink-install.*' -print -quit)
+[ -d "$legacy_children_backup" ]
+for name in "${agent_names[@]}"; do
+    [ "$(readlink "$legacy_children_backup/$name.toml")" = "$legacy_dir/$name.toml" ]
+done
+
+legacy_root_target="$TMP_ROOT/legacy-root/.codex/agents"
+mkdir -p "$(dirname "$legacy_root_target")" "$TMP_ROOT/legacy-root-backups"
+ln -s "$legacy_dir" "$legacy_root_target"
+CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$legacy_root_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$TMP_ROOT/legacy-root-backups" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/legacy-root.log"
+assert_root_link "$legacy_root_target" "$source_dir"
+legacy_root_backup=$(find "$TMP_ROOT/legacy-root-backups" -mindepth 1 -maxdepth 1 -name 'agents.symlink-install.*' -print -quit)
+[ -L "$legacy_root_backup" ]
+[ "$(readlink "$legacy_root_backup")" = "$legacy_dir" ]
+
+collision_target="$TMP_ROOT/collision/.codex/agents"
+collision_backups="$TMP_ROOT/collision/.codex/backups"
+mkdir -p "$(dirname "$collision_target")" "$collision_backups"
+ln -s "$legacy_dir" "$collision_target"
+collision_name='agents.symlink-install.20260101-000000.fixture'
+printf '%s\n' preserve >"$collision_backups/$collision_name"
+collision_inode=$(stat -f '%i' "$collision_backups/$collision_name")
+CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$collision_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$collision_backups" \
+AGENTS_SETUP_BACKUP_TIMESTAMP_OVERRIDE=20260101-000000 \
+AGENTS_SETUP_BACKUP_PID_OVERRIDE=fixture \
+    /bin/bash "$SETUP" >"$TMP_ROOT/collision.log"
+assert_root_link "$collision_target" "$source_dir"
+[ "$(cat "$collision_backups/$collision_name")" = preserve ]
+[ "$(stat -f '%i' "$collision_backups/$collision_name")" = "$collision_inode" ]
+collision_backup="$collision_backups/$collision_name.1"
+[ -L "$collision_backup" ]
+[ "$(readlink "$collision_backup")" = "$legacy_dir" ]
+
+for kind in wrong-root regular-file unknown-entry; do
+    conflict_target="$TMP_ROOT/$kind/.codex/agents"
+    mkdir -p "$(dirname "$conflict_target")"
     case "$kind" in
-        file) conflict_path="$TMP_ROOT/$kind/planner.toml"; mkdir -p "$(dirname "$conflict_path")"; printf '%s\n' preserve >"$conflict_path" ;;
-        directory) conflict_path="$TMP_ROOT/$kind/planner.toml"; mkdir -p "$conflict_path" ;;
-        differing) conflict_path="$TMP_ROOT/$kind/planner.toml"; mkdir -p "$(dirname "$conflict_path")"; ln -s "$TMP_ROOT/$kind/other.toml" "$conflict_path" ;;
-        broken) conflict_path="$TMP_ROOT/$kind/planner.toml"; mkdir -p "$(dirname "$conflict_path")"; ln -s "$TMP_ROOT/$kind/missing.toml" "$conflict_path" ;;
+        wrong-root)
+            wrong_dir="$TMP_ROOT/$kind/wrong"
+            mkdir -p "$wrong_dir"
+            ln -s "$wrong_dir" "$conflict_target"
+            ;;
+        regular-file)
+            printf '%s\n' preserve >"$conflict_target"
+            ;;
+        unknown-entry)
+            mkdir -p "$conflict_target"
+            ln -s "$source_dir/planner.toml" "$conflict_target/planner.toml"
+            printf '%s\n' preserve >"$conflict_target/unknown"
+            ;;
     esac
+    before=$(snapshot_state "target=$conflict_target")
     if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-       LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$TMP_ROOT/$kind" \
+       LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$conflict_target" \
+       CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
        /bin/bash "$SETUP" >"$TMP_ROOT/$kind.log" 2>&1; then
-        printf '[FAIL] agents %s conflict unexpectedly succeeded\n' "$kind" >&2
+        printf '[FAIL] Agent %s conflict unexpectedly succeeded\n' "$kind" >&2
         exit 1
     fi
-    [ -e "$conflict_path" ] || [ -L "$conflict_path" ]
+    [ "$before" = "$(snapshot_state "target=$conflict_target")" ]
+done
+
+for child_kind in unrelated-child broken-child; do
+    child_target="$TMP_ROOT/$child_kind/.codex/agents"
+    child_backups="$TMP_ROOT/$child_kind/.codex/backups"
+    mkdir -p "$child_target" "$child_backups"
+    for name in "${agent_names[@]}"; do
+        if [ "$name" = planner ]; then
+            if [ "$child_kind" = unrelated-child ]; then
+                unrelated_file="$TMP_ROOT/$child_kind/unrelated/planner.toml"
+                mkdir -p "$(dirname "$unrelated_file")"
+                printf '%s\n' unrelated >"$unrelated_file"
+                ln -s "$unrelated_file" "$child_target/$name.toml"
+            else
+                ln -s "$TMP_ROOT/$child_kind/missing/planner.toml" "$child_target/$name.toml"
+            fi
+        else
+            ln -s "$source_dir/$name.toml" "$child_target/$name.toml"
+        fi
+    done
+    printf '%s\n' existing >"$child_backups/existing"
+    before=$(snapshot_state "target=$child_target" "backups=$child_backups")
+    if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+       LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$child_target" \
+       CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+       CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$child_backups" \
+       /bin/bash "$SETUP" >"$TMP_ROOT/$child_kind.log" 2>&1; then
+        printf '[FAIL] Agent %s child target unexpectedly succeeded\n' "$child_kind" >&2
+        exit 1
+    fi
+    [ "$before" = "$(snapshot_state "target=$child_target" "backups=$child_backups")" ]
 done
 
 missing_source="$TMP_ROOT/missing-source"
-missing_local="$TMP_ROOT/missing-local"
-mkdir -p "$missing_source" "$missing_local"
+missing_target="$TMP_ROOT/missing-source-target/.codex/agents"
+mkdir -p "$missing_source"
 for name in planner plan-reviewer implementer reviewer; do
     printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$missing_source/$name.toml"
 done
 if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$missing_source" \
-   LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$missing_local" \
-   /bin/bash "$SETUP" >"$TMP_ROOT/missing.log" 2>&1; then
-    printf '%s\n' '[FAIL] missing source unexpectedly succeeded' >&2
+   LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$missing_target" \
+   CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+   /bin/bash "$SETUP" >"$TMP_ROOT/missing-source.log" 2>&1; then
+    printf '%s\n' '[FAIL] missing Agent source unexpectedly succeeded' >&2
     exit 1
 fi
-[ ! -e "$missing_local/planner.toml" ]
+grep -Fq "[ERROR] Agent definition is not a regular file: $missing_source/git-actions.toml" "$TMP_ROOT/missing-source.log"
+[ ! -e "$missing_target" ]
 
 malformed_source="$TMP_ROOT/malformed-source"
-malformed_local="$TMP_ROOT/malformed-local"
-mkdir -p "$malformed_source" "$malformed_local"
-for name in "${agent_names[@]}"; do
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$malformed_source/$name.toml"
-done
+malformed_target="$TMP_ROOT/malformed-target/.codex/agents"
+write_agent_set "$malformed_source"
 printf 'name = "planner"\ndescription = [\n' >"$malformed_source/planner.toml"
 if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$malformed_source" \
-   LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$malformed_local" \
+   LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$malformed_target" \
+   CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
    /bin/bash "$SETUP" >"$TMP_ROOT/malformed.log" 2>&1; then
-    printf '%s\n' '[FAIL] malformed Agent TOML unexpectedly succeeded' >&2
+    printf '%s\n' '[FAIL] malformed Agent TOML unexpectedly succeeded\n' >&2
     exit 1
 fi
-[ ! -e "$malformed_local/planner.toml" ]
+[ ! -e "$malformed_target" ]
 
-missing_target_source="$TMP_ROOT/missing-target-source"
-missing_target_parent="$TMP_ROOT/missing-target-parent"
-mkdir -p "$missing_target_source" "$missing_target_parent"
+backup_failure_target="$TMP_ROOT/backup-failure/.codex/agents"
+backup_failure_backups="$TMP_ROOT/backup-failure/.codex/backups"
+mkdir -p "$(dirname "$backup_failure_target")" "$backup_failure_backups"
+ln -s "$legacy_dir" "$backup_failure_target"
+printf '%s\n' existing >"$backup_failure_backups/existing"
+backup_failure_before=$(snapshot_state "target=$backup_failure_target" "backups=$backup_failure_backups")
+set +e
+AGENTS_SETUP_FAIL_BACKUP=1 \
+CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$backup_failure_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$backup_failure_backups" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/backup-failure.log" 2>&1
+status=$?
+set -e
+[ "$status" -ne 0 ]
+[ "$backup_failure_before" = "$(snapshot_state "target=$backup_failure_target" "backups=$backup_failure_backups")" ]
+
+rollback_target="$TMP_ROOT/rollback/.codex/agents"
+rollback_backups="$TMP_ROOT/rollback/.codex/backups"
+mkdir -p "$rollback_target" "$rollback_backups"
 for name in "${agent_names[@]}"; do
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$missing_target_source/$name.toml"
+    ln -s "$source_dir/$name.toml" "$rollback_target/$name.toml"
 done
+printf '%s\n' existing >"$rollback_backups/existing"
+printf '%s\n' keep >"$TMP_ROOT/rollback/.codex/unrelated"
+rollback_before=$(snapshot_state \
+    "target=$rollback_target" \
+    "backups=$rollback_backups" \
+    "unrelated=$TMP_ROOT/rollback/.codex/unrelated")
 set +e
 AGENTS_SETUP_FAIL_AFTER=1 \
-CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$missing_target_source" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$missing_target_parent/agents" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/missing-target.log" 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-[ ! -e "$missing_target_parent/agents" ]
-
-legacy_source="$TMP_ROOT/legacy-source"
-legacy_local="$TMP_ROOT/legacy-local"
-legacy_target="$TMP_ROOT/legacy-target"
-mkdir -p "$legacy_source" "$legacy_local" "$legacy_target" "$TMP_ROOT/legacy-backups"
-for name in "${agent_names[@]}"; do
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$legacy_source/$name.toml"
-    printf '%s\n' legacy >"$legacy_target/$name.toml"
-    ln -s "$legacy_target/$name.toml" "$legacy_local/$name.toml"
-done
-CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$legacy_source" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$legacy_local" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_target" \
-CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$TMP_ROOT/legacy-backups" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/legacy.log"
-for name in "${agent_names[@]}"; do
-    [ "$(readlink "$legacy_local/$name.toml")" = "$legacy_source/$name.toml" ]
-done
-[ "$(find "$TMP_ROOT/legacy-backups" -mindepth 1 -maxdepth 1 -type l | wc -l | tr -d ' ')" = 5 ]
-for name in "${agent_names[@]}"; do
-    backup=$(find "$TMP_ROOT/legacy-backups" -mindepth 1 -maxdepth 1 -name "$name.toml.symlink-install*" -print -quit)
-    [ -n "$backup" ]
-    [ "$(readlink "$backup")" = "$legacy_target/$name.toml" ]
-done
-
-backup_failure="$TMP_ROOT/backup-failure"
-mkdir -p "$backup_failure" "$TMP_ROOT/agent-backups"
-for name in "${agent_names[@]}"; do
-    ln -s "$legacy_target/$name.toml" "$backup_failure/$name.toml"
-done
-printf '%s\n' keep >"$TMP_ROOT/agent-backups/existing"
-backup_inode=$(stat -f '%i' "$TMP_ROOT/agent-backups/existing")
-set +e
-AGENTS_SETUP_FAIL_BACKUP=1 \
 CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$backup_failure" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_target" \
-CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$TMP_ROOT/agent-backups" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/agent-backup-failure.log" 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-for name in "${agent_names[@]}"; do
-    [ "$(readlink "$backup_failure/$name.toml")" = "$legacy_target/$name.toml" ]
-done
-[ "$(cat "$TMP_ROOT/agent-backups/existing")" = keep ]
-[ "$(stat -f '%i' "$TMP_ROOT/agent-backups/existing")" = "$backup_inode" ]
-
-backup_snapshot="$TMP_ROOT/agent-backup-snapshot"
-mkdir -p "$backup_snapshot/home/backups" "$backup_snapshot/backup-dir"
-for name in "${agent_names[@]}"; do
-    ln -s "$legacy_target/$name.toml" "$backup_snapshot/home/$name.toml"
-done
-printf '%s\n' existing >"$backup_snapshot/home/backups/existing"
-chmod 640 "$backup_snapshot/home/backups/existing"
-printf '%s\n' preserve >"$backup_snapshot/backup-dir/non-target"
-snapshot_state \
-    "home=$backup_snapshot/home" \
-    "backups=$backup_snapshot/home/backups" \
-    "non-target=$backup_snapshot/backup-dir" >"$TMP_ROOT/agent-backup-snapshot.before"
-set +e
-AGENTS_SETUP_FAIL_BACKUP=1 \
-CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$backup_snapshot/home" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_target" \
-CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$backup_snapshot/home/backups" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/agent-backup-snapshot.log" 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-snapshot_state \
-    "home=$backup_snapshot/home" \
-    "backups=$backup_snapshot/home/backups" \
-    "non-target=$backup_snapshot/backup-dir" >"$TMP_ROOT/agent-backup-snapshot.after"
-cmp -s "$TMP_ROOT/agent-backup-snapshot.before" "$TMP_ROOT/agent-backup-snapshot.after"
-
-rollback_source="$TMP_ROOT/rollback-source"
-rollback_local="$TMP_ROOT/rollback-local"
-mkdir -p "$rollback_source" "$rollback_local"
-for name in "${agent_names[@]}"; do
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$rollback_source/$name.toml"
-done
-printf '%s\n' preserve >"$rollback_local/non-target"
-mkdir -p "$rollback_local/backups"
-printf '%s\n' existing >"$rollback_local/backups/existing"
-for name in "${agent_names[@]}"; do
-    ln -s "$legacy_target/$name.toml" "$rollback_local/$name.toml"
-done
-for name in "${agent_names[@]}"; do
-    stat -f '%i' "$rollback_local/$name.toml" >"$TMP_ROOT/rollback-$name.inode"
-done
-rollback_backup_inode=$(stat -f '%i' "$rollback_local/backups/existing")
-snapshot_state \
-    "local=$rollback_local" \
-    "source=$rollback_source" >"$TMP_ROOT/agent-rollback.before"
-set +e
-AGENTS_SETUP_FAIL_AFTER=2 \
-CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$rollback_source" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$rollback_local" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_target" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$rollback_target" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+CODEX_AGENTS_BACKUP_DIR_OVERRIDE="$rollback_backups" \
     /bin/bash "$SETUP" >"$TMP_ROOT/rollback.log" 2>&1
 status=$?
 set -e
 [ "$status" -ne 0 ]
+grep -Fq '[ERROR] injected Agent setup failure' "$TMP_ROOT/rollback.log"
+[ "$rollback_before" = "$(snapshot_state \
+    "target=$rollback_target" \
+    "backups=$rollback_backups" \
+    "unrelated=$TMP_ROOT/rollback/.codex/unrelated")" ]
 for name in "${agent_names[@]}"; do
-    [ -L "$rollback_local/$name.toml" ]
-    [ "$(readlink "$rollback_local/$name.toml")" = "$legacy_target/$name.toml" ]
-    [ "$(stat -f '%i' "$rollback_local/$name.toml")" = "$(cat "$TMP_ROOT/rollback-$name.inode")" ]
+    [ "$(readlink "$rollback_target/$name.toml")" = "$source_dir/$name.toml" ]
 done
-[ "$(cat "$rollback_local/non-target")" = preserve ]
-[ "$(cat "$rollback_local/backups/existing")" = existing ]
-[ "$(stat -f '%i' "$rollback_local/backups/existing")" = "$rollback_backup_inode" ]
-[ "$(find "$rollback_local/backups" -mindepth 1 -maxdepth 1 -type f -name existing | wc -l | tr -d ' ')" = 1 ]
-snapshot_state \
-    "local=$rollback_local" \
-    "source=$rollback_source" >"$TMP_ROOT/agent-rollback.after"
-cmp -s "$TMP_ROOT/agent-rollback.before" "$TMP_ROOT/agent-rollback.after"
 
-printf '%s\n' '[PASS] agents setup scenarios'
+missing_target_parent="$TMP_ROOT/failure-missing/.codex"
+set +e
+AGENTS_SETUP_FAIL_AFTER=1 \
+CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$missing_target_parent/agents" \
+CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+    /bin/bash "$SETUP" >"$TMP_ROOT/failure-missing.log" 2>&1
+status=$?
+set -e
+[ "$status" -ne 0 ]
+[ ! -e "$missing_target_parent/agents" ]
+[ ! -L "$missing_target_parent/agents" ]
+[ ! -e "$missing_target_parent" ]
+[ ! -L "$missing_target_parent" ]
+[ ! -e "$missing_target_parent/backups" ]
+[ ! -L "$missing_target_parent/backups" ]
+
+printf '%s\n' '[PASS] agents setup root symlink scenarios'
