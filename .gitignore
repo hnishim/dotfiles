@@ -1,2 +1,5 @@
 textlint/node_modules/
 textlint/tests/__pycache__/
+karabiner-elements/config/assets/
+karabiner-elements/config/automatic_backups/
+karabiner-elements/config/_backup/

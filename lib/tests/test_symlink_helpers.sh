@@ -31,6 +31,24 @@ scenario_missing_and_idempotent() {
     [ "$(stat -f '%i' "$path")" = "$link_inode" ]
 }
 
+scenario_directory_source_and_idempotent() {
+    local source_dir="$TMP_ROOT/source-directory"
+    local path="$TMP_ROOT/directory-link"
+    mkdir "$source_dir"
+    printf '%s\n' directory-content >"$source_dir/entry"
+
+    create_symlink "$source_dir" "$path" "directory-source"
+    assert_correct_link "$path" "$source_dir"
+    [ "$(cat "$path/entry")" = directory-content ]
+
+    local link_inode
+    link_inode=$(stat -f '%i' "$path")
+    create_symlink "$source_dir" "$path" "directory-source"
+    assert_correct_link "$path" "$source_dir"
+    [ "$(stat -f '%i' "$path")" = "$link_inode" ]
+    [ "$(cat "$path/entry")" = directory-content ]
+}
+
 scenario_correct_existing_is_invariant() {
     local existing="$TMP_ROOT/correct-existing"
     ln -s "$source_file" "$existing"
@@ -181,6 +199,7 @@ run_scenario() {
 }
 
 run_scenario scenario_missing_and_idempotent
+run_scenario scenario_directory_source_and_idempotent
 run_scenario scenario_correct_existing_is_invariant
 run_scenario scenario_safe_different_link_is_preserved
 run_scenario scenario_safe_broken_link_is_preserved

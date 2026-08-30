@@ -16,11 +16,11 @@ SCRIPT_DIR=$(get_script_dir)
 
 # Local path
 LOCAL_KARABINER_DIR="$HOME/.config/karabiner"
-LOCAL_KARABINER_JSON="$LOCAL_KARABINER_DIR/karabiner.json"
 LOCAL_KARABINER_EDN="$HOME/.config/karabiner.edn"
 
 # Repository path
-ICLOUD_KARABINER_JSON="$SCRIPT_DIR/karabiner.json"
+ICLOUD_KARABINER_CONFIG="$SCRIPT_DIR/config"
+ICLOUD_KARABINER_JSON="$SCRIPT_DIR/config/karabiner.json"
 ICLOUD_KARABINER_EDN="$SCRIPT_DIR/goku/karabiner.edn"
 
 echo "=== Karabiner-Elements設定ファイル同期スクリプト ==="
@@ -30,19 +30,20 @@ echo "開始時刻: $(date)"
 log_info "前提条件をチェック中..."
 
 # iCloud設定ファイルの存在確認
+check_path "$ICLOUD_KARABINER_CONFIG" "iCloud Karabiner設定ディレクトリ" "directory" || exit 1
 check_path "$ICLOUD_KARABINER_JSON" "iCloud karabiner.json" "file" || exit 1
 check_path "$ICLOUD_KARABINER_EDN" "iCloud karabiner.edn" "file" || exit 1
 
-# ローカルKarabinerディレクトリの存在確認
-check_path "$LOCAL_KARABINER_DIR" "ローカルKarabinerディレクトリ" "directory" || exit 1
+# ローカル設定ディレクトリの親を作成（既存の競合は変更しない）
+ensure_directory "$HOME/.config" "ローカル設定ディレクトリ"
 
 log_success "前提条件チェック完了"
 
 echo ""
 log_info "シンボリックリンクの状態を確認・作成します..."
 
-# --- karabiner.json の同期 ---
-create_symlink "$ICLOUD_KARABINER_JSON" "$LOCAL_KARABINER_JSON" "karabiner.json" || exit 1
+# --- Karabiner設定ディレクトリの同期 ---
+create_symlink "$SCRIPT_DIR/config" "$LOCAL_KARABINER_DIR" "Karabiner設定ディレクトリ" || exit 1
 
 # --- karabiner.edn (goku) の同期 ---
 create_symlink "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN" "karabiner.edn" || exit 1
@@ -66,7 +67,7 @@ else
 fi
 
 # 完了メッセージの表示
-symlinks_info="  karabiner.json: $LOCAL_KARABINER_JSON -> $ICLOUD_KARABINER_JSON
+symlinks_info="  karabiner directory: $LOCAL_KARABINER_DIR -> $ICLOUD_KARABINER_CONFIG
   karabiner.edn:  $LOCAL_KARABINER_EDN -> $ICLOUD_KARABINER_EDN"
 
 show_completion_message "Karabiner-Elements設定ファイル同期" "$symlinks_info" ""
