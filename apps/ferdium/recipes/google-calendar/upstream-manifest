@@ -1,0 +1,7 @@
+# Ferdium recipes upstream manifest for the Google Calendar v2.4.7 recipe.
+source_url=https://github.com/ferdium/ferdium-recipes
+source_ref=fc4675ab5724e83d59d92f38a63dcc503615a7c9
+recipe_version=2.4.7
+
+# Format: relative target path<TAB>upstream fixture path<TAB>sha256
+webview.js	apps/ferdium/tests/fixtures/upstream/google-calendar/webview.js	24f28f7c340e89668e896e945d0a773c977feb5b979b547dd3c7b7c4e37b7344
