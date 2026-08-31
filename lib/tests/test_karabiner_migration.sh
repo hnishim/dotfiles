@@ -73,13 +73,92 @@ scenario_intentional_link_failure_restores_backup() {
 
 scenario_setup_syntax_and_call_contract() {
     bash -n "$SETUP"
-    awk '
+    if ! awk '
         /^[[:space:]]*create_symlink / {
             if ($0 !~ /^[[:space:]]*create_symlink "[^"]*" "[^"]*" "[^"]*" \|\| exit 1$/) exit 1
             count++
         }
-        END { exit count == 2 ? 0 : 1 }
-    ' "$SETUP"
+        END { exit count == 1 ? 0 : 1 }
+    ' "$SETUP"; then
+        printf '%s\n' '[EXPECTED_FAIL] setup still has the pre-migration create_symlink contract' >&2
+        return 1
+    fi
+}
+
+scenario_setup_uses_repository_edn_for_goku() {
+    rg -n --fixed-strings 'check_path "$ICLOUD_KARABINER_EDN" "iCloud karabiner.edn" "file" || exit 1' "$SETUP" >/dev/null
+    if ! rg -n --fixed-strings 'GOKU_EDN_CONFIG_FILE="$ICLOUD_KARABINER_EDN" goku' "$SETUP" >/dev/null; then
+        printf '%s\n' '[EXPECTED_FAIL] setup does not pass the repository EDN through GOKU_EDN_CONFIG_FILE' >&2
+        return 1
+    fi
+    [ "$(awk '
+        /^[[:space:]]*#/ { next }
+        { while (match($0, /GOKU_EDN_CONFIG_FILE="\$ICLOUD_KARABINER_EDN"[[:space:]]+goku/)) { count++; $0 = substr($0, RSTART + RLENGTH) } }
+        END { print count + 0 }
+    ' "$SETUP")" -eq 1 ]
+    [ "$(awk '
+        /^[[:space:]]*#/ { next }
+        {
+            line = $0
+            while (match(line, /GOKU_EDN_CONFIG_FILE="\$ICLOUD_KARABINER_EDN"[[:space:]]+goku/)) {
+                line = substr(line, 1, RSTART - 1) substr(line, RSTART + RLENGTH)
+            }
+            if (line ~ /(^|[[:space:];|&])goku([[:space:];|&]|$)/) count++
+        }
+        END { print count + 0 }
+    ' "$SETUP")" -eq 0 ]
+    if rg -n --fixed-strings 'LOCAL_KARABINER_EDN=' "$SETUP"; then
+        return 1
+    fi
+    if rg -n --fixed-strings 'create_symlink "$ICLOUD_KARABINER_EDN"' "$SETUP"; then
+        return 1
+    fi
+    if rg -n --fixed-strings 'karabiner.edn:  $LOCAL_KARABINER_EDN' "$SETUP"; then
+        return 1
+    fi
+}
+
+scenario_setup_preserves_existing_edn() {
+    if rg -n '(^|[;&|[:space:]])(rm|unlink)([[:space:]]|$).*([Kk][Aa][Rr][Aa][Bb][Ii][Nn][Ee][Rr]\.edn|LOCAL_KARABINER_EDN)' "$SETUP"; then
+        printf '%s\n' '[FAIL] setup automatically removes the existing local karabiner.edn' >&2
+        return 1
+    fi
+}
+
+scenario_goku_runtime_uses_spaced_repository_path() {
+    if ! command -v goku >/dev/null 2>&1; then
+        printf '%s\n' '[SKIP] goku runtime contract (goku is not available on PATH)' >&2
+        return 0
+    fi
+
+    local isolated_home="$TMP_ROOT/goku home"
+    local spaced_repository="$TMP_ROOT/repository with spaces"
+    local input_edn="$spaced_repository/karabiner.edn"
+    local generated_json="$isolated_home/.config/karabiner/karabiner.json"
+    local stdout_file="$TMP_ROOT/goku.stdout"
+    local stderr_file="$TMP_ROOT/goku.stderr"
+    local expected_normalized="$TMP_ROOT/expected-normalized.json"
+    local actual_normalized="$TMP_ROOT/actual-normalized.json"
+    local repository_json_hash_before
+    local repository_json_hash_after
+
+    mkdir -p "$isolated_home/.config/karabiner" "$spaced_repository"
+    cp -- "$DOTFILES_ROOT/karabiner-elements/goku/karabiner.edn" "$input_edn"
+    cp -- "$CONFIG_JSON" "$generated_json"
+    repository_json_hash_before=$(shasum -a 256 "$CONFIG_JSON")
+
+    if ! HOME="$isolated_home" GOKU_EDN_CONFIG_FILE="$input_edn" goku >"$stdout_file" 2>"$stderr_file"; then
+        printf '%s\n' '[FAIL] goku runtime contract failed' >&2
+        return 1
+    fi
+    [ ! -s "$stderr_file" ]
+    jq -e '. | type == "object"' "$generated_json" >/dev/null
+    jq -S . "$CONFIG_JSON" >"$expected_normalized"
+    jq -S . "$generated_json" >"$actual_normalized"
+    cmp -s "$expected_normalized" "$actual_normalized"
+    repository_json_hash_after=$(shasum -a 256 "$CONFIG_JSON")
+    [ "$repository_json_hash_before" = "$repository_json_hash_after" ]
+    printf '%s\n' '[PASS] goku runtime contract (isolated HOME, spaced EDN path, normalized JSON, repository JSON unchanged)'
 }
 
 scenario_json_is_valid() {
@@ -108,7 +187,10 @@ scenario_no_legacy_karabiner_placement() {
 
 scenario_manual_directory_migration_and_restore
 scenario_intentional_link_failure_restores_backup
+scenario_goku_runtime_uses_spaced_repository_path
 scenario_setup_syntax_and_call_contract
+scenario_setup_uses_repository_edn_for_goku
+scenario_setup_preserves_existing_edn
 scenario_json_is_valid
 scenario_setup_has_current_directory_contract
 scenario_no_legacy_karabiner_placement

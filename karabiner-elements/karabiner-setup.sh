@@ -16,7 +16,6 @@ SCRIPT_DIR=$(get_script_dir)
 
 # Local path
 LOCAL_KARABINER_DIR="$HOME/.config/karabiner"
-LOCAL_KARABINER_EDN="$HOME/.config/karabiner.edn"
 
 # Repository path
 ICLOUD_KARABINER_CONFIG="$SCRIPT_DIR/config"
@@ -45,9 +44,6 @@ log_info "シンボリックリンクの状態を確認・作成します..."
 # --- Karabiner設定ディレクトリの同期 ---
 create_symlink "$SCRIPT_DIR/config" "$LOCAL_KARABINER_DIR" "Karabiner設定ディレクトリ" || exit 1
 
-# --- karabiner.edn (goku) の同期 ---
-create_symlink "$ICLOUD_KARABINER_EDN" "$LOCAL_KARABINER_EDN" "karabiner.edn" || exit 1
-
 # --- goku を実行して karabiner.json を更新 ---
 log_info "goku を実行して karabiner.json の内容を更新します..."
 
@@ -55,7 +51,7 @@ log_info "goku を実行して karabiner.json の内容を更新します..."
 check_command "goku" "'brew install yqrashawn/goku/goku' を実行してインストールしてください。" || exit 1
 
 # goku を実行して設定を karabiner.json に反映
-if goku; then
+if GOKU_EDN_CONFIG_FILE="$ICLOUD_KARABINER_EDN" goku; then
     log_success "goku を実行し、karabiner.json を正常に更新しました。"
     # JSONが事前生成済みでも、実行中のKarabinerが旧設定を保持している場合がある。
     # setup後の読み込み状態を保証するため、差分の有無にかかわらず再起動する。
@@ -68,6 +64,6 @@ fi
 
 # 完了メッセージの表示
 symlinks_info="  karabiner directory: $LOCAL_KARABINER_DIR -> $ICLOUD_KARABINER_CONFIG
-  karabiner.edn:  $LOCAL_KARABINER_EDN -> $ICLOUD_KARABINER_EDN"
+"
 
 show_completion_message "Karabiner-Elements設定ファイル同期" "$symlinks_info" ""
