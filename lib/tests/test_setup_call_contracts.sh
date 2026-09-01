@@ -26,6 +26,31 @@ assert_setup_script_registered() {
     ' "$DOTFILES_ROOT/setup-macos.sh"
 }
 
+assert_hammerspoon_contract() {
+    local setup="$DOTFILES_ROOT/hammerspoon/hammerspoon-setup.sh"
+    local expected='create_symlink "$HAMMERSPOON_SOURCE" "$HAMMERSPOON_TARGET" "Hammerspoon設定" || exit 1'
+    local actual
+    actual=$(awk '/^[[:space:]]*create_symlink / { print; count++ } END { if (count != 1) exit 1 }' "$setup") || return 1
+    [ "$actual" = "$expected" ] || return 1
+    ! rg -n -i 'RAYCAST|Raycast|external_scripts|title-case-chicago|two-panes-finder|scripts/raycast' "$setup" >/dev/null
+}
+
+assert_legacy_hammerspoon_contract() {
+    local setup="$DOTFILES_ROOT/hammerspoon/hammerspoon-setup.sh"
+    local expected_sha256='7212bf4da8b397217aa8a76c1e1d3f2baf25f4d080a123e2bf3635fb61816204'
+    local actual_sha256
+    actual_sha256=$(shasum -a 256 "$setup" | awk '{ print $1 }') || return 1
+    [ "$actual_sha256" = "$expected_sha256" ] || return 1
+    local expected
+    expected=$(printf '%s\n' \
+        'create_symlink "$HAMMERSPOON_SOURCE" "$HAMMERSPOON_TARGET" "Hammerspoon設定" || exit 1' \
+        'create_symlink "$RAYCAST_SOURCE_ROOT/title-case-chicago.py" "$HAMMERSPOON_EXTERNAL_SCRIPTS_SOURCE/title-case-chicago.py" "Hammerspoon Title Case Python script" || exit 1' \
+        'create_symlink "$RAYCAST_SOURCE_ROOT/title-case-chicago.sh" "$HAMMERSPOON_EXTERNAL_SCRIPTS_SOURCE/title-case-chicago.sh" "Hammerspoon Title Case shell script" || exit 1' \
+        'create_symlink "$RAYCAST_SOURCE_ROOT/two-panes-finder.applescript" "$HAMMERSPOON_EXTERNAL_SCRIPTS_SOURCE/two-panes-finder.applescript" "Hammerspoon Finder script" || exit 1')
+    actual=$(awk '/^[[:space:]]*create_symlink / { print }' "$setup") || return 1
+    [ "$actual" = "$expected" ]
+}
+
 assert_karabiner_goku_contract() {
     local setup="$DOTFILES_ROOT/karabiner-elements/karabiner-setup.sh"
     local configured_count
@@ -69,7 +94,11 @@ run_contract() {
     local expected_count="$2"
     local valid_count
     set +e
-    assert_single_api_contract "$script" "$expected_count"
+    if [ "$script" = "hammerspoon/hammerspoon-setup.sh" ]; then
+        assert_hammerspoon_contract
+    else
+        assert_single_api_contract "$script" "$expected_count"
+    fi
     local rc=$?
     set -e
     if [ "$rc" -eq 0 ]; then
@@ -78,6 +107,9 @@ run_contract() {
         valid_count=$(awk '/^[[:space:]]*create_symlink / && $0 ~ /^[[:space:]]*create_symlink "[^"]*" "[^"]*" "[^"]*" \|\| exit 1$/ { count++ } END { print count + 0 }' "$DOTFILES_ROOT/$script")
         if [ "$script" = "karabiner-elements/karabiner-setup.sh" ] && [ "$valid_count" -eq 2 ]; then
             printf '%s\n' "[EXPECTED_FAIL] $script (EDN symlink migration is not yet implemented)"
+        elif [ "$script" = "hammerspoon/hammerspoon-setup.sh" ] \
+            && assert_legacy_hammerspoon_contract; then
+            printf '%s\n' "[EXPECTED_FAIL] $script (init-only Hammerspoon setup migration is not yet implemented)"
         elif [ "$valid_count" -eq 0 ]; then
             printf '%s\n' "[EXPECTED_FAIL] $script (single safe API migration is absent)"
         else
