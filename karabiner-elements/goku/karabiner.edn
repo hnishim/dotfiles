@@ -21,23 +21,24 @@
   }
 
   :tos {
+    ;; ⌥Tは日本語の確定動作（かわせみで定義必要：「変換と確定」→「全文節確定」、「候補操作」→「候補決定」）
     ;; 角括弧 []
-    :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:control :option :shift]}                          {:key :left_arrow}]
-    :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter :modi [:control :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
-    :to_square_brackets_en_non-xls [{:key :open_bracket} {:key :close_bracket}                                                                                  {:key :left_arrow}]
-    :to_square_brackets_en_xls     [{:key :open_bracket} {:key :close_bracket}                                                         {:key :u :modi :control} {:key :left_arrow}]
+    :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :t :modi :option}                          {:key :left_arrow}]
+    :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+    :to_square_brackets_en_non-xls [{:key :open_bracket} {:key :close_bracket}                                                  {:key :left_arrow}]
+    :to_square_brackets_en_xls     [{:key :open_bracket} {:key :close_bracket}                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; 波括弧 {}
-    :to_curly_brackets_jp_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter :modi [:control :option :shift]}                          {:key :left_arrow}]
-    :to_curly_brackets_jp_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter :modi [:control :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
-    :to_curly_brackets_en_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                                                                                  {:key :left_arrow}]
-    :to_curly_brackets_en_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                                                         {:key :u :modi :control} {:key :left_arrow}]
+    :to_curly_brackets_jp_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :t :modi :option}                          {:key :left_arrow}]
+    :to_curly_brackets_jp_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+    :to_curly_brackets_en_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                                                  {:key :left_arrow}]
+    :to_curly_brackets_en_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; 丸括弧 ()
-    :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:control :option :shift]}                          {:key :left_arrow}]
-    :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter :modi [:control :option :shift]} {:key :u :modi :control} {:key :left_arrow}]
-    :to_parentheses_en_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                                                  {:key :left_arrow}]
-    :to_parentheses_en_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                         {:key :u :modi :control} {:key :left_arrow}]
+    :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :t :modi :option}                          {:key :left_arrow}]
+    :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+    :to_parentheses_en_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                  {:key :left_arrow}]
+    :to_parentheses_en_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift}                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; シングルクォート ''
     :to_quotes_non-xls [{:key :quote} {:key :quote}                          {:key :left_arrow}]
@@ -63,13 +64,6 @@
     {:des "CAPSハイパーキー: Caps_lockを Shift, Command, Control, Option に置換する"
      :rules [
       [:caps_lock [:!CTOleft_shift]]
-      ;;g
-      ;;h
-      ;;l
-      ;;o
-      ;;q
-      ;;u
-      ;;v
     ]}
 
     {:des "英かな：左右⌘キーを単独で押したときは英数・かなキーとして扱う"
@@ -92,15 +86,15 @@
 
     {:des "Comboで括弧を自動的に閉じてカーソルを中に移動"
      :rules [
-      ;; ^⌥⇧リターンは日本語の確定動作（かわせみで定義必要：「変換と確定」→「全文節確定」、「候補操作」→「候補決定」）
+      ;; ⌥Tは日本語の確定動作（かわせみで定義必要：「変換と確定」→「全文節確定」、「候補操作」→「候補決定」）
       ;; '"`は半角直接入力設定なので確定不要。
       
       ;; 不等号 <>
       ;; ,. → 不等号 <>（共通）
-      [[:comma :period] [:!Scomma :!Speriod :!TOSreturn_or_enter      :left_arrow] [:ja :!excel]]  ;; 日本語、Excel以外
-      [[:comma :period] [:!Scomma :!Speriod :!TOSreturn_or_enter :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
-      [[:comma :period] [:!Scomma :!Speriod                           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
-      [[:comma :period] [:!Scomma :!Speriod                      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
+      [[:comma :period] [:!Scomma :!Speriod :!Ot      :left_arrow] [:ja :!excel]]  ;; 日本語、Excel以外
+      [[:comma :period] [:!Scomma :!Speriod :!Ot :!Tu :left_arrow] [:ja :excel]]   ;; 日本語、Excel
+      [[:comma :period] [:!Scomma :!Speriod           :left_arrow] [:!ja :!excel]] ;; 日本語以外、Excel以外
+      [[:comma :period] [:!Scomma :!Speriod      :!Tu :left_arrow] [:!ja :excel]]  ;; 日本語以外、Excel
 
       ;; 角括弧 []
       ;; [] → 角括弧 []（ビルドインキーボード）
@@ -192,6 +186,7 @@
       
       ;; ウィンドウを最小化
       [:!CCm :vk_none] ;; Cmd（左右共通）+ M
+      [:!CCOOm :vk_none] ;; Cmd + Option（ともに左右共通）+ M
     ]}
 
     {:des "英字入力時、⌥Tを無効化"
