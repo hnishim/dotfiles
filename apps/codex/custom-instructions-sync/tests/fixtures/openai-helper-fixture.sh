@@ -8,6 +8,7 @@ fi
 
 : "${TEST_SOURCE_DIR:?}"
 : "${TEST_CODEX_HOME:?}"
+: "${TEST_MIRROR_ROOT:?}"
 
 read_utf8_source() {
     local path=$1
@@ -55,8 +56,8 @@ read_utf8_source "$TEST_SOURCE_DIR/user-profile.md" user-profile.md
 }
 
 output="$TEST_CODEX_HOME/AGENTS.md"
-mirror="$TEST_CODEX_HOME/custom-instructions-sync"
-skills="$TEST_CODEX_HOME/skills-notion-sync"
+mirror="$TEST_MIRROR_ROOT/custom-instructions-sync"
+skills="$TEST_MIRROR_ROOT/skills-notion-sync"
 mkdir -p "$mirror" "$skills/example" "$skills/writing-references"
 
 printf '%s\n\n%s\n\n%s\n' "$custom_data" "$openai_data" "$profile_data" >"$output"

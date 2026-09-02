@@ -21,6 +21,7 @@ trap cleanup_test_tmp EXIT
 
 SOURCE_DIR="$TMP_ROOT/source"
 CODEX_HOME="$TMP_ROOT/codex"
+MIRROR_ROOT="$TMP_ROOT/support/mirrors"
 CONFIG_DIR="$TMP_ROOT/config"
 PAGES_DIR="$TMP_ROOT/pages"
 EDIT_LOG="$TMP_ROOT/edits.log"
@@ -28,7 +29,7 @@ CONFIG="$CONFIG_DIR/notion-pages.conf"
 HELPER="$TMP_ROOT/helper"
 NTN="$TMP_ROOT/ntn"
 
-mkdir -p "$SOURCE_DIR" "$CODEX_HOME" "$CONFIG_DIR" "$PAGES_DIR"
+mkdir -p "$SOURCE_DIR" "$CODEX_HOME" "$MIRROR_ROOT" "$CONFIG_DIR" "$PAGES_DIR"
 printf '%s\n' '# custom marker' >"$SOURCE_DIR/custom-instructions.md"
 printf '%s\n' '# shared marker' '## スキルの作成・更新と検証' >"$SOURCE_DIR/openai-instructions.md"
 printf '%s\n' '# profile marker' >"$SOURCE_DIR/user-profile.md"
@@ -82,9 +83,11 @@ chmod 755 "$NTN"
 
 run_sync() {
     TEST_SOURCE_DIR="$SOURCE_DIR" TEST_CODEX_HOME="$CODEX_HOME" \
+        TEST_MIRROR_ROOT="$MIRROR_ROOT" \
         PAGES_DIR="$PAGES_DIR" EDIT_LOG="$EDIT_LOG" \
         TEST_FORCE_UNSTABLE="${TEST_FORCE_UNSTABLE:-0}" TEST_STABILITY_WAIT="${TEST_STABILITY_WAIT:-0}" \
         CUSTOM_INSTRUCTIONS_STABILITY_WAIT=0 NOTION_READBACK_WAIT_SECONDS=0 \
+        NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
         "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
 }
 

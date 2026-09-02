@@ -26,6 +26,7 @@ SWIFT_SOURCE="$ASSET_DIR/CustomInstructionsSync.swift"
 INFO_PLIST="$ASSET_DIR/Info.plist"
 ENTITLEMENTS="$ASSET_DIR/CustomInstructionsSync.entitlements"
 SOURCE_PLIST="$ASSET_DIR/$LABEL.plist"
+MIRROR_LAYOUT_SOURCE="$ASSET_DIR/mirror-layout.sh"
 SYNC_SOURCE="$ASSET_DIR/sync-custom-instructions"
 CODEX_HOME_DIR="${CODEX_HOME_DIR_OVERRIDE:-${CODEX_HOME:-$HOME/.codex}}"
 CODEX_HOOKS_DIR="$HARNESS_ROOT/hooks/runtime"
@@ -37,6 +38,7 @@ APPLICATIONS_DIR="${CUSTOM_INSTRUCTIONS_APPLICATIONS_DIR_OVERRIDE:-$HOME/Applica
 APP_PATH="$APPLICATIONS_DIR/$APP_NAME"
 HELPER_EXECUTABLE="$APP_PATH/Contents/MacOS/$EXECUTABLE_NAME"
 APPLICATION_SUPPORT_DIR="${CUSTOM_INSTRUCTIONS_SUPPORT_DIR_OVERRIDE:-$HOME/Library/Application Support/$LABEL}"
+MIRROR_ROOT="$APPLICATION_SUPPORT_DIR/mirrors"
 SYNC_EXECUTABLE="$APPLICATION_SUPPORT_DIR/sync-custom-instructions"
 NOTION_CONFIG="$APPLICATION_SUPPORT_DIR/notion-pages.conf"
 if [ -n "${NTN_EXECUTABLE_OVERRIDE:-}" ]; then
@@ -53,14 +55,28 @@ STDOUT_PATH="$LOG_DIR/$LABEL.log"
 STDERR_PATH="$LOG_DIR/$LABEL.err.log"
 DOMAIN="gui/$(id -u)"
 MODULE_CACHE_DIR="${CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE:-$HOME/Library/Caches/$LABEL/SwiftModuleCache}"
+BOOKMARK_DOMAIN='com.hnishim.custom-instructions-sync-helper'
 
-for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$SYNC_SOURCE" \
+for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$MIRROR_LAYOUT_SOURCE" "$SYNC_SOURCE" \
     "$CODEX_HOOKS_JSON" "$CODEX_HOOK_INSTALLER"; do
     if [ ! -f "$required_file" ]; then
         log_error "必要なファイルが見つかりません: $required_file"
         exit 1
     fi
 done
+source "$MIRROR_LAYOUT_SOURCE"
+
+preflight_application_support_dir() {
+    local support_dir=$1
+    if [ -L "$support_dir" ]; then
+        log_error "Custom Instructions SyncのApplication Supportフォルダーがsymlinkのため停止します: $support_dir"
+        return 1
+    fi
+    if [ -e "$support_dir" ] && [ ! -d "$support_dir" ]; then
+        log_error "Custom Instructions SyncのApplication Supportフォルダーが通常のフォルダーではありません: $support_dir"
+        return 1
+    fi
+}
 
 if [ ! -d "$CODEX_HOOKS_DIR" ]; then
     log_error "Codexフックの正本フォルダーが見つかりません: $CODEX_HOOKS_DIR"
@@ -84,10 +100,8 @@ if [ "${CODEX_HARNESS_TRANSACTION_CHILD:-0}" != "1" ]; then
         --launchagent-domain "$DOMAIN" \
         --launchagent-label "$LABEL" \
         --launchagent-plist "$TARGET_PLIST" \
-        --bookmark-domain com.hnishim.custom-instructions-sync-helper \
+        --bookmark-domain "$BOOKMARK_DOMAIN" \
         --path "$CODEX_HOME_DIR/AGENTS.md" \
-        --path "$CODEX_HOME_DIR/custom-instructions-sync" \
-        --path "$CODEX_HOME_DIR/skills-notion-sync" \
         --path "$CODEX_HOME_DIR/hooks" \
         --path "$CODEX_HOME_DIR/hooks.json" \
         --path "$CODEX_HOME_DIR/agents" \
@@ -108,9 +122,19 @@ if ! SWIFTC=$(xcrun --find swiftc 2>/dev/null); then
     exit 1
 fi
 
+preflight_application_support_dir "$APPLICATION_SUPPORT_DIR"
+preflight_mirror_root "$MIRROR_ROOT"
 mkdir -p "$CODEX_HOME_DIR" "$APPLICATIONS_DIR" "$APPLICATION_SUPPORT_DIR" "$LAUNCH_AGENTS_DIR" "$LOG_DIR" "$MODULE_CACHE_DIR"
 chmod 700 "$APPLICATION_SUPPORT_DIR"
+mkdir -p "$MIRROR_ROOT"
+chmod 700 "$MIRROR_ROOT"
 install -m 755 "$SYNC_SOURCE" "$SYNC_EXECUTABLE"
+
+DEFAULTS_EXECUTABLE=$(command -v defaults 2>/dev/null || true)
+bookmark_domain_was_present=false
+if [ -n "$DEFAULTS_EXECUTABLE" ] && "$DEFAULTS_EXECUTABLE" read "$BOOKMARK_DOMAIN" >/dev/null 2>&1; then
+    bookmark_domain_was_present=true
+fi
 
 build_root=$(mktemp -d "${TMPDIR:-/tmp}/custom-instructions-sync-build.XXXXXX")
 case "${build_root:?}" in
@@ -122,12 +146,20 @@ case "${build_root:?}" in
 esac
 
 cleanup() {
+    local status=$?
     case "${build_root:?}" in
         "${TMPDIR:-/tmp}"/custom-instructions-sync-build.*) rm -rf -- "$build_root" ;;
         *) log_error "一時ディレクトリを削除しません: $build_root" ;;
     esac
+    if [ "$status" -ne 0 ] && [ "$bookmark_domain_was_present" != true ] && [ -n "$DEFAULTS_EXECUTABLE" ]; then
+        "$DEFAULTS_EXECUTABLE" delete "$BOOKMARK_DOMAIN" >/dev/null 2>&1 || true
+    fi
+    exit "$status"
 }
 trap cleanup EXIT
+
+preflight_mirror_tree "$MIRROR_ROOT/custom-instructions-sync" custom
+preflight_mirror_tree "$MIRROR_ROOT/skills-notion-sync" skills
 
 build_app="$build_root/$APP_NAME"
 mkdir -p "$build_app/Contents/MacOS"
@@ -173,8 +205,8 @@ ditto "$build_app" "$APP_PATH"
 codesign --verify --strict "$APP_PATH"
 
 if ! "$HELPER_EXECUTABLE" --status >/dev/null 2>&1; then
-    log_info "初回フォルダーアクセス権を設定します。3つのフォルダーを順に選択してください。"
-    "$HELPER_EXECUTABLE" --authorize "$CODEX_HOME_DIR" "$CUSTOM_INSTRUCTIONS_DIR_HINT" "$SKILLS_DIR_HINT"
+    log_info "初回フォルダーアクセス権を設定します。4つのフォルダーを順に選択してください。"
+    "$HELPER_EXECUTABLE" --authorize "$CODEX_HOME_DIR" "$CUSTOM_INSTRUCTIONS_DIR_HINT" "$SKILLS_DIR_HINT" "$MIRROR_ROOT"
 fi
 
 status_output=$("$HELPER_EXECUTABLE" --status)
@@ -182,16 +214,20 @@ printf '%s\n' "$status_output"
 custom_instructions_dir=$(printf '%s\n' "$status_output" | sed -n 's/^source=//p')
 skills_dir=$(printf '%s\n' "$status_output" | sed -n 's/^skills=//p')
 authorized_output_dir=$(printf '%s\n' "$status_output" | sed -n 's/^output=//p')
+authorized_mirror_root=$(printf '%s\n' "$status_output" | sed -n 's/^mirror=//p')
 
 if [ "$custom_instructions_dir" != "$CUSTOM_INSTRUCTIONS_DIR_HINT" ] ||
-   [ "$skills_dir" != "$SKILLS_DIR_HINT" ]; then
+   [ "$skills_dir" != "$SKILLS_DIR_HINT" ] ||
+   [ "$authorized_output_dir" != "$CODEX_HOME_DIR" ] ||
+   [ "$authorized_mirror_root" != "$MIRROR_ROOT" ]; then
     log_info "保存済みの正本フォルダーがharnessと異なるため、明示的に再認可します。"
-    "$HELPER_EXECUTABLE" --authorize "$CODEX_HOME_DIR" "$CUSTOM_INSTRUCTIONS_DIR_HINT" "$SKILLS_DIR_HINT"
+    "$HELPER_EXECUTABLE" --authorize "$CODEX_HOME_DIR" "$CUSTOM_INSTRUCTIONS_DIR_HINT" "$SKILLS_DIR_HINT" "$MIRROR_ROOT"
     status_output=$("$HELPER_EXECUTABLE" --status)
     printf '%s\n' "$status_output"
     custom_instructions_dir=$(printf '%s\n' "$status_output" | sed -n 's/^source=//p')
     skills_dir=$(printf '%s\n' "$status_output" | sed -n 's/^skills=//p')
     authorized_output_dir=$(printf '%s\n' "$status_output" | sed -n 's/^output=//p')
+    authorized_mirror_root=$(printf '%s\n' "$status_output" | sed -n 's/^mirror=//p')
 fi
 
 if [ -z "$custom_instructions_dir" ] || [ ! -d "$custom_instructions_dir" ] ||
@@ -202,6 +238,11 @@ fi
 
 if [ "$authorized_output_dir" != "$CODEX_HOME_DIR" ]; then
     log_error "認可済み出力先がCodexホームと一致しません: $authorized_output_dir"
+    exit 1
+fi
+
+if [ "$authorized_mirror_root" != "$MIRROR_ROOT" ]; then
+    log_error "認可済みNotion同期ミラーrootが想定と一致しません: $authorized_mirror_root"
     exit 1
 fi
 
@@ -221,6 +262,12 @@ fi
 
 log_info "Codex用AGENTS.mdの初期同期を実行します。"
 "$HELPER_EXECUTABLE" --sync
+
+validate_generated_mirrors \
+    "$CUSTOM_INSTRUCTIONS_DIR_HINT" \
+    "$SKILLS_DIR_HINT" \
+    "$MIRROR_ROOT/custom-instructions-sync" \
+    "$MIRROR_ROOT/skills-notion-sync"
 
 log_info "harnessのAgentsとSkills runtimeを準備します。"
 CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \

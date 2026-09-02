@@ -11,17 +11,18 @@ enum SyncError: LocalizedError {
     case accessDenied(String)
     case missingOrEmpty(String)
     case invalidUTF8(String)
+    case invalidMirrorLayout(String)
     case unstableSources
 
     var errorDescription: String? {
         switch self {
         case .usage:
-            return "使い方: CustomInstructionsSync --authorize <.codexフォルダー> [custom-instructions候補] [skills候補] | --sync | --status"
+            return "使い方: CustomInstructionsSync --authorize <.codexフォルダー> [custom-instructions候補] [skills候補] [Notion同期ミラーroot] | --sync | --status"
         case .cancelled:
             return "フォルダー選択がキャンセルされました。"
         case .invalidSelection(let message), .bookmarkResolution(let message),
              .accessDenied(let message), .missingOrEmpty(let message),
-             .invalidUTF8(let message):
+             .invalidUTF8(let message), .invalidMirrorLayout(let message):
             return message
         case .missingAuthorization:
             return "保存済みのフォルダーアクセス権がありません。setup.shを実行してください。"
@@ -35,13 +36,17 @@ struct StoredAccess {
     static let sourceKey = "sourceFolderBookmark"
     static let skillsKey = "skillsFolderBookmark"
     static let outputKey = "outputFolderBookmark"
+    static let mirrorKey = "mirrorFolderBookmark"
 
     let sourceURL: URL
     let skillsURL: URL
     let outputURL: URL
+    let mirrorURL: URL
 }
 
+#if !TESTING
 @main
+#endif
 @MainActor
 struct CustomInstructionsSync {
     static let customInstructionsName = "custom-instructions.md"
@@ -59,17 +64,24 @@ struct CustomInstructionsSync {
 
             switch command {
             case "--authorize":
-                guard (2...4).contains(arguments.count) else { throw SyncError.usage }
+                guard (2...5).contains(arguments.count) else { throw SyncError.usage }
                 let sourceHint = arguments.count >= 3
                     ? URL(fileURLWithPath: arguments[2], isDirectory: true)
                     : FileManager.default.homeDirectoryForCurrentUser
                 let skillsHint = arguments.count >= 4
                     ? URL(fileURLWithPath: arguments[3], isDirectory: true)
                     : FileManager.default.homeDirectoryForCurrentUser
+                let mirrorHint = arguments.count >= 5
+                    ? URL(fileURLWithPath: arguments[4], isDirectory: true)
+                    : FileManager.default.homeDirectoryForCurrentUser
                 try authorize(
                     sourceHint: sourceHint,
                     skillsHint: skillsHint,
-                    expectedOutput: URL(fileURLWithPath: arguments[1], isDirectory: true)
+                    expectedOutput: URL(fileURLWithPath: arguments[1], isDirectory: true),
+                    mirrorHint: mirrorHint,
+                    expectedMirror: arguments.count >= 5
+                        ? URL(fileURLWithPath: arguments[4], isDirectory: true)
+                        : nil
                 )
             case "--sync":
                 guard arguments.count == 1 else { throw SyncError.usage }
@@ -80,6 +92,7 @@ struct CustomInstructionsSync {
                 print("source=\(access.sourceURL.path)")
                 print("skills=\(access.skillsURL.path)")
                 print("output=\(access.outputURL.path)")
+                print("mirror=\(access.mirrorURL.path)")
             default:
                 throw SyncError.usage
             }
@@ -89,7 +102,13 @@ struct CustomInstructionsSync {
         }
     }
 
-    static func authorize(sourceHint: URL, skillsHint: URL, expectedOutput: URL) throws {
+    static func authorize(
+        sourceHint: URL,
+        skillsHint: URL,
+        expectedOutput: URL,
+        mirrorHint: URL,
+        expectedMirror: URL?
+    ) throws {
         let sourceURL = try chooseFolder(
             title: "Custom Instructionsの正本フォルダーを選択",
             message: "custom-instructions.md、openai-instructions.md、user-profile.mdがあるフォルダーを選択してください。",
@@ -111,6 +130,15 @@ struct CustomInstructionsSync {
         )
         try requireSamePath(outputURL, expectedOutput, label: "出力フォルダー")
 
+        let mirrorURL = try chooseFolder(
+            title: "Notion同期ミラーrootを選択",
+            message: "custom-instructions-syncとskills-notion-syncを作成するmirrorsフォルダーを選択してください。",
+            initialURL: mirrorHint
+        )
+        if let expectedMirror {
+            try requireSamePath(mirrorURL, expectedMirror, label: "Notion同期ミラーroot")
+        }
+
         let sourceBookmark = try sourceURL.bookmarkData(
             options: [.withSecurityScope, .securityScopeAllowOnlyReadAccess],
             includingResourceValuesForKeys: nil,
@@ -126,11 +154,17 @@ struct CustomInstructionsSync {
             includingResourceValuesForKeys: nil,
             relativeTo: nil
         )
+        let mirrorBookmark = try mirrorURL.bookmarkData(
+            options: [.withSecurityScope],
+            includingResourceValuesForKeys: nil,
+            relativeTo: nil
+        )
 
         let defaults = UserDefaults.standard
         defaults.set(sourceBookmark, forKey: StoredAccess.sourceKey)
         defaults.set(skillsBookmark, forKey: StoredAccess.skillsKey)
         defaults.set(outputBookmark, forKey: StoredAccess.outputKey)
+        defaults.set(mirrorBookmark, forKey: StoredAccess.mirrorKey)
         guard defaults.synchronize() else {
             throw SyncError.accessDenied("フォルダーアクセス権の保存に失敗しました。")
         }
@@ -223,14 +257,16 @@ struct CustomInstructionsSync {
         let defaults = UserDefaults.standard
         guard let sourceData = defaults.data(forKey: StoredAccess.sourceKey),
               let skillsData = defaults.data(forKey: StoredAccess.skillsKey),
-              let outputData = defaults.data(forKey: StoredAccess.outputKey) else {
+              let outputData = defaults.data(forKey: StoredAccess.outputKey),
+              let mirrorData = defaults.data(forKey: StoredAccess.mirrorKey) else {
             throw SyncError.missingAuthorization
         }
 
         let sourceURL = try resolveBookmark(sourceData, key: StoredAccess.sourceKey)
         let skillsURL = try resolveBookmark(skillsData, key: StoredAccess.skillsKey)
         let outputURL = try resolveBookmark(outputData, key: StoredAccess.outputKey)
-        return StoredAccess(sourceURL: sourceURL, skillsURL: skillsURL, outputURL: outputURL)
+        let mirrorURL = try resolveBookmark(mirrorData, key: StoredAccess.mirrorKey)
+        return StoredAccess(sourceURL: sourceURL, skillsURL: skillsURL, outputURL: outputURL, mirrorURL: mirrorURL)
     }
 
     static func resolveBookmark(_ data: Data, key: String) throws -> URL {
@@ -274,6 +310,12 @@ struct CustomInstructionsSync {
         }
         defer { access.skillsURL.stopAccessingSecurityScopedResource() }
 
+        let mirrorGranted = access.mirrorURL.startAccessingSecurityScopedResource()
+        guard mirrorGranted else {
+            throw SyncError.accessDenied("Notion同期ミラーrootへのアクセス権を開始できませんでした。setup.shを再実行してください。")
+        }
+        defer { access.mirrorURL.stopAccessingSecurityScopedResource() }
+
         let outputGranted = access.outputURL.startAccessingSecurityScopedResource()
         guard outputGranted else {
             throw SyncError.accessDenied("出力フォルダーへのアクセス権を開始できませんでした。setup.shを再実行してください。")
@@ -299,13 +341,43 @@ struct CustomInstructionsSync {
             throw SyncError.unstableSources
         }
 
-        let mirrorDirectory = access.outputURL.appendingPathComponent(mirrorDirectoryName, isDirectory: true)
-        try FileManager.default.createDirectory(
-            at: mirrorDirectory,
-            withIntermediateDirectories: true,
-            attributes: [.posixPermissions: 0o700]
-        )
-        try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: mirrorDirectory.path)
+        try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))
+
+        let fileManager = FileManager.default
+        switch mirrorItemKind(at: access.mirrorURL) {
+        case .absent:
+            try fileManager.createDirectory(
+                at: access.mirrorURL,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+        case .directory:
+            break
+        case .symbolicLink, .regularFile, .other:
+            throw SyncError.invalidMirrorLayout(
+                "Notion同期ミラーrootが通常のフォルダーではありません: \(access.mirrorURL.path)"
+            )
+        }
+        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: access.mirrorURL.path)
+        try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))
+
+        let mirrorDirectory = access.mirrorURL.appendingPathComponent(mirrorDirectoryName, isDirectory: true)
+        switch mirrorItemKind(at: mirrorDirectory) {
+        case .absent:
+            try fileManager.createDirectory(
+                at: mirrorDirectory,
+                withIntermediateDirectories: true,
+                attributes: [.posixPermissions: 0o700]
+            )
+        case .directory:
+            break
+        case .symbolicLink, .regularFile, .other:
+            throw SyncError.invalidMirrorLayout(
+                "Notion同期ミラーが通常のフォルダーではありません: \(mirrorDirectory.path)"
+            )
+        }
+        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: mirrorDirectory.path)
+        try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))
 
         let customMirror = mirrorDirectory.appendingPathComponent(customInstructionsName, isDirectory: false)
         let profileMirror = mirrorDirectory.appendingPathComponent(userProfileName, isDirectory: false)
@@ -318,7 +390,7 @@ struct CustomInstructionsSync {
 
         let outputURL = access.outputURL.appendingPathComponent(outputName, isDirectory: false)
         let agentsUpdated = try writePrivatelyIfChanged(outputData, to: outputURL)
-        try replaceSkillsMirror(stableSkills, in: access.outputURL)
+        try replaceSkillsMirror(stableSkills, in: access.mirrorURL)
 
         if customUpdated || profileUpdated {
             print("[SUCCESS] Notion同期用のローカルコピーを更新しました。")
@@ -329,6 +401,164 @@ struct CustomInstructionsSync {
             ? "[SUCCESS] AGENTS.mdを更新しました: \(outputURL.path)"
             : "[SUCCESS] AGENTS.mdは最新です。更新をスキップしました。")
         print("[SUCCESS] SkillsのNotion同期用ミラーを更新しました（\(stableSkills.count)ファイル）。")
+    }
+
+    enum MirrorItemKind {
+        case absent
+        case directory
+        case regularFile
+        case symbolicLink
+        case other
+    }
+
+    static func mirrorItemKind(at url: URL) -> MirrorItemKind {
+        var information = stat()
+        let result = url.withUnsafeFileSystemRepresentation { path in
+            guard let path else { return Int32(-1) }
+            return lstat(path, &information)
+        }
+        guard result == 0 else {
+            return errno == ENOENT ? .absent : .other
+        }
+
+        switch information.st_mode & S_IFMT {
+        case S_IFDIR:
+            return .directory
+        case S_IFREG:
+            return .regularFile
+        case S_IFLNK:
+            return .symbolicLink
+        default:
+            return .other
+        }
+    }
+
+    static func validateMirrorLayout(_ rootURL: URL, expectedSkills: Set<String>) throws {
+        switch mirrorItemKind(at: rootURL) {
+        case .absent:
+            return
+        case .directory:
+            break
+        case .symbolicLink, .regularFile, .other:
+            throw SyncError.invalidMirrorLayout(
+                "Notion同期ミラーrootが通常のフォルダーではありません: \(rootURL.path)"
+            )
+        }
+
+        let allowedRootDirectories = Set([mirrorDirectoryName, skillsMirrorDirectoryName])
+        for entryURL in try FileManager.default.contentsOfDirectory(
+            at: rootURL,
+            includingPropertiesForKeys: nil,
+            options: []
+        ) {
+            guard allowedRootDirectories.contains(entryURL.lastPathComponent) else {
+                throw SyncError.invalidMirrorLayout(
+                    "Notion同期ミラーroot内に想定外のエントリがあります: \(entryURL.path)"
+                )
+            }
+            guard mirrorItemKind(at: entryURL) == .directory else {
+                throw SyncError.invalidMirrorLayout(
+                    "Notion同期ミラーroot内のエントリが通常のフォルダーではありません: \(entryURL.path)"
+                )
+            }
+        }
+
+        let customURL = rootURL.appendingPathComponent(mirrorDirectoryName, isDirectory: true)
+        if mirrorItemKind(at: customURL) == .directory {
+            try validateFlatMirror(customURL, allowedFiles: [customInstructionsName, userProfileName])
+        }
+
+        let skillsURL = rootURL.appendingPathComponent(skillsMirrorDirectoryName, isDirectory: true)
+        if mirrorItemKind(at: skillsURL) == .directory {
+            try validateSkillsMirror(skillsURL, expectedFiles: expectedSkills)
+        }
+    }
+
+    static func validateFlatMirror(_ rootURL: URL, allowedFiles: Set<String>) throws {
+        for entryURL in try FileManager.default.contentsOfDirectory(
+            at: rootURL,
+            includingPropertiesForKeys: nil,
+            options: []
+        ) {
+            guard allowedFiles.contains(entryURL.lastPathComponent) else {
+                throw SyncError.invalidMirrorLayout(
+                    "Notion同期ミラー内に想定外のエントリがあります: \(entryURL.path)"
+                )
+            }
+            guard mirrorItemKind(at: entryURL) == .regularFile else {
+                throw SyncError.invalidMirrorLayout(
+                    "Notion同期ミラー内のエントリが通常のファイルではありません: \(entryURL.path)"
+                )
+            }
+        }
+    }
+
+    static func validateSkillsMirror(_ rootURL: URL, expectedFiles: Set<String>) throws {
+        var expectedDirectories = Set<String>()
+        for relativePath in expectedFiles {
+            let components = relativePath.split(separator: "/").map(String.init)
+            guard components.count == 2,
+                  components[1].hasSuffix(".md"),
+                  components[0].isEmpty == false,
+                  components[1].isEmpty == false else {
+                throw SyncError.invalidMirrorLayout(
+                    "Skills同期ミラーの想定パスが不正です: \(relativePath)"
+                )
+            }
+            expectedDirectories.insert(components[0])
+        }
+
+        var actualDirectories = Set<String>()
+        var actualFiles = Set<String>()
+        try collectMirrorEntries(
+            rootURL,
+            relativePrefix: "",
+            directories: &actualDirectories,
+            files: &actualFiles
+        )
+
+        if let unexpected = actualDirectories.subtracting(expectedDirectories).sorted().first {
+            throw SyncError.invalidMirrorLayout(
+                "Skills同期ミラー内に想定外のフォルダーがあります: \(rootURL.path)/\(unexpected)"
+            )
+        }
+        if let unexpected = actualFiles.subtracting(expectedFiles).sorted().first {
+            throw SyncError.invalidMirrorLayout(
+                "Skills同期ミラー内に想定外のファイルがあります: \(rootURL.path)/\(unexpected)"
+            )
+        }
+    }
+
+    static func collectMirrorEntries(
+        _ rootURL: URL,
+        relativePrefix: String,
+        directories: inout Set<String>,
+        files: inout Set<String>
+    ) throws {
+        for entryURL in try FileManager.default.contentsOfDirectory(
+            at: rootURL,
+            includingPropertiesForKeys: nil,
+            options: []
+        ) {
+            let name = entryURL.lastPathComponent
+            let relativePath = relativePrefix.isEmpty ? name : "\(relativePrefix)/\(name)"
+            switch mirrorItemKind(at: entryURL) {
+            case .directory:
+                directories.insert(relativePath)
+                try collectMirrorEntries(
+                    entryURL,
+                    relativePrefix: relativePath,
+                    directories: &directories,
+                    files: &files
+                )
+            case .regularFile:
+                files.insert(relativePath)
+            case .symbolicLink, .absent, .other:
+                throw SyncError.invalidMirrorLayout(
+                    "Skills同期ミラー内にsymlinkまたは不明な種別があります: \(entryURL.path)"
+                )
+            }
+        }
     }
 
     static func readStableSources(from folderURL: URL) throws -> (custom: Data, openai: Data, profile: Data) {
@@ -422,6 +652,8 @@ struct CustomInstructionsSync {
         let fileManager = FileManager.default
         let mirrorURL = outputFolderURL.appendingPathComponent(skillsMirrorDirectoryName, isDirectory: true)
         let stagingURL = outputFolderURL.appendingPathComponent(".\(skillsMirrorDirectoryName).staging-\(UUID().uuidString)", isDirectory: true)
+
+        try validateMirrorLayout(outputFolderURL, expectedSkills: Set(files.keys))
 
         try fileManager.createDirectory(at: stagingURL, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         do {

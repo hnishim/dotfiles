@@ -90,7 +90,6 @@ esac
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 DEV_ROOT=$(cd -- "$SCRIPT_DIR/../../../../../" && pwd)
-HARNESS_ROOT=${CODEX_HARNESS_ROOT_OVERRIDE:-$DEV_ROOT/harness}
 SYNC_SCRIPT="$DEV_ROOT/dotfiles/apps/codex/custom-instructions-sync/sync-custom-instructions"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/skills-notion-sync-test.XXXXXX")
 case "${TMP_ROOT:?}" in
@@ -105,9 +104,13 @@ cleanup_test_tmp() {
 }
 trap cleanup_test_tmp EXIT
 
+HARNESS_ROOT=${CODEX_HARNESS_ROOT_OVERRIDE:-$TMP_ROOT/harness}
 CODEX_HOME="$TMP_ROOT/codex"
-MIRROR_DIR="$CODEX_HOME/custom-instructions-sync"
-SKILLS_MIRROR_DIR="$CODEX_HOME/skills-notion-sync"
+MIRROR_ROOT="$TMP_ROOT/support/mirrors"
+MIRROR_DIR="$MIRROR_ROOT/custom-instructions-sync"
+SKILLS_MIRROR_DIR="$MIRROR_ROOT/skills-notion-sync"
+LEGACY_MIRROR_DIR="$CODEX_HOME/custom-instructions-sync"
+LEGACY_SKILLS_MIRROR_DIR="$CODEX_HOME/skills-notion-sync"
 CONFIG_DIR="$TMP_ROOT/config"
 FAKE_STATE_DIR="$TMP_ROOT/pages"
 FAKE_META_DIR="$TMP_ROOT/meta"
@@ -117,10 +120,27 @@ CONFIG="$CONFIG_DIR/notion-pages.conf"
 HELPER="$TMP_ROOT/helper"
 NTN="$TMP_ROOT/ntn"
 
-mkdir -p "$MIRROR_DIR" "$SKILLS_MIRROR_DIR" "$CONFIG_DIR" "$FAKE_STATE_DIR" "$FAKE_META_DIR"
+mkdir -p "$MIRROR_DIR" "$SKILLS_MIRROR_DIR" "$LEGACY_MIRROR_DIR" "$LEGACY_SKILLS_MIRROR_DIR" "$CONFIG_DIR" "$FAKE_STATE_DIR" "$FAKE_META_DIR"
+printf '%s\n' 'legacy mirror must not be read' >"$LEGACY_MIRROR_DIR/custom-instructions.md"
+printf '%s\n' 'legacy mirror must not be read' >"$LEGACY_MIRROR_DIR/user-profile.md"
+mkdir -p "$LEGACY_SKILLS_MIRROR_DIR/legacy"
+printf '%s\n' '---' 'name: legacy' '---' '# legacy mirror must not be read' >"$LEGACY_SKILLS_MIRROR_DIR/legacy/SKILL.md"
 cp "$0" "$HELPER"
 cp "$0" "$NTN"
 chmod 755 "$HELPER" "$NTN"
+
+if [ -z "${CODEX_HARNESS_ROOT_OVERRIDE:-}" ]; then
+    mkdir -p "$HARNESS_ROOT/custom-instructions" \
+        "$HARNESS_ROOT/skills/explain" \
+        "$HARNESS_ROOT/skills/example" \
+        "$HARNESS_ROOT/skills/writing-references"
+    printf '%s\n' '# custom fixture' >"$HARNESS_ROOT/custom-instructions/custom-instructions.md"
+    printf '%s\n' '# profile fixture' >"$HARNESS_ROOT/custom-instructions/user-profile.md"
+    printf '%s\n' '---' 'name: explain' '---' '# explain fixture' >"$HARNESS_ROOT/skills/explain/SKILL.md"
+    printf '%s\n' '---' 'name: example' '---' '# example fixture' >"$HARNESS_ROOT/skills/example/SKILL.md"
+    printf '%s\n' '---' 'name: prose' '---' '# prose fixture' >"$HARNESS_ROOT/skills/writing-references/prose.md"
+    printf '%s\n' '---' 'name: review' '---' '# review fixture' >"$HARNESS_ROOT/skills/writing-references/review.md"
+fi
 
 for source_file in \
     "$HARNESS_ROOT/custom-instructions/custom-instructions.md" \
@@ -180,6 +200,7 @@ run_sync() {
     FAKE_META_DIR="$FAKE_META_DIR" \
     FAKE_EDIT_LOG="$FAKE_EDIT_LOG" \
     FAKE_QUERY_JSON="$FAKE_QUERY_JSON" \
+    NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
     "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
 }
 
@@ -192,7 +213,7 @@ edit_count() {
 }
 
 skill_count=$(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' | wc -l | tr -d ' ')
-syncable_skill_count=$((skill_count - 9))
+syncable_skill_count="$skill_count"
 if ! run_sync >"$TMP_ROOT/first.log" 2>&1; then
     /bin/cat "$TMP_ROOT/first.log" >&2
     exit 1

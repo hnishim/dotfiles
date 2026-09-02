@@ -50,13 +50,20 @@ fake_support="$TMP_ROOT/support"
 fake_launch_agents="$TMP_ROOT/launch-agents"
 fake_logs="$TMP_ROOT/logs"
 fake_cache="$TMP_ROOT/cache"
+legacy_custom="$codex_home/custom-instructions-sync"
+legacy_skills="$codex_home/skills-notion-sync"
 
 mkdir -p "$fixture_harness/custom-instructions" "$fixture_harness/hooks/runtime" \
-    "$fixture_harness/skills/example" "$fixture_harness/skills/.system/nested" \
-    "$fixture_harness/agents" "$target/legacy" "$backups" "$archive_system" "$fake_bin"
+    "$fixture_harness/skills/example" "$fixture_harness/skills/writing-references" \
+    "$fixture_harness/skills/.system/nested" \
+    "$fixture_harness/agents" "$target/legacy" "$backups" "$archive_system" \
+    "$legacy_custom" "$legacy_skills/example" "$fake_bin"
 cp "$DOTFILES_ROOT/../harness/transaction.py" "$fixture_harness/transaction.py"
 printf '%s\n' custom >"$fixture_harness/custom-instructions/custom-instructions.md"
+printf '%s\n' openai >"$fixture_harness/custom-instructions/openai-instructions.md"
+printf '%s\n' profile >"$fixture_harness/custom-instructions/user-profile.md"
 printf '%s\n' skill >"$fixture_harness/skills/example/SKILL.md"
+printf '%s\n' reference >"$fixture_harness/skills/writing-references/example.md"
 printf '%s\n' plugin >"$fixture_harness/skills/.system/.codex-system-skills.marker"
 printf '%s\n' opaque >"$fixture_harness/skills/.system/state"
 printf '%s\n' nested >"$fixture_harness/skills/.system/nested/state"
@@ -72,6 +79,9 @@ printf '%s\n' archive >"$archive_system/state"
 printf '%s\n' old >"$target/legacy/old.txt"
 ln -s "$fixture_harness/skills/example" "$target/legacy-child"
 ln -s "$archive_system" "$target/.system"
+printf '%s\n' legacy-custom >"$legacy_custom/custom-instructions.md"
+printf '%s\n' legacy-profile >"$legacy_custom/user-profile.md"
+printf '%s\n' legacy-skill >"$legacy_skills/example/SKILL.md"
 printf '%s\n' existing >"$backups/existing"
 
 fake_swiftc="$fake_bin/fake-swiftc"
@@ -87,10 +97,22 @@ printf '%s\n' '#!/bin/bash' 'output=' \
     "printf '%s\\n' \"printf '%s\\\\n' 'source=$fixture_harness/custom-instructions'\"" \
     "printf '%s\\n' \"printf '%s\\\\n' 'skills=$fixture_harness/skills'\"" \
     "printf '%s\\n' \"printf '%s\\\\n' 'output=$codex_home'\"" \
+    "printf '%s\\n' 'if [ -n \"\$FAKE_HELPER_STATE\" ] && [ -f \"\$FAKE_HELPER_STATE\" ] && /usr/bin/grep -Fxq legacy \"\$FAKE_HELPER_STATE\"; then'" \
+    "printf '%s\\n' ':'" \
+    "printf '%s\\n' 'else'" \
+    "printf '%s\\n' \"printf '%s\\\\n' 'mirror=$fake_support/mirrors'\"" \
+    "printf '%s\\n' 'fi'" \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '--sync)'" \
+    "printf '%s\\n' \"mkdir -p '$fake_support/mirrors/custom-instructions-sync' '$fake_support/mirrors/skills-notion-sync/example' '$fake_support/mirrors/skills-notion-sync/writing-references'\"" \
+    "printf '%s\\n' \"printf '%s\\\\n\\\\n%s\\\\n' custom openai >'$fake_support/mirrors/custom-instructions-sync/custom-instructions.md'\"" \
+    "printf '%s\\n' \"printf '%s\\\\n' profile >'$fake_support/mirrors/custom-instructions-sync/user-profile.md'\"" \
+    "printf '%s\\n' \"printf '%s\\\\n' skill >'$fake_support/mirrors/skills-notion-sync/example/SKILL.md'\"" \
+    "printf '%s\\n' \"printf '%s\\\\n' reference >'$fake_support/mirrors/skills-notion-sync/writing-references/example.md'\"" \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '--authorize)'" \
+    "printf '%s\\n' \"printf '%s\\\\n' authorized >\\\"\$FAKE_HELPER_STATE\\\"\"" \
+    "printf '%s\\n' \"printf '%s\\\\n' authorize >>\\\"\$FAKE_AUTH_LOG\\\"\"" \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '*) exit 1 ;;'" \
     "printf '%s\\n' 'esac'" \
@@ -112,6 +134,10 @@ chmod 755 "$fake_bin/xcrun" "$fake_bin/codesign" "$fake_bin/ditto"
 target_before=$(snapshot_tree "$target")
 backups_before=$(snapshot_tree "$backups")
 system_before=$(snapshot_tree "$fixture_harness/skills/.system")
+legacy_custom_before=$(snapshot_tree "$legacy_custom")
+legacy_skills_before=$(snapshot_tree "$legacy_skills")
+printf '%s\n' legacy >"$TMP_ROOT/helper-state"
+AUTH_LOG="$TMP_ROOT/authorize.log"
 set +e
 PATH="$fake_bin:$PATH" \
 HOME="$TMP_ROOT/home" \
@@ -123,11 +149,15 @@ LAUNCH_AGENTS_DIR_OVERRIDE="$fake_launch_agents" \
 CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE="$fake_logs" \
 CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE="$fake_cache" \
 NTN_EXECUTABLE_OVERRIDE="$TMP_ROOT/missing-ntn" \
+FAKE_HELPER_STATE="$TMP_ROOT/helper-state" \
+FAKE_AUTH_LOG="$AUTH_LOG" \
 CODEX_SYSTEM_SKILLS_RECOGNITION_COMMAND='exit 1' \
     /bin/bash "$CODEX_SETUP" >"$TMP_ROOT/codex-setup.log" 2>&1
 status=$?
 set -e
 [ "$status" -ne 0 ]
+[ "$(wc -l <"$AUTH_LOG" | tr -d ' ')" -eq 1 ]
+[ "$(cat "$TMP_ROOT/helper-state")" = authorized ]
 grep -Fq 'Codex plugin-managed .systemの明示的認識gateに失敗しました。' "$TMP_ROOT/codex-setup.log" || {
     sed -n '1,160p' "$TMP_ROOT/codex-setup.log" >&2
     exit 1
@@ -135,9 +165,40 @@ grep -Fq 'Codex plugin-managed .systemの明示的認識gateに失敗しまし�
 [ "$(snapshot_tree "$target")" = "$target_before" ]
 [ "$(snapshot_tree "$backups")" = "$backups_before" ]
 [ "$(snapshot_tree "$fixture_harness/skills/.system")" = "$system_before" ]
+[ "$(snapshot_tree "$legacy_custom")" = "$legacy_custom_before" ]
+[ "$(snapshot_tree "$legacy_skills")" = "$legacy_skills_before" ]
+[ ! -e "$fake_support" ]
 [ -d "$target" ] && [ ! -L "$target" ]
 [ "$(readlink "$target/.system")" = "$archive_system" ]
 [ "$(readlink "$target/legacy-child")" = "$fixture_harness/skills/example" ]
 [ -z "$(find "$backups" -mindepth 1 -maxdepth 1 -name 'skills.symlink-install.*' -print -quit)" ]
+
+external_support="$TMP_ROOT/external-support"
+mkdir -p "$external_support"
+printf '%s\n' external >"$external_support/marker"
+external_support_before=$(snapshot_tree "$external_support")
+ln -s "$external_support" "$fake_support"
+set +e
+PATH="$fake_bin:$PATH" \
+HOME="$TMP_ROOT/home" \
+CODEX_HARNESS_ROOT_OVERRIDE="$fixture_harness" \
+CODEX_HOME_DIR_OVERRIDE="$codex_home" \
+CUSTOM_INSTRUCTIONS_APPLICATIONS_DIR_OVERRIDE="$fake_apps" \
+CUSTOM_INSTRUCTIONS_SUPPORT_DIR_OVERRIDE="$fake_support" \
+LAUNCH_AGENTS_DIR_OVERRIDE="$fake_launch_agents" \
+CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE="$fake_logs" \
+CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE="$fake_cache" \
+NTN_EXECUTABLE_OVERRIDE="$TMP_ROOT/missing-ntn" \
+FAKE_HELPER_STATE="$TMP_ROOT/helper-state" \
+FAKE_AUTH_LOG="$AUTH_LOG" \
+CODEX_SYSTEM_SKILLS_RECOGNITION_COMMAND='true' \
+    /bin/bash "$CODEX_SETUP" >"$TMP_ROOT/symlink-support.log" 2>&1
+symlink_status=$?
+set -e
+[ "$symlink_status" -ne 0 ]
+grep -Fq 'Application Supportフォルダーがsymlinkのため停止します' "$TMP_ROOT/symlink-support.log"
+[ -L "$fake_support" ]
+[ "$(readlink "$fake_support")" = "$external_support" ]
+[ "$(snapshot_tree "$external_support")" = "$external_support_before" ]
 
 printf '%s\n' '[PASS] codex setup Skills transaction gate rollback'
