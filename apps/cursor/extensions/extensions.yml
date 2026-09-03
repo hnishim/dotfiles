@@ -1,8 +1,8 @@
 extensions:
   - DavidAnson.vscode-markdownlint
   - idleberg.applescript
-  - google.geminicodeassist
   - janisdd.vscode-edit-csv
   - TakumiI.markdowntable
   - mechatroner.rainbow-csv
   - 3w36zj6.textlint
+  - openai.chatgpt
