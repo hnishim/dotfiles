@@ -3,7 +3,6 @@ extensions:
   - idleberg.applescript
   - google.geminicodeassist
   - janisdd.vscode-edit-csv
-  - shd101wyy.markdown-preview-enhanced
   - TakumiI.markdowntable
   - mechatroner.rainbow-csv
   - 3w36zj6.textlint
