@@ -104,7 +104,7 @@ def main() -> int:
     harness_root = Path(
         os.environ.get(
             "CODEX_HARNESS_ROOT_OVERRIDE",
-            str(Path(__file__).resolve().parents[3] / "harness"),
+            str(Path(__file__).resolve().parents[4] / "harness"),
         )
     ).expanduser()
     source_root = Path(
@@ -121,7 +121,7 @@ def main() -> int:
     if len(sys.argv) > 2:
         raise SystemExit("使い方: install-hooks.py [codex-home]")
 
-    legacy_root = Path(__file__).resolve().parents[2] / "codex"
+    legacy_root = Path(__file__).resolve().parents[3] / "codex"
     targets = (
         (home / "hooks", runtime, legacy_root / "hooks"),
         (home / "hooks.json", generated, legacy_root / "hooks.json"),
@@ -199,3 +199,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

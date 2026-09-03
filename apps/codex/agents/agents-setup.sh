@@ -3,24 +3,49 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/../../.." && pwd)/harness}"
+DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../.." && pwd)
+RAW_SCRIPT_DIR=$(dirname -- "$0")
+if [[ "$RAW_SCRIPT_DIR" = /* ]]; then
+    RAW_DOTFILES_ROOT=$(dirname -- "$(dirname -- "$(dirname -- "$RAW_SCRIPT_DIR")")")
+else
+    RAW_DOTFILES_ROOT="$DOTFILES_ROOT"
+fi
+if [ -d "$RAW_DOTFILES_ROOT/harness" ]; then
+    DEFAULT_HARNESS_ROOT="$RAW_DOTFILES_ROOT/harness"
+else
+    DEFAULT_HARNESS_ROOT="$RAW_DOTFILES_ROOT/../harness"
+fi
+HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$DEFAULT_HARNESS_ROOT}"
 SOURCE_DIR="${CODEX_AGENTS_SOURCE_DIR_OVERRIDE:-$HARNESS_ROOT/agents}"
 TARGET_DIR="${LOCAL_CODEX_AGENTS_DIR_OVERRIDE:-$HOME/.codex/agents}"
-LEGACY_SOURCE_DIR="${CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE:-$(cd "$SCRIPT_DIR/../.." && pwd)/codex/agents}"
+LEGACY_SOURCE_DIR="${CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE:-$RAW_DOTFILES_ROOT/codex/agents}"
 BACKUP_DIR="${CODEX_AGENTS_BACKUP_DIR_OVERRIDE:-$(dirname "$TARGET_DIR")/backups}"
 FAIL_AFTER="${AGENTS_SETUP_FAIL_AFTER:-0}"
 PYTHON_EXECUTABLE="${PYTHON_EXECUTABLE:-$(command -v python3 2>/dev/null || true)}"
 
-agent_names=(planner plan-reviewer implementer reviewer git-actions)
-
 [ -d "$SOURCE_DIR" ] || { printf '[ERROR] Agent source is missing: %s\n' "$SOURCE_DIR" >&2; exit 1; }
 [ -n "$LEGACY_SOURCE_DIR" ] || { printf '%s\n' '[ERROR] legacy Agent source is not resolvable' >&2; exit 1; }
+
+agent_names=()
+while IFS= read -r -d '' path; do
+    name=${path##*/}
+    name=${name%.toml}
+    [ -n "$name" ] || {
+        printf '[ERROR] Agent definition has an empty name: %s\n' "$path" >&2
+        exit 1
+    }
+    agent_names+=("$name")
+done < <(find "$SOURCE_DIR" -mindepth 1 -maxdepth 1 -type f -name '*.toml' -print0)
+[ "${#agent_names[@]}" -gt 0 ] || {
+    printf '[ERROR] Agent source has no TOML definitions: %s\n' "$SOURCE_DIR" >&2
+    exit 1
+}
 
 same_target() {
     local left="$1"
     local right="$2"
-    [ "$(/usr/bin/python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$left")" = \
-      "$(/usr/bin/python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$right")" ]
+    [ "$("$PYTHON_EXECUTABLE" -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$left")" = \
+      "$("$PYTHON_EXECUTABLE" -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$right")" ]
 }
 
 validate_agent() {
@@ -59,17 +84,21 @@ for key in required_strings:
         raise SystemExit(f"missing or invalid Agent field: {key}")
 if data["name"] != expected_name:
     raise SystemExit("Agent name does not match filename")
-if expected_name in {"planner", "plan-reviewer", "reviewer"}:
-    if data.get("sandbox_mode") != "read-only":
-        raise SystemExit("read-only Agent lacks sandbox_mode = read-only")
+sandbox_mode = data.get("sandbox_mode")
+if sandbox_mode is not None and (not isinstance(sandbox_mode, str) or not sandbox_mode.strip()):
+    raise SystemExit("invalid sandbox_mode")
+if "reviewer" in expected_name.lower() and sandbox_mode != "read-only":
+    raise SystemExit("read-only Agent lacks sandbox_mode = read-only")
 PY
 }
 
 is_managed_agent_child() {
-    case "$1" in
-        planner.toml|plan-reviewer.toml|implementer.toml|reviewer.toml|git-actions.toml) return 0 ;;
+    local child_name="$1"
+    case "$child_name" in
+        *.toml) ;;
         *) return 1 ;;
     esac
+    [ -f "$SOURCE_DIR/$child_name" ] || [ -f "$LEGACY_SOURCE_DIR/$child_name" ]
 }
 
 for name in "${agent_names[@]}"; do

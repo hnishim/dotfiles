@@ -451,6 +451,9 @@ struct CustomInstructionsSync {
             includingPropertiesForKeys: nil,
             options: []
         ) {
+            if isIgnorableMirrorMetadata(at: entryURL) {
+                continue
+            }
             guard allowedRootDirectories.contains(entryURL.lastPathComponent) else {
                 throw SyncError.invalidMirrorLayout(
                     "Notion同期ミラーroot内に想定外のエントリがあります: \(entryURL.path)"
@@ -480,6 +483,9 @@ struct CustomInstructionsSync {
             includingPropertiesForKeys: nil,
             options: []
         ) {
+            if isIgnorableMirrorMetadata(at: entryURL) {
+                continue
+            }
             guard allowedFiles.contains(entryURL.lastPathComponent) else {
                 throw SyncError.invalidMirrorLayout(
                     "Notion同期ミラー内に想定外のエントリがあります: \(entryURL.path)"
@@ -541,6 +547,9 @@ struct CustomInstructionsSync {
             options: []
         ) {
             let name = entryURL.lastPathComponent
+            if isIgnorableMirrorMetadata(at: entryURL) {
+                continue
+            }
             let relativePath = relativePrefix.isEmpty ? name : "\(relativePrefix)/\(name)"
             switch mirrorItemKind(at: entryURL) {
             case .directory:
@@ -559,6 +568,10 @@ struct CustomInstructionsSync {
                 )
             }
         }
+    }
+
+    static func isIgnorableMirrorMetadata(at url: URL) -> Bool {
+        url.lastPathComponent == ".DS_Store" && mirrorItemKind(at: url) == .regularFile
     }
 
     static func readStableSources(from folderURL: URL) throws -> (custom: Data, openai: Data, profile: Data) {

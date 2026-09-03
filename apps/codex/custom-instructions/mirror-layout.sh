@@ -40,7 +40,7 @@ preflight_mirror_tree() {
         while IFS= read -r -d '' entry; do
             relative=${entry#"$mirror_path"/}
             case "$relative" in
-                custom-instructions.md|user-profile.md) ;;
+                custom-instructions.md|user-profile.md|.DS_Store|*/.DS_Store) ;;
                 *)
                     log_error "Notion同期ミラー内に想定外のファイルがあります: $entry"
                     return 1
@@ -70,7 +70,7 @@ preflight_mirror_tree() {
     while IFS= read -r -d '' entry; do
         relative=${entry#"$mirror_path"/}
         case "$relative" in
-            */SKILL.md|writing-references/*.md) ;;
+            */SKILL.md|writing-references/*.md|.DS_Store|*/.DS_Store) ;;
             *)
                 log_error "Skills同期ミラー内に想定外のファイルがあります: $entry"
                 return 1
@@ -102,12 +102,18 @@ def fail(message):
     raise SystemExit(1)
 
 
+def is_ignored_metadata(path):
+    return path.name == ".DS_Store" and path.is_file() and not path.is_symlink()
+
+
 def check_tree(root):
     if root.is_symlink() or not root.is_dir():
         fail(f"生成されたNotion同期ミラーが通常のフォルダーではありません: {root}")
     for path in [root, *sorted(root.rglob("*"))]:
         if path.is_symlink():
             fail(f"生成されたNotion同期ミラーにsymlinkがあります: {path}")
+        if is_ignored_metadata(path):
+            continue
         if path.is_dir():
             mode = stat.S_IMODE(path.stat().st_mode)
             if mode != 0o700:
@@ -126,6 +132,7 @@ check_tree(skills_mirror)
 actual_custom = {
     path.relative_to(custom_mirror).as_posix()
     for path in custom_mirror.rglob("*")
+    if not is_ignored_metadata(path)
 }
 if actual_custom != {"custom-instructions.md", "user-profile.md"}:
     fail("生成されたcustom-instructions同期ミラーの構造が正本の想定と一致しません")
@@ -165,7 +172,7 @@ for reference in references.iterdir():
 actual_skills = {
     path.relative_to(skills_mirror).as_posix(): path.read_bytes()
     for path in skills_mirror.rglob("*")
-    if path.is_file()
+    if path.is_file() and not is_ignored_metadata(path)
 }
 expected_skill_entries = set(expected_skills)
 for relative in expected_skills:
@@ -173,6 +180,7 @@ for relative in expected_skills:
 actual_skill_entries = {
     path.relative_to(skills_mirror).as_posix()
     for path in skills_mirror.rglob("*")
+    if not is_ignored_metadata(path)
 }
 if actual_skill_entries != expected_skill_entries:
     fail("生成されたSkills同期ミラーの構造が正本の想定と一致しません")
