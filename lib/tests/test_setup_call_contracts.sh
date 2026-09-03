@@ -26,6 +26,32 @@ assert_setup_script_registered() {
     ' "$DOTFILES_ROOT/setup-macos.sh"
 }
 
+assert_codex_entrypoint_contract() {
+    /usr/bin/python3 - "$DOTFILES_ROOT/setup-macos.sh" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+match = re.search(r"setup_scripts=\(\n(?P<body>.*?)\n\)", source, re.S)
+if not match:
+    raise SystemExit("setup-macos.sh has no setup_scripts array")
+entries = re.findall(r'^\s+"([^"]+)"\s*$', match.group("body"), re.M)
+if entries.count("apps/codex/codex-setup.sh") != 1:
+    raise SystemExit("Codex setup entry is missing or duplicated")
+for forbidden in (
+    "apps/codex/agents-setup.sh",
+    "apps/codex/agents/agents-setup.sh",
+    "apps/codex/skills/skills-setup.sh",
+    "apps/codex/custom-instructions-sync/custom-instructions-setup.sh",
+    "apps/codex/custom-instructions/custom-instructions-setup.sh",
+    "apps/codex/hooks/hooks-setup.sh",
+):
+    if forbidden in entries:
+        raise SystemExit(f"Codex feature setup is registered directly: {forbidden}")
+PY
+}
+
 assert_hammerspoon_contract() {
     local setup="$DOTFILES_ROOT/hammerspoon/hammerspoon-setup.sh"
     local expected='create_symlink "$HAMMERSPOON_SOURCE" "$HAMMERSPOON_TARGET" "Hammerspoon設定" || exit 1'
@@ -127,7 +153,7 @@ run_contract karabiner-elements/karabiner-setup.sh 1
 run_contract apps/warp/warp-setup.sh 1
 run_contract apps/snapzy/snapzy-setup.sh 1
 run_contract apps/codex/skills/skills-setup.sh 0
-run_contract apps/codex/agents-setup.sh 1
+run_contract apps/codex/agents/agents-setup.sh 1
 run_contract textlint/textlint-setup.sh 2
 run_contract hammerspoon/hammerspoon-setup.sh 1
 
@@ -161,6 +187,17 @@ if grep -Fqx '    "apps/codex/skills/skills-setup.sh"' "$DOTFILES_ROOT/setup-mac
     failures=$((failures + 1))
 else
     printf '%s\n' '[PASS] setup-macos.sh delegates Skills migration to codex-setup transaction'
+fi
+
+set +e
+assert_codex_entrypoint_contract
+codex_entrypoint_status=$?
+set -e
+if [ "$codex_entrypoint_status" -eq 0 ]; then
+    printf '%s\n' '[PASS] setup-macos.sh registers only the Codex aggregate setup'
+else
+    printf '%s\n' '[UNEXPECTED_FAIL] setup-macos.sh Codex aggregate entrypoint contract'
+    failures=$((failures + 1))
 fi
 
 [ "$failures" -eq 0 ]

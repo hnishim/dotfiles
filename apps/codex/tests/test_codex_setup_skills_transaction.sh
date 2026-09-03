@@ -68,11 +68,9 @@ printf '%s\n' plugin >"$fixture_harness/skills/.system/.codex-system-skills.mark
 printf '%s\n' opaque >"$fixture_harness/skills/.system/state"
 printf '%s\n' nested >"$fixture_harness/skills/.system/nested/state"
 printf '%s\n' '{}' >"$fixture_harness/hooks/hooks.json.tmpl"
-for name in planner plan-reviewer implementer reviewer git-actions; do
-    sandbox='workspace-write'
-    case "$name" in planner|plan-reviewer|reviewer) sandbox='read-only' ;; esac
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "%s"\ndeveloper_instructions = "test"\n' \
-        "$name" "$sandbox" >"$fixture_harness/agents/$name.toml"
+for name in fixture-agent-a fixture-agent-b; do
+    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\ndeveloper_instructions = "test"\n' \
+        "$name" >"$fixture_harness/agents/$name.toml"
 done
 
 printf '%s\n' archive >"$archive_system/state"
@@ -92,14 +90,22 @@ printf '%s\n' '#!/bin/bash' 'output=' \
     'mkdir -p "$(dirname "$output")"' \
     'exec >"$output"' \
     "printf '%s\\n' '#!/bin/bash'" \
+    "printf '%s\\n' 'if [ -n \"\${FAKE_HELPER_EVENT_LOG:-}\" ]; then'" \
+    "printf '%s\\n' '    printf \"%s\\\\n\" \"\$1\" >>\"\$FAKE_HELPER_EVENT_LOG\"'" \
+    "printf '%s\\n' 'fi'" \
     "printf '%s\\n' 'case \"\$1\" in'" \
     "printf '%s\\n' '--status)'" \
+    "printf '%s\\n' 'if [ -n \"\$FAKE_HELPER_STATE\" ] && [ -f \"\$FAKE_HELPER_STATE\" ] && /usr/bin/grep -Fxq mismatch \"\$FAKE_HELPER_STATE\"; then'" \
+    "printf '%s\\n' \"printf '%s\\\\n' 'source=$fixture_harness/custom-instructions'\"" \
+    "printf '%s\\n' \"printf '%s\\\\n' 'skills=$fixture_harness/skills'\"" \
+    "printf '%s\\n' \"printf '%s\\\\n' 'output=/nonexistent-home'\"" \
+    "printf '%s\\n' \"printf '%s\\\\n' 'mirror=/nonexistent-mirror'\"" \
+    "printf '%s\\n' 'elif [ -n \"\$FAKE_HELPER_STATE\" ] && [ -f \"\$FAKE_HELPER_STATE\" ] && /usr/bin/grep -Fxq legacy \"\$FAKE_HELPER_STATE\"; then'" \
+    "printf '%s\\n' '    exit 1'" \
+    "printf '%s\\n' 'else'" \
     "printf '%s\\n' \"printf '%s\\\\n' 'source=$fixture_harness/custom-instructions'\"" \
     "printf '%s\\n' \"printf '%s\\\\n' 'skills=$fixture_harness/skills'\"" \
     "printf '%s\\n' \"printf '%s\\\\n' 'output=$codex_home'\"" \
-    "printf '%s\\n' 'if [ -n \"\$FAKE_HELPER_STATE\" ] && [ -f \"\$FAKE_HELPER_STATE\" ] && /usr/bin/grep -Fxq legacy \"\$FAKE_HELPER_STATE\"; then'" \
-    "printf '%s\\n' ':'" \
-    "printf '%s\\n' 'else'" \
     "printf '%s\\n' \"printf '%s\\\\n' 'mirror=$fake_support/mirrors'\"" \
     "printf '%s\\n' 'fi'" \
     "printf '%s\\n' ';;'" \
@@ -132,13 +138,23 @@ printf '%s\n' '#!/bin/bash' 'rm -rf -- "$2"' 'cp -R -- "$1" "$2"' >"$fake_bin/di
 chmod 755 "$fake_bin/xcrun" "$fake_bin/codesign" "$fake_bin/ditto"
 
 target_before=$(snapshot_tree "$target")
+agents_target="$codex_home/agents"
+agents_before=$(snapshot_tree "$agents_target")
+agents_manifest="$codex_home/AGENTS.md"
+agents_manifest_before=$(snapshot_tree "$agents_manifest")
 backups_before=$(snapshot_tree "$backups")
 system_before=$(snapshot_tree "$fixture_harness/skills/.system")
 legacy_custom_before=$(snapshot_tree "$legacy_custom")
 legacy_skills_before=$(snapshot_tree "$legacy_skills")
-printf '%s\n' legacy >"$TMP_ROOT/helper-state"
+printf '%s\n' mismatch >"$TMP_ROOT/helper-state"
 AUTH_LOG="$TMP_ROOT/authorize.log"
+HELPER_EVENT_LOG="$TMP_ROOT/helper-events.log"
+GATE_EVENT_LOG="$TMP_ROOT/gate-events.log"
+: >"$AUTH_LOG"
+: >"$HELPER_EVENT_LOG"
+: >"$GATE_EVENT_LOG"
 set +e
+CODEX_HARNESS_PREPARE_ONLY=1 \
 PATH="$fake_bin:$PATH" \
 HOME="$TMP_ROOT/home" \
 CODEX_HARNESS_ROOT_OVERRIDE="$fixture_harness" \
@@ -151,18 +167,20 @@ CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE="$fake_cache" \
 NTN_EXECUTABLE_OVERRIDE="$TMP_ROOT/missing-ntn" \
 FAKE_HELPER_STATE="$TMP_ROOT/helper-state" \
 FAKE_AUTH_LOG="$AUTH_LOG" \
-CODEX_SYSTEM_SKILLS_RECOGNITION_COMMAND='exit 1' \
+FAKE_HELPER_EVENT_LOG="$HELPER_EVENT_LOG" \
+FAKE_GATE_EVENT_LOG="$GATE_EVENT_LOG" \
+CODEX_SYSTEM_SKILLS_RECOGNITION_COMMAND='printf "%s\\n" system-skills-gate >>"$FAKE_GATE_EVENT_LOG"; exit 1' \
     /bin/bash "$CODEX_SETUP" >"$TMP_ROOT/codex-setup.log" 2>&1
 status=$?
 set -e
 [ "$status" -ne 0 ]
-[ "$(wc -l <"$AUTH_LOG" | tr -d ' ')" -eq 1 ]
-[ "$(cat "$TMP_ROOT/helper-state")" = authorized ]
-grep -Fq 'Codex plugin-managed .systemの明示的認識gateに失敗しました。' "$TMP_ROOT/codex-setup.log" || {
-    sed -n '1,160p' "$TMP_ROOT/codex-setup.log" >&2
-    exit 1
-}
+[ "$(wc -l <"$AUTH_LOG" | tr -d ' ')" -eq 0 ]
+[ "$(cat "$TMP_ROOT/helper-state")" = mismatch ]
+[ "$(cat "$HELPER_EVENT_LOG")" = $'--status\n--status' ]
+[ ! -s "$GATE_EVENT_LOG" ]
 [ "$(snapshot_tree "$target")" = "$target_before" ]
+[ "$(snapshot_tree "$agents_target")" = "$agents_before" ]
+[ "$(snapshot_tree "$agents_manifest")" = "$agents_manifest_before" ]
 [ "$(snapshot_tree "$backups")" = "$backups_before" ]
 [ "$(snapshot_tree "$fixture_harness/skills/.system")" = "$system_before" ]
 [ "$(snapshot_tree "$legacy_custom")" = "$legacy_custom_before" ]
@@ -172,6 +190,39 @@ grep -Fq 'Codex plugin-managed .systemの明示的認識gateに失敗しまし�
 [ "$(readlink "$target/.system")" = "$archive_system" ]
 [ "$(readlink "$target/legacy-child")" = "$fixture_harness/skills/example" ]
 [ -z "$(find "$backups" -mindepth 1 -maxdepth 1 -name 'skills.symlink-install.*' -print -quit)" ]
+
+printf '%s\n' authorized >"$TMP_ROOT/helper-state"
+: >"$AUTH_LOG"
+: >"$HELPER_EVENT_LOG"
+: >"$GATE_EVENT_LOG"
+set +e
+CODEX_HARNESS_PREPARE_ONLY=1 \
+PATH="$fake_bin:$PATH" \
+HOME="$TMP_ROOT/home" \
+CODEX_HARNESS_ROOT_OVERRIDE="$fixture_harness" \
+CODEX_HOME_DIR_OVERRIDE="$codex_home" \
+CUSTOM_INSTRUCTIONS_APPLICATIONS_DIR_OVERRIDE="$fake_apps" \
+CUSTOM_INSTRUCTIONS_SUPPORT_DIR_OVERRIDE="$fake_support" \
+LAUNCH_AGENTS_DIR_OVERRIDE="$fake_launch_agents" \
+CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE="$fake_logs" \
+CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE="$fake_cache" \
+NTN_EXECUTABLE_OVERRIDE="$TMP_ROOT/missing-ntn" \
+FAKE_HELPER_STATE="$TMP_ROOT/helper-state" \
+FAKE_AUTH_LOG="$AUTH_LOG" \
+FAKE_HELPER_EVENT_LOG="$HELPER_EVENT_LOG" \
+FAKE_GATE_EVENT_LOG="$GATE_EVENT_LOG" \
+CODEX_SYSTEM_SKILLS_RECOGNITION_COMMAND='printf "%s\\n" system-skills-gate >>"$FAKE_GATE_EVENT_LOG"; exit 1' \
+    /bin/bash "$CODEX_SETUP" >"$TMP_ROOT/mismatch-codex-setup.log" 2>&1
+mismatch_status=$?
+set -e
+[ "$mismatch_status" -ne 0 ]
+[ "$(wc -l <"$AUTH_LOG" | tr -d ' ')" -eq 0 ]
+[ "$(cat "$TMP_ROOT/helper-state")" = authorized ]
+[ "$(cat "$HELPER_EVENT_LOG")" = $'--status\n--status\n--sync' ]
+[ "$(cat "$GATE_EVENT_LOG")" = system-skills-gate ]
+[ "$(snapshot_tree "$target")" = "$target_before" ]
+[ "$(snapshot_tree "$agents_target")" = "$agents_before" ]
+[ "$(snapshot_tree "$agents_manifest")" = "$agents_manifest_before" ]
 
 external_support="$TMP_ROOT/external-support"
 mkdir -p "$external_support"

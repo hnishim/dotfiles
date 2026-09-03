@@ -90,7 +90,7 @@ esac
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 DEV_ROOT=$(cd -- "$SCRIPT_DIR/../../../../../" && pwd)
-SYNC_SCRIPT="$DEV_ROOT/dotfiles/apps/codex/custom-instructions-sync/sync-custom-instructions"
+SYNC_SCRIPT="$DEV_ROOT/dotfiles/apps/codex/custom-instructions/sync-custom-instructions"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/skills-notion-sync-test.XXXXXX")
 case "${TMP_ROOT:?}" in
     "${TMPDIR:-/tmp}"/skills-notion-sync-test.*) ;;
@@ -130,16 +130,27 @@ cp "$0" "$NTN"
 chmod 755 "$HELPER" "$NTN"
 
 if [ -z "${CODEX_HARNESS_ROOT_OVERRIDE:-}" ]; then
-    mkdir -p "$HARNESS_ROOT/custom-instructions" \
-        "$HARNESS_ROOT/skills/explain" \
-        "$HARNESS_ROOT/skills/example" \
-        "$HARNESS_ROOT/skills/writing-references"
+    mkdir -p "$HARNESS_ROOT/custom-instructions" "$HARNESS_ROOT/skills/writing-references"
     printf '%s\n' '# custom fixture' >"$HARNESS_ROOT/custom-instructions/custom-instructions.md"
     printf '%s\n' '# profile fixture' >"$HARNESS_ROOT/custom-instructions/user-profile.md"
-    printf '%s\n' '---' 'name: explain' '---' '# explain fixture' >"$HARNESS_ROOT/skills/explain/SKILL.md"
-    printf '%s\n' '---' 'name: example' '---' '# example fixture' >"$HARNESS_ROOT/skills/example/SKILL.md"
-    printf '%s\n' '---' 'name: prose' '---' '# prose fixture' >"$HARNESS_ROOT/skills/writing-references/prose.md"
-    printf '%s\n' '---' 'name: review' '---' '# review fixture' >"$HARNESS_ROOT/skills/writing-references/review.md"
+    for index in $(seq -w 1 10); do
+        mkdir -p "$HARNESS_ROOT/skills/sync-skill-$index"
+        printf '%s\n' '---' "name: sync-skill-$index" 'notion_sync: true' '---' "# sync skill $index" \
+            >"$HARNESS_ROOT/skills/sync-skill-$index/SKILL.md"
+    done
+    for index in $(seq -w 11 14); do
+        mkdir -p "$HARNESS_ROOT/skills/excluded-skill-$index"
+        printf '%s\n' '---' "name: excluded-skill-$index" 'notion_sync: false' '---' "# excluded skill $index" \
+            >"$HARNESS_ROOT/skills/excluded-skill-$index/SKILL.md"
+    done
+    for index in $(seq -w 1 9); do
+        printf '%s\n' '---' "name: sync-reference-$index" 'notion_sync: true' '---' "# sync reference $index" \
+            >"$HARNESS_ROOT/skills/writing-references/sync-$index.md"
+    done
+    for index in $(seq -w 10 14); do
+        printf '%s\n' '---' "name: excluded-reference-$index" 'notion_sync: false' '---' "# excluded reference $index" \
+            >"$HARNESS_ROOT/skills/writing-references/excluded-$index.md"
+    done
 fi
 
 for source_file in \
@@ -178,8 +189,9 @@ paths = Dir[File.join(root, "*", "SKILL.md")] + Dir[File.join(root, "writing-ref
 names = paths.sort.map do |path|
   text = File.read(path, encoding: "UTF-8")
   match = text.match(/\A---\r?\n(.*?)\r?\n---\r?\n?/m)
-  YAML.safe_load(match[1], permitted_classes: [], aliases: false).fetch("name")
-end
+  metadata = YAML.safe_load(match[1], permitted_classes: [], aliases: false)
+  metadata.fetch("name") if metadata["notion_sync"] == true
+end.compact
 results = names.each_with_index.map do |name, index|
   {
     "object" => "page",
@@ -212,8 +224,13 @@ edit_count() {
     fi
 }
 
-skill_count=$(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' | wc -l | tr -d ' ')
-syncable_skill_count="$skill_count"
+mirror_file_count=$(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' | wc -l | tr -d ' ')
+syncable_skill_count=19
+excluded_skill_count=9
+[ "$mirror_file_count" -eq $((syncable_skill_count + excluded_skill_count)) ] || {
+    printf '[ERROR] fixture件数が不正です: expected=28 actual=%s\n' "$mirror_file_count" >&2
+    exit 1
+}
 if ! run_sync >"$TMP_ROOT/first.log" 2>&1; then
     /bin/cat "$TMP_ROOT/first.log" >&2
     exit 1
@@ -241,6 +258,7 @@ run_sync >"$TMP_ROOT/third.log" 2>&1
 }
 
 /usr/bin/jq 'del(.results[0])' "$FAKE_QUERY_JSON" >"$TMP_ROOT/missing.json"
+printf '\n# pending update before missing-page validation\n' >>"$SKILLS_MIRROR_DIR/sync-skill-01/SKILL.md"
 if FAKE_QUERY_JSON="$TMP_ROOT/missing.json" run_sync >"$TMP_ROOT/missing.log" 2>&1; then
     /bin/cat "$TMP_ROOT/missing.log" >&2
     printf '[ERROR] Notionページ不足を検出できませんでした。\n' >&2
@@ -251,6 +269,31 @@ fi
     exit 1
 }
 
+assert_rejected_without_updates() {
+    local label=$1
+    local log_file="$TMP_ROOT/$label.log"
+    if run_sync >"$log_file" 2>&1; then
+        /bin/cat "$log_file" >&2
+        printf '[ERROR] %sを検出できませんでした。\n' "$label" >&2
+        exit 1
+    fi
+    [ "$(edit_count)" -eq $((expected_count + 1)) ] || {
+        /bin/cat "$log_file" >&2
+        printf '[ERROR] %sで部分更新が発生しました。\n' "$label" >&2
+        exit 1
+    }
+}
+
+printf '%s\n' '---' 'name: missing-notion-sync' '---' '# missing notion_sync' \
+    >"$SKILLS_MIRROR_DIR/writing-references/missing-notion-sync.md"
+assert_rejected_without_updates 'notion-sync-missing'
+rm -f "$SKILLS_MIRROR_DIR/writing-references/missing-notion-sync.md"
+
+printf '%s\n' '---' 'name: invalid-notion-sync' 'notion_sync: "true"' '---' '# invalid notion_sync' \
+    >"$SKILLS_MIRROR_DIR/writing-references/invalid-notion-sync.md"
+assert_rejected_without_updates 'notion-sync-type'
+rm -f "$SKILLS_MIRROR_DIR/writing-references/invalid-notion-sync.md"
+
 /usr/bin/jq '.results += [.results[0]]' "$FAKE_QUERY_JSON" >"$TMP_ROOT/duplicate.json"
 if FAKE_QUERY_JSON="$TMP_ROOT/duplicate.json" run_sync >"$TMP_ROOT/duplicate.log" 2>&1; then
     /bin/cat "$TMP_ROOT/duplicate.log" >&2
@@ -258,7 +301,7 @@ if FAKE_QUERY_JSON="$TMP_ROOT/duplicate.json" run_sync >"$TMP_ROOT/duplicate.log
     exit 1
 fi
 
-printf '%s\n' '---' 'name: explain' '---' '# duplicate source' >"$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
+printf '%s\n' '---' 'name: sync-skill-01' 'notion_sync: true' '---' '# duplicate source' >"$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
 if run_sync >"$TMP_ROOT/source-duplicate.log" 2>&1; then
     /bin/cat "$TMP_ROOT/source-duplicate.log" >&2
     printf '[ERROR] frontmatter name重複を検出できませんでした。\n' >&2
@@ -278,4 +321,4 @@ fi
 }
 rm -f "$SKILLS_MIRROR_DIR/writing-references/missing-name.md"
 
-printf '[SUCCESS] isolated sync tests passed (%s mirror files, %s synced skill files).\n' "$skill_count" "$syncable_skill_count"
+printf '[SUCCESS] isolated sync tests passed (%s mirror files, %s synced skill files, %s excluded files).\n' "$mirror_file_count" "$syncable_skill_count" "$excluded_skill_count"

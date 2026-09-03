@@ -3,14 +3,14 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../.." && pwd)
+DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../../.." && pwd)
 HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$DOTFILES_ROOT/.." && pwd)/harness}"
-SETUP="$DOTFILES_ROOT/apps/codex/agents-setup.sh"
+SETUP="$DOTFILES_ROOT/apps/codex/agents/agents-setup.sh"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/agents-setup-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
-agent_names=(planner plan-reviewer implementer reviewer git-actions)
-read_only_agents=(planner plan-reviewer reviewer)
+agent_names=(fixture-agent-a fixture-agent-b)
+managed_name="${agent_names[0]}"
 
 snapshot_state() {
     /usr/bin/python3 - "$@" <<'PY'
@@ -54,15 +54,21 @@ write_agent_set() {
     local value="${2:-test}"
     mkdir -p "$directory"
     for name in "${agent_names[@]}"; do
-        local sandbox_line='sandbox_mode = "workspace-write"'
-        for read_only in "${read_only_agents[@]}"; do
-            if [ "$name" = "$read_only" ]; then
-                sandbox_line='sandbox_mode = "read-only"'
-            fi
-        done
-        printf 'name = "%s"\ndescription = "%s"\nmodel = "test"\nmodel_reasoning_effort = "low"\n%s\ndeveloper_instructions = "test"\n' \
-            "$name" "$value" "$sandbox_line" >"$directory/$name.toml"
+        printf 'name = "%s"\ndescription = "%s"\nmodel = "test"\nmodel_reasoning_effort = "low"\ndeveloper_instructions = "test"\n' \
+            "$name" "$value" >"$directory/$name.toml"
     done
+}
+
+write_agent_definition() {
+    local directory="$1"
+    local name="$2"
+    local sandbox_mode="${3:-}"
+    mkdir -p "$directory"
+    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\ndeveloper_instructions = "test"\n' \
+        "$name" >"$directory/$name.toml"
+    if [ -n "$sandbox_mode" ]; then
+        printf 'sandbox_mode = "%s"\n' "$sandbox_mode" >>"$directory/$name.toml"
+    fi
 }
 
 assert_root_link() {
@@ -81,23 +87,56 @@ import tomllib
 from pathlib import Path
 
 root = Path(sys.argv[1])
-names = ("planner", "plan-reviewer", "implementer", "reviewer", "git-actions")
-read_only = {"planner", "plan-reviewer", "reviewer"}
-for name in names:
-    path = root / "agents" / f"{name}.toml"
+paths = sorted((root / "agents").glob("*.toml"))
+assert paths, root / "agents"
+for path in paths:
+    name = path.stem
     assert path.is_file() and not path.is_symlink(), path
     data = tomllib.loads(path.read_text(encoding="utf-8"))
     assert data["name"] == name
     for field in ("description", "model", "model_reasoning_effort", "developer_instructions"):
         assert isinstance(data[field], str) and data[field].strip(), (name, field)
-    if name in read_only:
-        assert data.get("sandbox_mode") == "read-only", name
 PY
 
 source_dir="$TMP_ROOT/source"
 legacy_dir="$TMP_ROOT/legacy"
 write_agent_set "$source_dir" current
 write_agent_set "$legacy_dir" legacy
+
+# Copy the planned setup into an isolated repository-shaped fixture.  Running
+# without source overrides proves that SCRIPT_DIR-relative defaults resolve to
+# the fixture Harness and the old dotfiles/codex/agents source, without
+# touching the real repository or its Harness.
+default_fixture="$TMP_ROOT/default-layout"
+mkdir -p "$default_fixture/apps/codex/agents" "$default_fixture/harness/agents" \
+    "$default_fixture/codex/agents"
+cp "$SETUP" "$default_fixture/apps/codex/agents/agents-setup.sh"
+chmod 755 "$default_fixture/apps/codex/agents/agents-setup.sh"
+write_agent_set "$default_fixture/harness/agents" harness-default
+write_agent_set "$default_fixture/codex/agents" legacy-default
+default_fixture_target="$TMP_ROOT/default-layout-home/.codex/agents"
+env -u CODEX_AGENTS_SOURCE_DIR_OVERRIDE \
+    -u CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE \
+    -u CODEX_HARNESS_ROOT_OVERRIDE \
+    -u LOCAL_CODEX_AGENTS_DIR_OVERRIDE \
+    HOME="$TMP_ROOT/default-layout-home" \
+    /bin/bash "$default_fixture/apps/codex/agents/agents-setup.sh" >"$TMP_ROOT/default-layout.log"
+assert_root_link "$default_fixture_target" "$default_fixture/harness/agents"
+default_legacy_backup=$(find "$TMP_ROOT/default-layout-home/.codex/backups" -mindepth 1 -maxdepth 1 -name 'agents.symlink-install.*' -print -quit 2>/dev/null || true)
+[ -z "$default_legacy_backup" ]
+default_legacy_home="$TMP_ROOT/default-legacy-home"
+mkdir -p "$default_legacy_home/.codex"
+ln -s "$default_fixture/codex/agents" "$default_legacy_home/.codex/agents"
+env -u CODEX_AGENTS_SOURCE_DIR_OVERRIDE \
+    -u CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE \
+    -u CODEX_HARNESS_ROOT_OVERRIDE \
+    -u LOCAL_CODEX_AGENTS_DIR_OVERRIDE \
+    HOME="$default_legacy_home" \
+    /bin/bash "$default_fixture/apps/codex/agents/agents-setup.sh" >"$TMP_ROOT/default-legacy-layout.log"
+assert_root_link "$default_legacy_home/.codex/agents" "$default_fixture/harness/agents"
+default_legacy_backup=$(find "$default_legacy_home/.codex/backups" -mindepth 1 -maxdepth 1 -name 'agents.symlink-install.*' -print -quit)
+[ -L "$default_legacy_backup" ]
+[ "$(readlink "$default_legacy_backup")" = "$default_fixture/codex/agents" ]
 
 fresh_target="$TMP_ROOT/fresh-home/.codex/agents"
 CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
@@ -227,7 +266,7 @@ for kind in wrong-root regular-file unknown-entry; do
             ;;
         unknown-entry)
             mkdir -p "$conflict_target"
-            ln -s "$source_dir/planner.toml" "$conflict_target/planner.toml"
+            ln -s "$source_dir/$managed_name.toml" "$conflict_target/$managed_name.toml"
             printf '%s\n' preserve >"$conflict_target/unknown"
             ;;
     esac
@@ -247,14 +286,14 @@ for child_kind in unrelated-child broken-child; do
     child_backups="$TMP_ROOT/$child_kind/.codex/backups"
     mkdir -p "$child_target" "$child_backups"
     for name in "${agent_names[@]}"; do
-        if [ "$name" = planner ]; then
+        if [ "$name" = "$managed_name" ]; then
             if [ "$child_kind" = unrelated-child ]; then
-                unrelated_file="$TMP_ROOT/$child_kind/unrelated/planner.toml"
+                unrelated_file="$TMP_ROOT/$child_kind/unrelated/$managed_name.toml"
                 mkdir -p "$(dirname "$unrelated_file")"
                 printf '%s\n' unrelated >"$unrelated_file"
                 ln -s "$unrelated_file" "$child_target/$name.toml"
             else
-                ln -s "$TMP_ROOT/$child_kind/missing/planner.toml" "$child_target/$name.toml"
+                ln -s "$TMP_ROOT/$child_kind/missing/$managed_name.toml" "$child_target/$name.toml"
             fi
         else
             ln -s "$source_dir/$name.toml" "$child_target/$name.toml"
@@ -276,9 +315,6 @@ done
 missing_source="$TMP_ROOT/missing-source"
 missing_target="$TMP_ROOT/missing-source-target/.codex/agents"
 mkdir -p "$missing_source"
-for name in planner plan-reviewer implementer reviewer; do
-    printf 'name = "%s"\ndescription = "test"\nmodel = "test"\nmodel_reasoning_effort = "low"\nsandbox_mode = "read-only"\ndeveloper_instructions = "test"\n' "$name" >"$missing_source/$name.toml"
-done
 if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$missing_source" \
    LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$missing_target" \
    CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
@@ -286,13 +322,13 @@ if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$missing_source" \
     printf '%s\n' '[FAIL] missing Agent source unexpectedly succeeded' >&2
     exit 1
 fi
-grep -Fq "[ERROR] Agent definition is not a regular file: $missing_source/git-actions.toml" "$TMP_ROOT/missing-source.log"
+grep -Fq "[ERROR] Agent source has no TOML definitions: $missing_source" "$TMP_ROOT/missing-source.log"
 [ ! -e "$missing_target" ]
 
 malformed_source="$TMP_ROOT/malformed-source"
 malformed_target="$TMP_ROOT/malformed-target/.codex/agents"
 write_agent_set "$malformed_source"
-printf 'name = "planner"\ndescription = [\n' >"$malformed_source/planner.toml"
+printf 'name = "%s"\ndescription = [\n' "$managed_name" >"$malformed_source/$managed_name.toml"
 if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$malformed_source" \
    LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$malformed_target" \
    CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
@@ -301,6 +337,19 @@ if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$malformed_source" \
     exit 1
 fi
 [ ! -e "$malformed_target" ]
+
+reviewer_guard_source="$TMP_ROOT/reviewer-guard-source"
+reviewer_guard_target="$TMP_ROOT/reviewer-guard-target/.codex/agents"
+write_agent_definition "$reviewer_guard_source" reviewer workspace-write
+if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$reviewer_guard_source" \
+   LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$reviewer_guard_target" \
+   CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
+   /bin/bash "$SETUP" >"$TMP_ROOT/reviewer-guard.log" 2>&1; then
+    printf '%s\n' '[FAIL] writable reviewer Agent unexpectedly succeeded' >&2
+    exit 1
+fi
+grep -Fq 'read-only Agent lacks sandbox_mode = read-only' "$TMP_ROOT/reviewer-guard.log"
+[ ! -e "$reviewer_guard_target" ]
 
 backup_failure_target="$TMP_ROOT/backup-failure/.codex/agents"
 backup_failure_backups="$TMP_ROOT/backup-failure/.codex/backups"

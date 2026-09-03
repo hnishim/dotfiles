@@ -4,9 +4,9 @@ set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../../.." && pwd)
-SWIFT_SOURCE="$SCRIPT_DIR/../CustomInstructionsSync.swift"
-SETUP_SOURCE="$DOTFILES_ROOT/apps/codex/codex-setup.sh"
-SYNC_SOURCE="$SCRIPT_DIR/../sync-custom-instructions"
+SWIFT_SOURCE="$DOTFILES_ROOT/apps/codex/custom-instructions/CustomInstructionsSync.swift"
+SETUP_SOURCE="$DOTFILES_ROOT/apps/codex/custom-instructions/custom-instructions-setup.sh"
+SYNC_SOURCE="$DOTFILES_ROOT/apps/codex/custom-instructions/sync-custom-instructions"
 
 python3 - "$SWIFT_SOURCE" "$SETUP_SOURCE" "$SYNC_SOURCE" <<'PY'
 import sys
@@ -37,6 +37,7 @@ setup_contracts = (
     '[ "$authorized_output_dir" != "$CODEX_HOME_DIR" ]',
     'preflight_mirror_root "$MIRROR_ROOT"',
     '"$DEFAULTS_EXECUTABLE" delete "$BOOKMARK_DOMAIN"',
+    'status_output=$("$HELPER_EXECUTABLE" --status)',
 )
 for contract in setup_contracts:
     if contract not in setup_source:
@@ -62,6 +63,13 @@ if setup_source.index('preflight_mirror_root "$MIRROR_ROOT"') \
     raise AssertionError("mirror root must be preflighted before setup creates or chmods it")
 if 'return lstat(path, &information)' not in swift_source:
     raise AssertionError("mirror layout validation must use lstat semantics")
+if setup_source.count('"$HELPER_EXECUTABLE" --authorize') != 1:
+    raise AssertionError("resolved status mismatch must not trigger a second authorization")
+if '保存済みの正本フォルダーがharnessと異なるため、明示的に再認可します。' in setup_source:
+    raise AssertionError("misleading reauthorization message must not remain")
+if '認可済み出力先がCodexホームと一致しません' not in setup_source or \
+   '認可済みNotion同期ミラーrootが想定と一致しません' not in setup_source:
+    raise AssertionError("mismatched output or mirror path must have a safe-stop error")
 
 print("[PASS] mirror bookmark and Application Support contract")
 PY

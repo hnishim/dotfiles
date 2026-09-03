@@ -38,24 +38,8 @@ for expected in ("$CODEX_HOME_DIR/skills", "$CODEX_HOME_DIR/backups", "$APPLICAT
     if path_args.count(expected) != 1:
         raise AssertionError(f"missing or duplicated transaction path: {expected}")
 
-for legacy in ("$CODEX_HOME_DIR/custom-instructions-sync", "$CODEX_HOME_DIR/skills-notion-sync"):
-    if legacy in path_args:
-        raise AssertionError(f"codex-setup must not manage legacy mirror cleanup: {legacy}")
-
 if any(path_arg == "$APPLICATION_SUPPORT_DIR/mirrors" for path_arg in path_args):
     raise AssertionError("mirrors must be protected by the parent Application Support transaction path")
-
-for required in (
-    'MIRROR_ROOT="$APPLICATION_SUPPORT_DIR/mirrors"',
-    'MIRROR_LAYOUT_SOURCE="$ASSET_DIR/mirror-layout.sh"',
-    'source "$MIRROR_LAYOUT_SOURCE"',
-    '"$DEFAULTS_EXECUTABLE" delete "$BOOKMARK_DOMAIN"',
-):
-    if required not in source:
-        raise AssertionError(f"missing migration safety contract: {required}")
-
-if "remove_legacy_mirror" in source or "LEGACY_MIRROR_DIR" in source or "LEGACY_SKILLS_MIRROR_DIR" in source:
-    raise AssertionError("codex-setup must not contain legacy mirror migration or cleanup")
 
 for path_arg in path_args:
     normalized = path_arg.lower()

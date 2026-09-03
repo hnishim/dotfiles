@@ -23,6 +23,10 @@ struct MirrorLayoutTest {
         try fileManager.createDirectory(at: fixtureRoot, withIntermediateDirectories: true)
         let validRoot = fixtureRoot.appendingPathComponent("valid", isDirectory: true)
         try createValidMirror(at: validRoot)
+        try Data("Finder metadata\n".utf8)
+            .write(to: validRoot.appendingPathComponent(".DS_Store", isDirectory: false))
+        try Data("Finder metadata\n".utf8)
+            .write(to: validRoot.appendingPathComponent("skills-notion-sync/example/.DS_Store", isDirectory: false))
         try CustomInstructionsSync.validateMirrorLayout(validRoot, expectedSkills: expectedSkills)
 
         let externalRoot = fixtureRoot.appendingPathComponent("external", isDirectory: true)

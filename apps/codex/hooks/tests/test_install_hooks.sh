@@ -3,14 +3,23 @@
 set -euo pipefail
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../.." && pwd)
+DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../../.." && pwd)
 HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$DOTFILES_ROOT/.." && pwd)/harness}"
-INSTALLER="$DOTFILES_ROOT/apps/codex/install-codex-hooks.py"
+HOOKS_SETUP="$DOTFILES_ROOT/apps/codex/hooks/hooks-setup.sh"
+INSTALLER="$DOTFILES_ROOT/apps/codex/hooks/install-codex-hooks.py"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/install-hooks-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
+SOURCE_HARNESS_ROOT="$HARNESS_ROOT"
+HARNESS_ROOT="$TMP_ROOT/harness"
+mkdir -p "$HARNESS_ROOT/hooks"
+HARNESS_ROOT=$(cd -P -- "$HARNESS_ROOT" && pwd)
+cp -R "$SOURCE_HARNESS_ROOT/hooks/runtime" "$HARNESS_ROOT/hooks/"
+cp "$SOURCE_HARNESS_ROOT/hooks/hooks.json.tmpl" "$HARNESS_ROOT/hooks/hooks.json.tmpl"
+
 run_install() {
-    /usr/bin/python3 "$INSTALLER" "$1"
+    CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
+        /usr/bin/python3 "$INSTALLER" "$1"
 }
 
 run_install_with_source() {
@@ -21,6 +30,54 @@ run_install_with_source() {
     HOOKS_TEMPLATE_OVERRIDE="$template" \
         run_install "$home"
 }
+
+# Run the actual Hooks setup script through a temporary repository-shaped path
+# with only its Python installer replaced by an argument-recording stub.  This
+# proves that Codex reaches hooks-setup.sh, delegates to the installer, passes
+# the resolved Codex home, and propagates installer failure.
+[ -f "$HOOKS_SETUP" ]
+setup_fixture="$TMP_ROOT/hooks-setup-fixture"
+setup_repository="$setup_fixture/repository"
+setup_script_dir="$setup_repository/apps/codex/hooks"
+setup_home="$setup_fixture/home/.codex"
+setup_log="$TMP_ROOT/hooks-setup-args.log"
+mkdir -p "$setup_script_dir" "$setup_repository/lib"
+ln -s "$HOOKS_SETUP" "$setup_script_dir/hooks-setup.sh"
+ln -s "$DOTFILES_ROOT/lib/common.sh" "$setup_repository/lib/common.sh"
+/usr/bin/python3 - "$setup_script_dir/install-codex-hooks.py" <<'PY'
+import os
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+path.write_text(
+    "#!/usr/bin/env python3\n"
+    "import os, sys\n"
+    "Path = __import__('pathlib').Path\n"
+    "Path(os.environ['HOOKS_SETUP_LOG']).write_text('\\n'.join(sys.argv[1:]) + '\\n', encoding='utf-8')\n"
+    "raise SystemExit(31 if os.environ.get('HOOKS_SETUP_FAIL') == '1' else 0)\n",
+    encoding="utf-8",
+)
+path.chmod(0o755)
+PY
+CODEX_HOME="$setup_home" \
+CODEX_HOME_DIR_OVERRIDE="$setup_home" \
+CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
+HOOKS_SETUP_LOG="$setup_log" \
+    /bin/bash "$setup_script_dir/hooks-setup.sh"
+[ "$(sed -n '1p' "$setup_log")" = "$setup_home" ]
+[ "$(wc -l <"$setup_log" | tr -d ' ')" = 1 ]
+
+set +e
+CODEX_HOME="$setup_home" \
+CODEX_HOME_DIR_OVERRIDE="$setup_home" \
+CODEX_HARNESS_ROOT_OVERRIDE="$HARNESS_ROOT" \
+HOOKS_SETUP_LOG="$setup_log" \
+HOOKS_SETUP_FAIL=1 \
+    /bin/bash "$setup_script_dir/hooks-setup.sh" >"$TMP_ROOT/hooks-setup-failure.log" 2>&1
+setup_status=$?
+set -e
+[ "$setup_status" -ne 0 ]
 
 snapshot_state() {
     /usr/bin/python3 - "$@" <<'PY'
@@ -131,6 +188,12 @@ run_install "$legacy" >"$TMP_ROOT/legacy.log"
 [ "$(readlink "$legacy/hooks")" = "$HARNESS_ROOT/hooks/runtime" ]
 [ "$(readlink "$legacy/hooks.json")" = "$HARNESS_ROOT/hooks/.runtime/hooks.json" ]
 [ -d "$legacy/backups" ]
+legacy_hooks_backup=$(find "$legacy/backups" -mindepth 1 -maxdepth 1 -name 'hooks.symlink-install.*' -print -quit)
+legacy_json_backup=$(find "$legacy/backups" -mindepth 1 -maxdepth 1 -name 'hooks.json.symlink-install.*' -print -quit)
+[ -n "$legacy_hooks_backup" ] && [ -L "$legacy_hooks_backup" ]
+[ "$(readlink "$legacy_hooks_backup")" = "$DOTFILES_ROOT/codex/hooks" ]
+[ -n "$legacy_json_backup" ] && [ -L "$legacy_json_backup" ]
+[ "$(readlink "$legacy_json_backup")" = "$DOTFILES_ROOT/codex/hooks.json" ]
 
 source_missing="$TMP_ROOT/source-missing"
 mkdir -p "$source_missing"
