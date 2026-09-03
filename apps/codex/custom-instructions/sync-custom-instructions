@@ -169,7 +169,11 @@ raise "frontmatterがMapではありません" unless frontmatter.is_a?(Hash)
 name = frontmatter["name"]
 raise "frontmatterのnameがありません" unless name.is_a?(String) && !name.empty?
 
-result = { "name" => name }
+raise "frontmatterのnotion_syncがありません" unless frontmatter.key?("notion_sync")
+notion_sync = frontmatter["notion_sync"]
+raise "frontmatterのnotion_syncがbooleanではありません" unless notion_sync == true || notion_sync == false
+
+result = { "name" => name, "notion_sync" => notion_sync }
 if frontmatter.key?("description")
   value = frontmatter["description"]
   raise "descriptionが文字列ではありません" unless value.is_a?(String)
@@ -188,17 +192,6 @@ end
 
 puts JSON.generate(result)
 RUBY
-}
-
-is_excluded_codex_id() {
-    case "$1" in
-        gmail-to-calendar|reply-automatically|git-add-commit-push|implementation-loop|reflect-textlint-findings|linear-issue-plan-review|initial-plan|notion-molcure|notion-personal|jobcan-fill-attendance)
-            return 0
-            ;;
-        *)
-            return 1
-            ;;
-    esac
 }
 
 build_metadata_payload() {
@@ -318,9 +311,6 @@ sync_page() {
     return 1
 }
 
-sync_page custom-instructions "$MIRROR_DIR/custom-instructions.md" "$custom_page_id"
-sync_page user-profile "$MIRROR_DIR/user-profile.md" "$profile_page_id"
-
 if [ ! -d "$SKILLS_MIRROR_DIR" ]; then
     printf '[ERROR] Skills同期用ミラーが存在しません: %s\n' "$SKILLS_MIRROR_DIR" >&2
     exit 1
@@ -328,6 +318,8 @@ fi
 
 skills_manifest="$temp_dir/skills-manifest.tsv"
 : >"$skills_manifest"
+source_names="$temp_dir/source-names.txt"
+: >"$source_names"
 
 while IFS= read -r source_file; do
     [ -n "$source_file" ] || continue
@@ -343,13 +335,15 @@ while IFS= read -r source_file; do
         exit 1
     fi
     codex_id=$(printf '%s\n' "$metadata" | "$JQ_EXECUTABLE" -r '.name')
-    if is_excluded_codex_id "$codex_id"; then
-        printf '[INFO] Skills同期対象外のためスキップします: %s (%s)\n' "$codex_id" "$relative_path"
-        continue
-    fi
-    if awk -F '\t' -v id="$codex_id" '$1 == id {found=1} END {exit found ? 0 : 1}' "$skills_manifest"; then
+    notion_sync=$(printf '%s\n' "$metadata" | "$JQ_EXECUTABLE" -r '.notion_sync')
+    if grep -Fqx -- "$codex_id" "$source_names"; then
         printf '[ERROR] frontmatterのnameが重複しています: %s\n' "$codex_id" >&2
         exit 1
+    fi
+    printf '%s\n' "$codex_id" >>"$source_names"
+    if [ "$notion_sync" = false ]; then
+        printf '[INFO] notion_sync=falseのためスキップします: %s (%s)\n' "$codex_id" "$relative_path"
+        continue
     fi
     printf '%s\t%s\t%s\n' "$codex_id" "$source_file" "$metadata" >>"$skills_manifest"
 done < <(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' -print | sort)
@@ -416,6 +410,9 @@ if [ -s "$duplicate_pages_file" ]; then
     sed 's/^/  - /' "$duplicate_pages_file" >&2
     exit 1
 fi
+
+sync_page custom-instructions "$MIRROR_DIR/custom-instructions.md" "$custom_page_id"
+sync_page user-profile "$MIRROR_DIR/user-profile.md" "$profile_page_id"
 
 while IFS=$'\t' read -r codex_id source_file metadata; do
     page_id=$(awk -F '\t' -v id="$codex_id" '$1 == id {print $2; exit}' "$page_rows")

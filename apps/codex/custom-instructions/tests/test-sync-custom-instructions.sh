@@ -104,6 +104,40 @@ cleanup_test_tmp() {
 }
 trap cleanup_test_tmp EXIT
 
+TRUE_SKILLS=(
+    draft-email
+    draft-press-release-qa
+    draft-proposal
+    executive-summary
+    explain
+    review-text
+    translate
+)
+FALSE_SKILLS=(
+    git-add-commit-push
+    gmail-to-calendar
+    implementation-loop
+    initial-plan
+    jobcan-fill-attendance
+    notion-molcure
+    notion-personal
+    reflect-textlint-findings
+    reply-automatically
+)
+TRUE_REFERENCES=(
+    business-email
+    cognitive-rhythm-writing
+    communication-writing
+    editing-guardrails
+    formatting
+    markdown-formatting
+    proofreading
+    prose-basics
+    technical-writing
+    translation-rules
+    writing-improvement
+)
+
 HARNESS_ROOT=${CODEX_HARNESS_ROOT_OVERRIDE:-$TMP_ROOT/harness}
 CODEX_HOME="$TMP_ROOT/codex"
 MIRROR_ROOT="$TMP_ROOT/support/mirrors"
@@ -133,23 +167,19 @@ if [ -z "${CODEX_HARNESS_ROOT_OVERRIDE:-}" ]; then
     mkdir -p "$HARNESS_ROOT/custom-instructions" "$HARNESS_ROOT/skills/writing-references"
     printf '%s\n' '# custom fixture' >"$HARNESS_ROOT/custom-instructions/custom-instructions.md"
     printf '%s\n' '# profile fixture' >"$HARNESS_ROOT/custom-instructions/user-profile.md"
-    for index in $(seq -w 1 10); do
-        mkdir -p "$HARNESS_ROOT/skills/sync-skill-$index"
-        printf '%s\n' '---' "name: sync-skill-$index" 'notion_sync: true' '---' "# sync skill $index" \
-            >"$HARNESS_ROOT/skills/sync-skill-$index/SKILL.md"
+    for skill_name in "${TRUE_SKILLS[@]}"; do
+        mkdir -p "$HARNESS_ROOT/skills/$skill_name"
+        printf '%s\n' '---' "name: $skill_name" 'notion_sync: true' '---' "# $skill_name" \
+            >"$HARNESS_ROOT/skills/$skill_name/SKILL.md"
     done
-    for index in $(seq -w 11 14); do
-        mkdir -p "$HARNESS_ROOT/skills/excluded-skill-$index"
-        printf '%s\n' '---' "name: excluded-skill-$index" 'notion_sync: false' '---' "# excluded skill $index" \
-            >"$HARNESS_ROOT/skills/excluded-skill-$index/SKILL.md"
+    for skill_name in "${FALSE_SKILLS[@]}"; do
+        mkdir -p "$HARNESS_ROOT/skills/$skill_name"
+        printf '%s\n' '---' "name: $skill_name" 'notion_sync: false' '---' "# $skill_name" \
+            >"$HARNESS_ROOT/skills/$skill_name/SKILL.md"
     done
-    for index in $(seq -w 1 9); do
-        printf '%s\n' '---' "name: sync-reference-$index" 'notion_sync: true' '---' "# sync reference $index" \
-            >"$HARNESS_ROOT/skills/writing-references/sync-$index.md"
-    done
-    for index in $(seq -w 10 14); do
-        printf '%s\n' '---' "name: excluded-reference-$index" 'notion_sync: false' '---' "# excluded reference $index" \
-            >"$HARNESS_ROOT/skills/writing-references/excluded-$index.md"
+    for reference_name in "${TRUE_REFERENCES[@]}"; do
+        printf '%s\n' '---' "name: $reference_name" 'notion_sync: true' '---' "# $reference_name" \
+            >"$HARNESS_ROOT/skills/writing-references/$reference_name.md"
     done
 fi
 
@@ -195,7 +225,7 @@ end.compact
 results = names.each_with_index.map do |name, index|
   {
     "object" => "page",
-    "id" => "page-#{index}",
+    "id" => "page-#{name}",
     "properties" => {
       "Codex ID" => {"type" => "rich_text", "rich_text" => [{"plain_text" => name}]}
     }
@@ -225,22 +255,71 @@ edit_count() {
 }
 
 mirror_file_count=$(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' | wc -l | tr -d ' ')
-syncable_skill_count=19
-excluded_skill_count=9
-[ "$mirror_file_count" -eq $((syncable_skill_count + excluded_skill_count)) ] || {
-    printf '[ERROR] fixture件数が不正です: expected=28 actual=%s\n' "$mirror_file_count" >&2
+true_skill_count=${#TRUE_SKILLS[@]}
+false_skill_count=${#FALSE_SKILLS[@]}
+true_reference_count=${#TRUE_REFERENCES[@]}
+false_reference_count=0
+total_file_count=$((true_skill_count + false_skill_count + true_reference_count + false_reference_count))
+syncable_file_count=$((true_skill_count + true_reference_count))
+[ "$mirror_file_count" -eq "$total_file_count" ] || {
+    printf '[ERROR] fixture件数が不正です: expected=%s actual=%s\n' "$total_file_count" "$mirror_file_count" >&2
     exit 1
 }
+[ "$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -path '*/SKILL.md' -type f | while read -r f; do grep -c '^notion_sync: true$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$true_skill_count" ] || exit 1
+[ "$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -path '*/SKILL.md' -type f | while read -r f; do grep -c '^notion_sync: false$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$false_skill_count" ] || exit 1
+[ "$(find "$SKILLS_MIRROR_DIR/writing-references" -type f -name '*.md' | while read -r f; do grep -c '^notion_sync: true$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$true_reference_count" ] || exit 1
+[ "$false_reference_count" -eq 0 ] || exit 1
+skill_names=$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -maxdepth 2 -type f -name 'SKILL.md' -exec sh -c 'basename "$(dirname "$1")"' _ {} \; | sort)
+expected_skill_names=$(printf '%s\n' "${TRUE_SKILLS[@]}" "${FALSE_SKILLS[@]}" | sort)
+[ "$skill_names" = "$expected_skill_names" ] || {
+    printf '[ERROR] Skill実名fixture集合が不正です。\nexpected:\n%s\nactual:\n%s\n' "$expected_skill_names" "$skill_names" >&2
+    exit 1
+}
+reference_names=$(find "$SKILLS_MIRROR_DIR/writing-references" -maxdepth 1 -type f -name '*.md' -exec sh -c 'basename "$1" .md' _ {} \; | sort)
+expected_reference_names=$(printf '%s\n' "${TRUE_REFERENCES[@]}" | sort)
+[ "$reference_names" = "$expected_reference_names" ] || exit 1
+! /usr/bin/grep -Fqx 'linear-issue-plan-review' <<<"$skill_names" || exit 1
+! /usr/bin/grep -Fqx 'linear-issue-plan-review' <<<"$reference_names" || exit 1
+for skill_name in "${TRUE_SKILLS[@]}"; do
+    /usr/bin/grep -Fqx "name: $skill_name" "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
+    /usr/bin/grep -Fqx 'notion_sync: true' "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
+done
+for skill_name in "${FALSE_SKILLS[@]}"; do
+    /usr/bin/grep -Fqx "name: $skill_name" "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
+    /usr/bin/grep -Fqx 'notion_sync: false' "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
+done
+/usr/bin/grep -Fqx 'name: jobcan-fill-attendance' "$SKILLS_MIRROR_DIR/jobcan-fill-attendance/SKILL.md" || exit 1
+/usr/bin/grep -Fqx 'notion_sync: false' "$SKILLS_MIRROR_DIR/jobcan-fill-attendance/SKILL.md" || exit 1
+for reference_name in "${TRUE_REFERENCES[@]}"; do
+    /usr/bin/grep -Fqx "name: $reference_name" "$SKILLS_MIRROR_DIR/writing-references/$reference_name.md" || exit 1
+    /usr/bin/grep -Fqx 'notion_sync: true' "$SKILLS_MIRROR_DIR/writing-references/$reference_name.md" || exit 1
+done
 if ! run_sync >"$TMP_ROOT/first.log" 2>&1; then
     /bin/cat "$TMP_ROOT/first.log" >&2
     exit 1
 fi
-expected_count=$((syncable_skill_count + 2))
+expected_count=$((syncable_file_count + 2))
 [ "$(edit_count)" -eq "$expected_count" ] || {
     /bin/cat "$TMP_ROOT/first.log" >&2
     printf '[ERROR] 初回更新件数が不正です: expected=%s actual=%s\n' "$expected_count" "$(edit_count)" >&2
     exit 1
 }
+/usr/bin/jq -e --argjson expected "$syncable_file_count" '(.results | length) == $expected' "$FAKE_QUERY_JSON" >/dev/null || exit 1
+if /usr/bin/jq -e '.results[] | .properties["Codex ID"].rich_text[]?.plain_text == "jobcan-fill-attendance"' "$FAKE_QUERY_JSON" >/dev/null; then
+    exit 1
+fi
+if /usr/bin/jq -e '.results[] | .properties["Codex ID"].rich_text[]?.plain_text == "linear-issue-plan-review"' "$FAKE_QUERY_JSON" >/dev/null; then
+    exit 1
+fi
+/usr/bin/grep -Fq "[SUCCESS] SkillsのNotion同期が完了しました（${syncable_file_count}件）。" "$TMP_ROOT/first.log" || exit 1
+for skill_name in "${TRUE_SKILLS[@]}"; do
+    /usr/bin/grep -Fqx "page-$skill_name" "$FAKE_EDIT_LOG" || exit 1
+done
+for skill_name in "${FALSE_SKILLS[@]}"; do
+    ! /usr/bin/grep -Fqx "page-$skill_name" "$FAKE_EDIT_LOG" || exit 1
+done
+! /usr/bin/grep -Fqx 'page-jobcan-fill-attendance' "$FAKE_EDIT_LOG" || exit 1
+! /usr/bin/grep -Fq 'linear-issue-plan-review' "$FAKE_EDIT_LOG" || exit 1
 
 run_sync >"$TMP_ROOT/second.log" 2>&1
 [ "$(edit_count)" -eq "$expected_count" ] || {
@@ -256,69 +335,117 @@ run_sync >"$TMP_ROOT/third.log" 2>&1
     printf '[ERROR] 変更ファイルのみの更新件数が不正です。\n' >&2
     exit 1
 }
-
-/usr/bin/jq 'del(.results[0])' "$FAKE_QUERY_JSON" >"$TMP_ROOT/missing.json"
-printf '\n# pending update before missing-page validation\n' >>"$SKILLS_MIRROR_DIR/sync-skill-01/SKILL.md"
-if FAKE_QUERY_JSON="$TMP_ROOT/missing.json" run_sync >"$TMP_ROOT/missing.log" 2>&1; then
-    /bin/cat "$TMP_ROOT/missing.log" >&2
-    printf '[ERROR] Notionページ不足を検出できませんでした。\n' >&2
-    exit 1
-fi
-[ "$(edit_count)" -eq $((expected_count + 1)) ] || {
-    printf '[ERROR] ページ不足時に部分更新が発生しました。\n' >&2
-    exit 1
-}
+baseline_count=$(edit_count)
 
 assert_rejected_without_updates() {
     local label=$1
+    local expected_error=$2
     local log_file="$TMP_ROOT/$label.log"
+    printf '\n# pending update before validation\n' >>"$MIRROR_DIR/custom-instructions.md"
+    printf '\n# pending profile update before validation\n' >>"$MIRROR_DIR/user-profile.md"
     if run_sync >"$log_file" 2>&1; then
         /bin/cat "$log_file" >&2
         printf '[ERROR] %sを検出できませんでした。\n' "$label" >&2
         exit 1
     fi
-    [ "$(edit_count)" -eq $((expected_count + 1)) ] || {
+    /usr/bin/grep -Fq -- "$expected_error" "$log_file" || {
+        /bin/cat "$log_file" >&2
+        printf '[ERROR] %sの固有エラーがありません。\n' "$label" >&2
+        exit 1
+    }
+    [ "$(edit_count)" -eq "$baseline_count" ] || {
         /bin/cat "$log_file" >&2
         printf '[ERROR] %sで部分更新が発生しました。\n' "$label" >&2
         exit 1
     }
+    cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
+    cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 }
+
+/usr/bin/jq 'del(.results[0])' "$FAKE_QUERY_JSON" >"$TMP_ROOT/missing.json"
+printf '\n# pending update before missing-page validation\n' >>"$MIRROR_DIR/custom-instructions.md"
+printf '\n# pending profile update before missing-page validation\n' >>"$MIRROR_DIR/user-profile.md"
+if FAKE_QUERY_JSON="$TMP_ROOT/missing.json" run_sync >"$TMP_ROOT/missing.log" 2>&1; then
+    /bin/cat "$TMP_ROOT/missing.log" >&2
+    printf '[ERROR] Notionページ不足を検出できませんでした。\n' >&2
+    exit 1
+fi
+/usr/bin/grep -Fq 'Notion Skillsデータソースに対応ページがありません' "$TMP_ROOT/missing.log" || {
+    /bin/cat "$TMP_ROOT/missing.log" >&2
+    printf '[ERROR] Notionページ不足の固有エラーがありません。\n' >&2
+    exit 1
+}
+[ "$(edit_count)" -eq "$baseline_count" ] || {
+    printf '[ERROR] ページ不足時に部分更新が発生しました。\n' >&2
+    exit 1
+}
+cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
+cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
 printf '%s\n' '---' 'name: missing-notion-sync' '---' '# missing notion_sync' \
     >"$SKILLS_MIRROR_DIR/writing-references/missing-notion-sync.md"
-assert_rejected_without_updates 'notion-sync-missing'
+assert_rejected_without_updates 'notion-sync-missing' 'frontmatterのnotion_syncがありません'
 rm -f "$SKILLS_MIRROR_DIR/writing-references/missing-notion-sync.md"
 
 printf '%s\n' '---' 'name: invalid-notion-sync' 'notion_sync: "true"' '---' '# invalid notion_sync' \
     >"$SKILLS_MIRROR_DIR/writing-references/invalid-notion-sync.md"
-assert_rejected_without_updates 'notion-sync-type'
+assert_rejected_without_updates 'notion-sync-type' 'frontmatterのnotion_syncがbooleanではありません'
 rm -f "$SKILLS_MIRROR_DIR/writing-references/invalid-notion-sync.md"
 
 /usr/bin/jq '.results += [.results[0]]' "$FAKE_QUERY_JSON" >"$TMP_ROOT/duplicate.json"
+printf '\n# pending update before Codex ID duplicate validation\n' >>"$MIRROR_DIR/custom-instructions.md"
+printf '\n# pending profile update before Codex ID duplicate validation\n' >>"$MIRROR_DIR/user-profile.md"
 if FAKE_QUERY_JSON="$TMP_ROOT/duplicate.json" run_sync >"$TMP_ROOT/duplicate.log" 2>&1; then
     /bin/cat "$TMP_ROOT/duplicate.log" >&2
     printf '[ERROR] Codex ID重複を検出できませんでした。\n' >&2
     exit 1
 fi
+/usr/bin/grep -Fq 'Notion SkillsデータソースでCodex IDが重複しています' "$TMP_ROOT/duplicate.log" || {
+    /bin/cat "$TMP_ROOT/duplicate.log" >&2
+    printf '[ERROR] Codex ID重複の固有エラーがありません。\n' >&2
+    exit 1
+}
+[ "$(edit_count)" -eq "$baseline_count" ] || { printf '[ERROR] Codex ID重複時に部分更新が発生しました。\n' >&2; exit 1; }
+cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
+cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
-printf '%s\n' '---' 'name: sync-skill-01' 'notion_sync: true' '---' '# duplicate source' >"$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
+printf '%s\n' '---' 'name: explain' 'notion_sync: true' '---' '# duplicate source' >"$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
+printf '\n# pending update before source duplicate validation\n' >>"$MIRROR_DIR/custom-instructions.md"
+printf '\n# pending profile update before source duplicate validation\n' >>"$MIRROR_DIR/user-profile.md"
 if run_sync >"$TMP_ROOT/source-duplicate.log" 2>&1; then
     /bin/cat "$TMP_ROOT/source-duplicate.log" >&2
     printf '[ERROR] frontmatter name重複を検出できませんでした。\n' >&2
     exit 1
 fi
+/usr/bin/grep -Fq 'frontmatterのnameが重複しています' "$TMP_ROOT/source-duplicate.log" || {
+    /bin/cat "$TMP_ROOT/source-duplicate.log" >&2
+    printf '[ERROR] frontmatter name重複の固有エラーがありません。\n' >&2
+    exit 1
+}
+[ "$(edit_count)" -eq "$baseline_count" ] || { printf '[ERROR] frontmatter name重複時に部分更新が発生しました。\n' >&2; exit 1; }
 rm -f "$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
+cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
+cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
-printf '%s\n' '---' 'description: missing name' '---' '# missing name' >"$SKILLS_MIRROR_DIR/writing-references/missing-name.md"
+printf '%s\n' '---' 'notion_sync: true' 'description: missing name' '---' '# missing name' >"$SKILLS_MIRROR_DIR/writing-references/missing-name.md"
+printf '\n# pending update before missing name validation\n' >>"$MIRROR_DIR/custom-instructions.md"
+printf '\n# pending profile update before missing name validation\n' >>"$MIRROR_DIR/user-profile.md"
 if run_sync >"$TMP_ROOT/missing-name.log" 2>&1; then
     /bin/cat "$TMP_ROOT/missing-name.log" >&2
     printf '[ERROR] frontmatter name欠落を検出できませんでした。\n' >&2
     exit 1
 fi
-[ "$(edit_count)" -eq $((expected_count + 1)) ] || {
+/usr/bin/grep -Fq 'frontmatterのnameがありません' "$TMP_ROOT/missing-name.log" || {
+    /bin/cat "$TMP_ROOT/missing-name.log" >&2
+    printf '[ERROR] frontmatter name欠落の固有エラーがありません。\n' >&2
+    exit 1
+}
+[ "$(edit_count)" -eq "$baseline_count" ] || {
     printf '[ERROR] name欠落時に部分更新が発生しました。\n' >&2
     exit 1
 }
 rm -f "$SKILLS_MIRROR_DIR/writing-references/missing-name.md"
+cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
+cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
-printf '[SUCCESS] isolated sync tests passed (%s mirror files, %s synced skill files, %s excluded files).\n' "$mirror_file_count" "$syncable_skill_count" "$excluded_skill_count"
+printf '[SUCCESS] isolated sync tests passed (%s mirror files, %s synced files, %s excluded skills).\n' "$mirror_file_count" "$syncable_file_count" "$false_skill_count"
