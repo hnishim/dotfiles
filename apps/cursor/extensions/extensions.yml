@@ -4,5 +4,7 @@ extensions:
   - google.geminicodeassist
   - janisdd.vscode-edit-csv
   - shd101wyy.markdown-preview-enhanced
-  - bierner.markdown-mermaid
+  - biernerm.markdown-mermaid
+  - TakumiI.markdowntable
   - mechatroner.rainbow-csv
+  - 3w36zj6.textlint
