@@ -38,6 +38,7 @@ setup_scripts=(
     "apps/espanso/espanso-setup.sh"
     "apps/cursor/cursor-setup.sh"
     "apps/ferdium/ferdium-setup.sh"
+    "apps/amphetamine/amphetamine-setup.sh"
     "textlint/textlint-setup.sh"
     "hammerspoon/hammerspoon-setup.sh"
 )
