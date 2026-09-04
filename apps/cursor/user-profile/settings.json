@@ -7,6 +7,8 @@
     "editor.unicodeHighlight.includeComments": false,
     "editor.unicodeHighlight.nonBasicASCII": false,
     "git.enableSmartCommit": true,
+    "files.encoding": "utf8",
+    "files.autoGuessEncoding": false,
     "files.trimFinalNewlines": true,
     "editor.wordWrap": "on",
     "editor.fontFamily": "'PlemolJP35'",
@@ -18,5 +20,9 @@
     "cursor.diffs.useCharacterLevelDiffs": true,
     "cursor.composer.shouldChimeAfterChatFinishes": true,
     "files.autoSave": "afterDelay",
-    "window.autoDetectColorScheme": false
+    "window.autoDetectColorScheme": false,
+    "[applescript]": {
+        "files.encoding": "utf8",
+        "files.autoGuessEncoding": false
+      } 
 }
