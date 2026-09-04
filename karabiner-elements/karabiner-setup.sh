@@ -53,10 +53,6 @@ check_command "goku" "'brew install yqrashawn/goku/goku' を実行してイン�
 # goku を実行して設定を karabiner.json に反映
 if GOKU_EDN_CONFIG_FILE="$ICLOUD_KARABINER_EDN" goku; then
     log_success "goku を実行し、karabiner.json を正常に更新しました。"
-    # JSONが事前生成済みでも、実行中のKarabinerが旧設定を保持している場合がある。
-    # setup後の読み込み状態を保証するため、差分の有無にかかわらず再起動する。
-    log_info "現在の設定を確実に読み込むため、Karabiner-Elementsを再起動します..."
-    restart_process "Karabiner-Elements" "org.pqrs.service.agent.Karabiner-Console-User-Server" || exit 1
 else
     log_error "goku の実行に失敗しました。karabiner.edn の内容を確認してください。"
     exit 1
