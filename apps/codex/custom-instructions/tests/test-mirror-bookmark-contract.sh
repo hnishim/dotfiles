@@ -17,9 +17,22 @@ setup_source = Path(sys.argv[2]).read_text(encoding="utf-8")
 sync_source = Path(sys.argv[3]).read_text(encoding="utf-8")
 
 swift_contracts = (
+    'static let sourceKey = "sourceFolderBookmark"',
+    'static let skillsKey = "skillsFolderBookmark"',
+    'static let outputKey = "outputFolderBookmark"',
     'static let mirrorKey = "mirrorFolderBookmark"',
     'guard (2...5).contains(arguments.count)',
-    'print("mirror=\\(access.mirrorURL.path)")',
+    'defaults.set(sourceBookmark, forKey: StoredAccess.sourceKey)',
+    'defaults.set(skillsBookmark, forKey: StoredAccess.skillsKey)',
+    'defaults.set(outputBookmark, forKey: StoredAccess.outputKey)',
+    'defaults.set(mirrorBookmark, forKey: StoredAccess.mirrorKey)',
+    'let sourceURL = try resolveBookmark(sourceData, key: StoredAccess.sourceKey)',
+    'let skillsURL = try resolveBookmark(skillsData, key: StoredAccess.skillsKey)',
+    'let outputURL = try resolveBookmark(outputData, key: StoredAccess.outputKey)',
+    'let mirrorURL = try resolveBookmark(mirrorData, key: StoredAccess.mirrorKey)',
+    'access.sourceURL.startAccessingSecurityScopedResource()',
+    'access.skillsURL.startAccessingSecurityScopedResource()',
+    'access.outputURL.startAccessingSecurityScopedResource()',
     'access.mirrorURL.startAccessingSecurityScopedResource()',
     'try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))',
     'static func mirrorItemKind(at url: URL) -> MirrorItemKind',
@@ -29,6 +42,16 @@ swift_contracts = (
 for contract in swift_contracts:
     if contract not in swift_source:
         raise AssertionError(f"missing Swift mirror bookmark contract: {contract}")
+
+status_prints = (
+    'print("source=\\(access.sourceURL.path)")',
+    'print("skills=\\(access.skillsURL.path)")',
+    'print("output=\\(access.outputURL.path)")',
+    'print("mirror=\\(access.mirrorURL.path)")',
+)
+status_positions = [swift_source.index(contract) for contract in status_prints]
+if status_positions != sorted(status_positions):
+    raise AssertionError("--status must print source, skills, output, and mirror in order")
 
 setup_contracts = (
     'MIRROR_ROOT="$APPLICATION_SUPPORT_DIR/mirrors"',

@@ -20,6 +20,7 @@ cleanup_test_tmp() { rm -rf -- "$TMP_ROOT"; }
 trap cleanup_test_tmp EXIT
 
 SOURCE_DIR="$TMP_ROOT/source"
+SKILLS_DIR="$TMP_ROOT/skills"
 CODEX_HOME="$TMP_ROOT/codex"
 MIRROR_ROOT="$TMP_ROOT/support/mirrors"
 CONFIG_DIR="$TMP_ROOT/config"
@@ -29,7 +30,7 @@ CONFIG="$CONFIG_DIR/notion-pages.conf"
 HELPER="$TMP_ROOT/helper"
 NTN="$TMP_ROOT/ntn"
 
-mkdir -p "$SOURCE_DIR" "$CODEX_HOME" "$MIRROR_ROOT" "$CONFIG_DIR" "$PAGES_DIR"
+mkdir -p "$SOURCE_DIR" "$SKILLS_DIR" "$CODEX_HOME" "$MIRROR_ROOT" "$CONFIG_DIR" "$PAGES_DIR"
 printf '%s\n' '# custom marker' >"$SOURCE_DIR/custom-instructions.md"
 printf '%s\n' '# shared marker' '## スキルの作成・更新と検証' >"$SOURCE_DIR/openai-instructions.md"
 printf '%s\n' '# profile marker' >"$SOURCE_DIR/user-profile.md"
@@ -82,7 +83,7 @@ EOF
 chmod 755 "$NTN"
 
 run_sync() {
-    TEST_SOURCE_DIR="$SOURCE_DIR" TEST_CODEX_HOME="$CODEX_HOME" \
+    TEST_SOURCE_DIR="$SOURCE_DIR" TEST_SKILLS_DIR="$SKILLS_DIR" TEST_CODEX_HOME="$CODEX_HOME" \
         TEST_MIRROR_ROOT="$MIRROR_ROOT" \
         PAGES_DIR="$PAGES_DIR" EDIT_LOG="$EDIT_LOG" \
         TEST_FORCE_UNSTABLE="${TEST_FORCE_UNSTABLE:-0}" TEST_STABILITY_WAIT="${TEST_STABILITY_WAIT:-0}" \

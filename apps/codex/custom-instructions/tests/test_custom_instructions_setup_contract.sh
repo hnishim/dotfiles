@@ -68,21 +68,31 @@ printf '%s\n' '#!/bin/bash' 'output=' \
     'printf "%s\\n" "--status)"' \
     "printf '%s\\n' 'if [ -n \"\${FAKE_SETUP_EVENTS:-}\" ]; then printf \"%s\\n\" --status >>\"\$FAKE_SETUP_EVENTS\"; fi'" \
     "printf '%s\\n' 'if [ -z \"\${FAKE_SETUP_STATE_FILE:-}\" ] || [ ! -s \"\$FAKE_SETUP_STATE_FILE\" ]; then exit 1; fi'" \
-    "printf '%s\\n' 'if /usr/bin/grep -Fxq mismatch \"\$FAKE_SETUP_STATE_FILE\"; then'" \
-    "printf '%s\\n' \"printf '%s\\n' source=/wrong-source\"" \
-    "printf '%s\\n' \"printf '%s\\n' skills=/wrong-skills\"" \
-    "printf '%s\\n' \"printf '%s\\n' output=/wrong-output\"" \
-    "printf '%s\\n' \"printf '%s\\n' mirror=/wrong-mirror\"" \
-    "printf '%s\\n' 'else'" \
+    "printf '%s\\n' 'case \"\$(cat \"\$FAKE_SETUP_STATE_FILE\")\" in'" \
+    "printf '%s\\n' 'authorized)'" \
     "printf '%s\\n' \"printf '%s\\n' source=$fixture_harness/custom-instructions\"" \
     "printf '%s\\n' \"printf '%s\\n' skills=$fixture_harness/skills\"" \
     "printf '%s\\n' \"printf '%s\\n' output=$codex_home\"" \
     "printf '%s\\n' \"printf '%s\\n' mirror=$fake_support/mirrors\"" \
-    "printf '%s\\n' 'fi'" \
+    "printf '%s\\n' ';;'" \
+    "printf '%s\\n' 'output-only)'" \
+    "printf '%s\\n' \"printf '%s\\n' source=$fixture_harness/custom-instructions\"" \
+    "printf '%s\\n' \"printf '%s\\n' skills=$fixture_harness/skills\"" \
+    "printf '%s\\n' \"printf '%s\\n' output=/wrong-output\"" \
+    "printf '%s\\n' \"printf '%s\\n' mirror=$fake_support/mirrors\"" \
+    "printf '%s\\n' ';;'" \
+    "printf '%s\\n' 'mirror-only)'" \
+    "printf '%s\\n' \"printf '%s\\n' source=$fixture_harness/custom-instructions\"" \
+    "printf '%s\\n' \"printf '%s\\n' skills=$fixture_harness/skills\"" \
+    "printf '%s\\n' \"printf '%s\\n' output=$codex_home\"" \
+    "printf '%s\\n' \"printf '%s\\n' mirror=/wrong-mirror\"" \
+    "printf '%s\\n' ';;'" \
+    "printf '%s\\n' '*) exit 1 ;;'" \
+    "printf '%s\\n' 'esac'" \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '--authorize)'" \
     "printf '%s\\n' 'printf \"authorized\\n\" >\"\$FAKE_SETUP_STATE_FILE\"'" \
-    "printf '%s\\n' 'printf \"authorize\\n\" >>\"\$FAKE_SETUP_AUTH\"'" \
+    "printf '%s\\n' 'printf \"authorize:%s\\n\" \"\$#\" >>\"\$FAKE_SETUP_AUTH\"'" \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '--sync)'" \
     "printf '%s\\n' 'printf \"sync\\n\" >>\"\$FAKE_SETUP_EVENTS\"'" \
@@ -124,7 +134,7 @@ run_setup() {
 : >"$TMP_ROOT/auth"
 : >"$TMP_ROOT/state"
 run_setup
-[ "$(cat "$TMP_ROOT/auth")" = authorize ]
+[ "$(cat "$TMP_ROOT/auth")" = authorize:5 ]
 [ "$(cat "$TMP_ROOT/state")" = authorized ]
 [ "$(cat "$TMP_ROOT/events")" = $'--status\n--status\nsync' ]
 
@@ -135,14 +145,38 @@ run_setup
 [ ! -s "$TMP_ROOT/auth" ]
 [ "$(cat "$TMP_ROOT/events")" = $'--status\n--status\nsync' ]
 
-: >"$TMP_ROOT/events"
-: >"$TMP_ROOT/auth"
-printf '%s\n' mismatch >"$TMP_ROOT/state"
-set +e
-run_setup
-mismatch_status=$?
-set -e
-[ "$mismatch_status" -ne 0 ]
-[ ! -s "$TMP_ROOT/auth" ]
-[ "$(cat "$TMP_ROOT/events")" = $'--status\n--status' ]
+assert_path_mismatch_stops_before_sync() {
+    local state=$1
+    local plist="$fake_launch_agents/com.hnishim.custom-instructions-sync.plist"
+    local plist_before="$TMP_ROOT/$state.plist.before"
+    : >"$TMP_ROOT/events"
+    : >"$TMP_ROOT/auth"
+    printf '%s\n' "$state" >"$TMP_ROOT/state"
+    printf '%s\n' "existing-$state-plist" >"$plist"
+    cp "$plist" "$plist_before"
+
+    set +e
+    run_setup
+    local setup_status=$?
+    set -e
+    [ "$setup_status" -ne 0 ]
+    [ ! -s "$TMP_ROOT/auth" ]
+    [ "$(cat "$TMP_ROOT/events")" = $'--status\n--status' ]
+    cmp -s "$plist_before" "$plist"
+
+    rm -f -- "$plist"
+    : >"$TMP_ROOT/events"
+    : >"$TMP_ROOT/auth"
+    set +e
+    run_setup
+    setup_status=$?
+    set -e
+    [ "$setup_status" -ne 0 ]
+    [ ! -s "$TMP_ROOT/auth" ]
+    [ "$(cat "$TMP_ROOT/events")" = $'--status\n--status' ]
+    [ ! -e "$plist" ]
+}
+
+assert_path_mismatch_stops_before_sync output-only
+assert_path_mismatch_stops_before_sync mirror-only
 printf '%s\n' '[PASS] custom-instructions setup authorization transaction contract'

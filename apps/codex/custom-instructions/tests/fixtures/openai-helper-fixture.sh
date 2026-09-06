@@ -2,13 +2,25 @@
 
 set -euo pipefail
 
-if [ "${1:-}" != "--sync" ]; then
-    exit 64
-fi
-
 : "${TEST_SOURCE_DIR:?}"
+: "${TEST_SKILLS_DIR:?}"
 : "${TEST_CODEX_HOME:?}"
 : "${TEST_MIRROR_ROOT:?}"
+
+case "${1:-}" in
+    --status)
+        printf 'source=%s\n' "$TEST_SOURCE_DIR"
+        printf 'skills=%s\n' "$TEST_SKILLS_DIR"
+        printf 'output=%s\n' "$TEST_CODEX_HOME"
+        printf 'mirror=%s\n' "$TEST_MIRROR_ROOT"
+        exit 0
+        ;;
+    --sync)
+        ;;
+    *)
+        exit 64
+        ;;
+esac
 
 read_utf8_source() {
     local path=$1

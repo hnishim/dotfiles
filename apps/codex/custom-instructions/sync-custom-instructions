@@ -27,6 +27,43 @@ if [ ! -x "$HELPER_EXECUTABLE" ]; then
     exit 1
 fi
 
+status_output=''
+if ! status_output=$("$HELPER_EXECUTABLE" --status); then
+    printf '[ERROR] 保存済みのフォルダーアクセス権を確認できません。同期を停止します。\n' >&2
+    exit 1
+fi
+
+status_line_count=$(printf '%s\n' "$status_output" | wc -l | tr -d ' ')
+if [ "$status_line_count" -ne 4 ] ||
+   [ "$(printf '%s\n' "$status_output" | grep -c '^source=')" -ne 1 ] ||
+   [ "$(printf '%s\n' "$status_output" | grep -c '^skills=')" -ne 1 ] ||
+   [ "$(printf '%s\n' "$status_output" | grep -c '^output=')" -ne 1 ] ||
+   [ "$(printf '%s\n' "$status_output" | grep -c '^mirror=')" -ne 1 ]; then
+    printf '[ERROR] 保存済みのフォルダーアクセス権のstatus形式が不正です。同期を停止します。\n' >&2
+    exit 1
+fi
+
+authorized_source=$(printf '%s\n' "$status_output" | sed -n 's/^source=//p')
+authorized_skills=$(printf '%s\n' "$status_output" | sed -n 's/^skills=//p')
+authorized_output=$(printf '%s\n' "$status_output" | sed -n 's/^output=//p')
+authorized_mirror=$(printf '%s\n' "$status_output" | sed -n 's/^mirror=//p')
+
+if [ -z "$authorized_source" ] || [ ! -d "$authorized_source" ] ||
+   [ -z "$authorized_skills" ] || [ ! -d "$authorized_skills" ]; then
+    printf '[ERROR] 保存済みの正本フォルダーを確認できません。同期を停止します。\n' >&2
+    exit 1
+fi
+
+if [ "$authorized_output" != "$CODEX_HOME_DIR" ]; then
+    printf '[ERROR] 認可済み出力先がCodexホームと一致しません。同期を停止します: %s\n' "$authorized_output" >&2
+    exit 1
+fi
+
+if [ "$authorized_mirror" != "$MIRROR_ROOT" ]; then
+    printf '[ERROR] 認可済みNotion同期ミラーrootが想定と一致しません。同期を停止します: %s\n' "$authorized_mirror" >&2
+    exit 1
+fi
+
 if ! "$HELPER_EXECUTABLE" --sync; then
     printf '[ERROR] 正本のローカルミラー作成に失敗しました。\n' >&2
     exit 1

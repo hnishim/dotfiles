@@ -2,8 +2,45 @@
 
 set -euo pipefail
 
-if [ "${FAKE_HELPER_MODE:-0}" = "1" ] && [ "${1:-}" = "--sync" ]; then
-    exit 0
+if [ "${FAKE_HELPER_MODE:-0}" = "1" ]; then
+    case "${1:-}" in
+        --status)
+            if [ -n "${FAKE_EVENTS:-}" ]; then
+                printf '%s\n' helper:status >>"$FAKE_EVENTS"
+            fi
+            if [ "${FAKE_STATUS_VARIANT:-authorized}" = "output-only" ]; then
+                status_output=$(printf '%s\n' "source=$FAKE_STATUS_SOURCE" "skills=$FAKE_STATUS_SKILLS" \
+                    'output=/wrong-output' "mirror=$FAKE_STATUS_MIRROR")
+            elif [ "${FAKE_STATUS_VARIANT:-authorized}" = "mirror-only" ]; then
+                status_output=$(printf '%s\n' "source=$FAKE_STATUS_SOURCE" "skills=$FAKE_STATUS_SKILLS" \
+                    "output=$FAKE_STATUS_OUTPUT" 'mirror=/wrong-mirror')
+            elif [ "${FAKE_STATUS_VARIANT:-authorized}" = "source-missing" ]; then
+                status_output=$(printf '%s\n' 'source=/missing-source' "skills=$FAKE_STATUS_SKILLS" \
+                    "output=$FAKE_STATUS_OUTPUT" "mirror=$FAKE_STATUS_MIRROR")
+            elif [ "${FAKE_STATUS_VARIANT:-authorized}" = "skills-missing" ]; then
+                status_output=$(printf '%s\n' "source=$FAKE_STATUS_SOURCE" 'skills=/missing-skills' \
+                    "output=$FAKE_STATUS_OUTPUT" "mirror=$FAKE_STATUS_MIRROR")
+            else
+                status_output=$(printf '%s\n' "source=$FAKE_STATUS_SOURCE" "skills=$FAKE_STATUS_SKILLS" \
+                    "output=$FAKE_STATUS_OUTPUT" "mirror=$FAKE_STATUS_MIRROR")
+            fi
+            if [ -n "${FAKE_STATUS_OUTPUT_LOG:-}" ]; then
+                printf '%s\n' "$status_output" >"$FAKE_STATUS_OUTPUT_LOG"
+            fi
+            printf '%s\n' "$status_output"
+            exit 0
+            ;;
+        --sync)
+            if [ -n "${FAKE_EVENTS:-}" ]; then
+                printf '%s\n' helper:sync >>"$FAKE_EVENTS"
+            fi
+            if [ "${FAKE_STATUS_REQUIRED:-0}" = "1" ] &&
+               [ "$(sed -n '1p' "$FAKE_EVENTS")" != 'helper:status' ]; then
+                exit 1
+            fi
+            exit 0
+            ;;
+    esac
 fi
 
 # The same file acts as a no-op helper and a deterministic fake ntn binary when
@@ -11,6 +48,10 @@ fi
 fake_notion() {
     local command=$1
     shift
+
+    if [ -n "${FAKE_EVENTS:-}" ]; then
+        printf 'notion:%s\n' "$command" >>"$FAKE_EVENTS"
+    fi
 
     case "$command" in
         whoami)
@@ -236,6 +277,10 @@ RUBY
 
 run_sync() {
     FAKE_HELPER_MODE=1 \
+    FAKE_STATUS_SOURCE="$HARNESS_ROOT/custom-instructions" \
+    FAKE_STATUS_SKILLS="$HARNESS_ROOT/skills" \
+    FAKE_STATUS_OUTPUT="$CODEX_HOME" \
+    FAKE_STATUS_MIRROR="$MIRROR_ROOT" \
     CUSTOM_INSTRUCTIONS_STABILITY_WAIT=0 \
     NOTION_READBACK_WAIT_SECONDS=0 \
     FAKE_STATE_DIR="$FAKE_STATE_DIR" \
@@ -245,6 +290,95 @@ run_sync() {
     NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
     "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
 }
+
+run_sync_with_preflight_fixture() {
+    FAKE_HELPER_MODE=1 \
+    FAKE_EVENTS="$TMP_ROOT/preflight-events" \
+    FAKE_STATUS_OUTPUT_LOG="$TMP_ROOT/status-output" \
+    FAKE_STATUS_REQUIRED=1 \
+    FAKE_STATUS_VARIANT="$1" \
+    FAKE_STATUS_SOURCE="$HARNESS_ROOT/custom-instructions" \
+    FAKE_STATUS_SKILLS="$HARNESS_ROOT/skills" \
+    FAKE_STATUS_OUTPUT="$CODEX_HOME" \
+    FAKE_STATUS_MIRROR="$MIRROR_ROOT" \
+    CUSTOM_INSTRUCTIONS_STABILITY_WAIT=0 \
+    NOTION_READBACK_WAIT_SECONDS=0 \
+    FAKE_STATE_DIR="$FAKE_STATE_DIR" \
+    FAKE_META_DIR="$FAKE_META_DIR" \
+    FAKE_EDIT_LOG="$FAKE_EDIT_LOG" \
+    FAKE_QUERY_JSON="$FAKE_QUERY_JSON" \
+    NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
+    "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
+}
+
+assert_status_mismatch_stops_before_sync() {
+    local variant=$1
+    : >"$TMP_ROOT/preflight-events"
+    set +e
+    run_sync_with_preflight_fixture "$variant" >"$TMP_ROOT/$variant-preflight.log" 2>&1
+    local sync_status=$?
+    set -e
+    [ "$sync_status" -ne 0 ]
+    [ "$(cat "$TMP_ROOT/preflight-events")" = 'helper:status' ]
+    [ "$(wc -l <"$TMP_ROOT/status-output" | tr -d ' ')" -eq 4 ]
+    case "$variant" in
+        output-only)
+            expected_output=/wrong-output
+            expected_mirror=$MIRROR_ROOT
+            ;;
+        mirror-only)
+            expected_output=$CODEX_HOME
+            expected_mirror=/wrong-mirror
+            ;;
+        source-missing)
+            expected_source=/missing-source
+            expected_output=$CODEX_HOME
+            expected_mirror=$MIRROR_ROOT
+            ;;
+        skills-missing)
+            expected_source="$HARNESS_ROOT/custom-instructions"
+            expected_skills=/missing-skills
+            expected_output=$CODEX_HOME
+            expected_mirror=$MIRROR_ROOT
+            ;;
+    esac
+    expected_source=${expected_source:-$HARNESS_ROOT/custom-instructions}
+    expected_skills=${expected_skills:-$HARNESS_ROOT/skills}
+    expected_status=$(printf '%s\n' "source=$expected_source" "skills=$expected_skills" "output=$expected_output" "mirror=$expected_mirror")
+    [ "$(cat "$TMP_ROOT/status-output")" = "$expected_status" ]
+    case "$variant" in
+        source-missing) [ ! -d "$expected_source" ] ;;
+        skills-missing) [ ! -d "$expected_skills" ] ;;
+    esac
+    [ "$(/usr/bin/grep -c '^helper:sync$' "$TMP_ROOT/preflight-events" || true)" -eq 0 ]
+    [ "$(/usr/bin/grep -c '^notion:' "$TMP_ROOT/preflight-events" || true)" -eq 0 ]
+}
+
+assert_status_mismatch_stops_before_sync output-only
+assert_status_mismatch_stops_before_sync mirror-only
+assert_status_mismatch_stops_before_sync source-missing
+assert_status_mismatch_stops_before_sync skills-missing
+
+: >"$TMP_ROOT/preflight-events"
+run_sync_with_preflight_fixture authorized >"$TMP_ROOT/authorized-preflight.log" 2>&1
+expected_status=$(printf '%s\n' "source=$HARNESS_ROOT/custom-instructions" "skills=$HARNESS_ROOT/skills" "output=$CODEX_HOME" "mirror=$MIRROR_ROOT")
+[ "$(cat "$TMP_ROOT/status-output")" = "$expected_status" ]
+status_line=$(/usr/bin/grep -n '^helper:status$' "$TMP_ROOT/preflight-events" | cut -d: -f1)
+sync_line=$(/usr/bin/grep -n '^helper:sync$' "$TMP_ROOT/preflight-events" | cut -d: -f1)
+[ -n "$status_line" ]
+[ -n "$sync_line" ]
+[ "$status_line" -lt "$sync_line" ]
+notion_seen=false
+while IFS= read -r event; do
+    case "$event" in
+        notion:*)
+            notion_seen=true
+            notion_line=$(/usr/bin/grep -n -F "$event" "$TMP_ROOT/preflight-events" | head -n 1 | cut -d: -f1)
+            [ "$status_line" -lt "$notion_line" ]
+            ;;
+    esac
+done <"$TMP_ROOT/preflight-events"
+[ "$notion_seen" = true ]
 
 edit_count() {
     if [ -f "$FAKE_EDIT_LOG" ]; then
