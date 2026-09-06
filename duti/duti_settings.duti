@@ -35,10 +35,8 @@ com.todesktop.230313mzl4w4u92 .applescript all
 com.todesktop.230313mzl4w4u92 .plist all
 com.todesktop.230313mzl4w4u92 com.apple.property-list all
 com.todesktop.230313mzl4w4u92 .mk all
-
-# Plain Text (Cogito)
-com.cogito.app .txt all
-com.cogito.app .md all
+com.todesktop.230313mzl4w4u92 .txt all
+com.todesktop.230313mzl4w4u92 .md all
 
 # Rich Text (TextEdit)
 com.apple.TextEdit .rtf all
