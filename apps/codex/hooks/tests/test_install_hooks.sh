@@ -11,7 +11,7 @@ TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/install-hooks-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
 SOURCE_HARNESS_ROOT="$HARNESS_ROOT"
-HARNESS_ROOT="$TMP_ROOT/harness"
+HARNESS_ROOT="$TMP_ROOT/harness source"
 mkdir -p "$HARNESS_ROOT/hooks"
 HARNESS_ROOT=$(cd -P -- "$HARNESS_ROOT" && pwd)
 cp -R "$SOURCE_HARNESS_ROOT/hooks/runtime" "$HARNESS_ROOT/hooks/"
@@ -133,6 +133,7 @@ run_install "$home" >"$TMP_ROOT/first.log"
 /usr/bin/python3 -m json.tool "$HARNESS_ROOT/hooks/.runtime/hooks.json" >/dev/null
 /usr/bin/python3 - "$HARNESS_ROOT/hooks/.runtime/hooks.json" "$HARNESS_ROOT/hooks/runtime" <<'PY'
 import json
+import shlex
 import sys
 from pathlib import Path
 
@@ -144,7 +145,7 @@ expected = {
             "matcher": "^Bash$",
             "hooks": [{
                 "type": "command",
-                "command": f"/usr/bin/python3 {runtime}/gh_normal_context_guard.py",
+                "command": f"/usr/bin/python3 {shlex.quote(runtime + '/gh_normal_context_guard.py')}",
                 "timeout": 5,
                 "statusMessage": "Checking GitHub CLI execution context",
             }],
@@ -153,23 +154,43 @@ expected = {
             "matcher": ".*",
             "hooks": [{
                 "type": "command",
-                "command": f"/usr/bin/python3 {runtime}/textlint-pretool-hook.py",
+                "command": f"/usr/bin/python3 {shlex.quote(runtime + '/textlint-pretool-hook.py')}",
                 "timeout": 120,
                 "statusMessage": "Notionへ渡す文章をtextlintで整えています",
             }],
         },
     ],
+    "UserPromptSubmit": [{
+        "matcher": ".*",
+        "hooks": [{
+            "type": "command",
+            "command": f"/usr/bin/python3 {shlex.quote(runtime + '/active-policy-user-prompt-hook.py')}",
+            "timeout": 5,
+            "statusMessage": "Active Policyを読み込んでいます",
+        }],
+    }],
     "PostToolUse": [{
         "matcher": ".*",
         "hooks": [{
             "type": "command",
-            "command": f"/usr/bin/python3 {runtime}/textlint-posttool-hook.py",
+            "command": f"/usr/bin/python3 {shlex.quote(runtime + '/textlint-posttool-hook.py')}",
             "timeout": 120,
             "statusMessage": "ローカル文章ファイルをtextlintで整えています",
         }],
     }],
 }
 assert config["hooks"] == expected
+
+for entries in config["hooks"].values():
+    for entry in entries:
+        for hook in entry["hooks"]:
+            command = hook["command"]
+            parts = shlex.split(command)
+            assert len(parts) == 2
+            assert parts[0] == "/usr/bin/python3"
+            assert parts[1].startswith(runtime + "/")
+            assert " " in parts[1]
+            assert command != f"/usr/bin/python3 {parts[1]}"
 PY
 
 first_hooks_inode=$(stat -f '%i' "$home/hooks")
