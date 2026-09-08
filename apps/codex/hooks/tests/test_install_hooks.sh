@@ -121,15 +121,6 @@ expected = {
             }],
         },
     ],
-    "UserPromptSubmit": [{
-        "matcher": ".*",
-        "hooks": [{
-            "type": "command",
-            "command": f"/usr/bin/python3 {shlex.quote(runtime + '/active-policy-user-prompt-hook.py')}",
-            "timeout": 5,
-            "statusMessage": "Active Policyを読み込んでいます",
-        }],
-    }],
     "PostToolUse": [{
         "matcher": ".*",
         "hooks": [{
