@@ -137,6 +137,9 @@ matches:
   - trigger: quikc
     replace: quick
 
+  - trigger: titel
+    replace: title
+
   # 記号
 
   - trigger: '\command'
