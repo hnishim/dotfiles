@@ -4,28 +4,21 @@ matches:
 
   - trigger: modarity
     replace: modality
-    word: true
 
   - trigger: Temas
     replace: Teams
-    word: true
 
   - trigger: experiemental
     replace: experimental
-    word: true
 
   - trigger: quikc
     replace: quick
-    word: true
 
   - trigger: titel
     replace: title
-    word: true
 
   - trigger: supplimental
     replace: supplemental
-    word: true
-
 
   ## General typos
 
@@ -51,210 +44,168 @@ matches:
 
   - triggers: [wiht, wihth]
     replace: with
-    word: true
     propagate_case: true
 
   - trigger: jsut
     replace: just
-    word: true
     propagate_case: true
 
   - triggers: [becuase, beacuse]
     replace: because
-    word: true
     propagate_case: true
 
   - trigger: occured
     replace: occurred
-    word: true
     propagate_case: true
 
   - trigger: occurence
     replace: occurrence
-    word: true
     propagate_case: true
 
   - trigger: seperate
     replace: separate
-    word: true
     propagate_case: true
 
   - trigger: seperated
     replace: separated
-    word: true
     propagate_case: true
 
   - trigger: recieve
     replace: receive
-    word: true
     propagate_case: true
 
   - trigger: recieved
     replace: received
-    word: true
     propagate_case: true
 
   - trigger: neccessary
     replace: necessary
-    word: true
     propagate_case: true
 
   - trigger: necesary
     replace: necessary
-    word: true
     propagate_case: true
 
   - trigger: enviroment
     replace: environment
-    word: true
     propagate_case: true
 
   - triggers: [paramter, paramater]
     replace: parameter
-    word: true
     propagate_case: true
 
   - trigger: arguement
     replace: argument
-    word: true
     propagate_case: true
 
   - triggers: [dependecy, dependancy]
     replace: dependency
-    word: true
     propagate_case: true
 
   - triggers: [implemenation, implementaion, implemention]
     replace: implementation
-    word: true
     propagate_case: true
 
   - trigger: specifc
     replace: specific
-    word: true
     propagate_case: true
 
   - trigger: specifiy
     replace: specify
-    word: true
     propagate_case: true
 
   - triggers: [requried, requred]
     replace: required
-    word: true
     propagate_case: true
 
   - triggers: [defualt, deault]
     replace: default
-    word: true
     propagate_case: true
 
   - trigger: sucess
     replace: success
-    word: true
     propagate_case: true
 
   - triggers: [succesful, sucessful]
     replace: successful
-    word: true
     propagate_case: true
 
   - triggers: [availble, avaliable]
     replace: available
-    word: true
     propagate_case: true
 
   - triggers: [configration, configuraiton]
     replace: configuration
-    word: true
     propagate_case: true
 
   - triggers: [reponse, resposne]
     replace: response
-    word: true
     propagate_case: true
 
   - trigger: udpate
     replace: update
-    word: true
     propagate_case: true
 
   - trigger: udpated
     replace: updated
-    word: true
     propagate_case: true
 
   - trigger: udpates
     replace: updates
-    word: true
     propagate_case: true
 
   - triggers: [fucntion, funciton]
     replace: function
-    word: true
     propagate_case: true
 
   - trigger: retrun
     replace: return
-    word: true
     propagate_case: true
 
   - trigger: retruns
     replace: returns
-    word: true
     propagate_case: true
 
   - trigger: lenght
     replace: length
-    word: true
     propagate_case: true
 
   - triggers: [strcuture, sturcture]
     replace: structure
-    word: true
     propagate_case: true
 
   - triggers: [proejct, projcet]
     replace: project
-    word: true
     propagate_case: true
 
   - triggers: [docuemnt, doucment]
     replace: document
-    word: true
     propagate_case: true
 
   - trigger: langauge
     replace: language
-    word: true
     propagate_case: true
 
   - triggers: [mesage, messsage]
     replace: message
-    word: true
     propagate_case: true
 
   - triggers: [deisgn, desgin]
     replace: design
-    word: true
     propagate_case: true
 
   - triggers: [improtant, imporant]
     replace: important
-    word: true
     propagate_case: true
 
   - triggers: [relavant, relevent]
     replace: relevant
-    word: true
     propagate_case: true
 
   - triggers: [exmaple, examlpe]
     replace: example
-    word: true
     propagate_case: true
 
   - triggers: [verison, vresion]
     replace: version
-    word: true
     propagate_case: true

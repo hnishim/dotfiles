@@ -86,8 +86,9 @@ matches:
 
   # テキスト補完
 
-  - triggers: [Mesot, mesot]
-    replace: Mesothelin
+  - trigger: mesot
+    replace: mesothelin
+    propagate_case: true
 
   - triggers: [Boeh, boeh]
     replace: Boehringer Ingelheim
@@ -107,21 +108,23 @@ matches:
 
   - trigger: de novo
     markdown: "*de novo*"
-
-  - trigger: De novo
-    markdown: "*De novo*"
+    propagate_case: true
 
   - trigger: in vivo
     markdown: "*in vivo*"
+    propagate_case: true
 
   - trigger: in vitro
     markdown: "*in vitro*"
+    propagate_case: true
 
   - trigger: in silico
     markdown: "*in silico*"
+    propagate_case: true
 
   - trigger: etal
     markdown: "*et al.*"
+    propagate_case: true
 
   # 記号
 
