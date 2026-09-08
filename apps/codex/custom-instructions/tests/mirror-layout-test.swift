@@ -92,7 +92,74 @@ struct MirrorLayoutTest {
         try Data("unexpected\n".utf8).write(to: skillsUnexpected)
         try expectRejected(skillsUnexpectedRoot, expectedSkills: expectedSkills, label: "Skills unexpected file")
 
+        try testPrivateFileWrites(at: fixtureRoot)
+
         print("[PASS] Swift mirror layout safety tests")
+    }
+
+    static func testPrivateFileWrites(at fixtureRoot: URL) throws {
+        let fileManager = FileManager.default
+        let expected = Data("same content\n".utf8)
+
+        let target = fixtureRoot.appendingPathComponent("existing-target", isDirectory: false)
+        try expected.write(to: target)
+        try fileManager.setAttributes([.posixPermissions: 0o640], ofItemAtPath: target.path)
+        let targetModeBefore = try privateMode(of: target)
+        let output = fixtureRoot.appendingPathComponent("AGENTS.md", isDirectory: false)
+        try fileManager.createSymbolicLink(at: output, withDestinationURL: target)
+        guard CustomInstructionsSync.mirrorItemKind(at: output) == .symbolicLink else {
+            throw MirrorLayoutTestError.failed("AGENTS.md fixture is not a symlink")
+        }
+        let updated = try CustomInstructionsSync.writePrivatelyIfChanged(
+            expected,
+            to: output,
+            replaceSymlink: true
+        )
+        guard updated else {
+            throw MirrorLayoutTestError.failed("same-content AGENTS.md symlink was not replaced")
+        }
+        guard CustomInstructionsSync.mirrorItemKind(at: output) == .regularFile else {
+            throw MirrorLayoutTestError.failed("AGENTS.md output remained a symlink")
+        }
+        guard try Data(contentsOf: output) == expected else {
+            throw MirrorLayoutTestError.failed("AGENTS.md output bytes differ")
+        }
+        guard try privateMode(of: output) == 0o600 else {
+            throw MirrorLayoutTestError.failed("AGENTS.md output mode is not 0600")
+        }
+        guard try Data(contentsOf: target) == expected,
+              try privateMode(of: target) == targetModeBefore else {
+            throw MirrorLayoutTestError.failed("AGENTS.md symlink target changed")
+        }
+
+        let regular = fixtureRoot.appendingPathComponent("regular-output", isDirectory: false)
+        try expected.write(to: regular)
+        let regularInode = try fileManager.attributesOfItem(atPath: regular.path)[.systemFileNumber] as? NSNumber
+        guard !(try CustomInstructionsSync.writePrivatelyIfChanged(expected, to: regular)) else {
+            throw MirrorLayoutTestError.failed("same-content regular output was rewritten")
+        }
+        let regularInodeAfter = try fileManager.attributesOfItem(atPath: regular.path)[.systemFileNumber] as? NSNumber
+        guard regularInode == regularInodeAfter else {
+            throw MirrorLayoutTestError.failed("same-content regular output inode changed")
+        }
+
+        let mirror = fixtureRoot.appendingPathComponent("valid/custom-instructions-sync/custom-instructions.md")
+        let mirrorInode = try fileManager.attributesOfItem(atPath: mirror.path)[.systemFileNumber] as? NSNumber
+        let mirrorData = try Data(contentsOf: mirror)
+        guard !(try CustomInstructionsSync.writePrivatelyIfChanged(mirrorData, to: mirror)) else {
+            throw MirrorLayoutTestError.failed("same-content mirror was rewritten")
+        }
+        let mirrorInodeAfter = try fileManager.attributesOfItem(atPath: mirror.path)[.systemFileNumber] as? NSNumber
+        guard mirrorInode == mirrorInodeAfter else {
+            throw MirrorLayoutTestError.failed("same-content mirror inode changed")
+        }
+    }
+
+    static func privateMode(of url: URL) throws -> UInt16 {
+        guard let value = try FileManager.default.attributesOfItem(atPath: url.path)[.posixPermissions] as? NSNumber else {
+            throw MirrorLayoutTestError.failed("mode unavailable: \(url.path)")
+        }
+        return value.uint16Value
     }
 
     static func createValidMirror(at root: URL) throws {

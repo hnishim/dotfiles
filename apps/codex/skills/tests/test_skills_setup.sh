@@ -48,7 +48,6 @@ PY
 run_setup() {
     ICLOUD_SKILLS_DIR_OVERRIDE="$source_dir" \
     LOCAL_CODEX_SKILLS_DIR_OVERRIDE="$1" \
-    CODEX_SKILLS_BACKUP_DIR_OVERRIDE="${2:-$1-backups}" \
         /bin/bash "$SETUP"
 }
 
@@ -58,8 +57,10 @@ run_setup "$fresh" >/dev/null
 [ "$(readlink "$fresh")" = "$source_dir" ]
 [ -f "$fresh/example/SKILL.md" ]
 [ -e "$fresh/.system" ]
+fresh_inode=$(stat -f '%i' "$fresh")
 run_setup "$fresh" >/dev/null
 [ "$(readlink "$fresh")" = "$source_dir" ]
+[ "$(stat -f '%i' "$fresh")" = "$fresh_inode" ]
 [ "$source_system_before" = "$(snapshot_tree "$source_dir/.system")" ]
 
 physical="$TMP_ROOT/physical/skills"
@@ -67,11 +68,13 @@ mkdir -p "$physical/example" "$TMP_ROOT/archive-system"
 printf '%s\n' keep >"$physical/example/local"
 ln -s "$TMP_ROOT/archive-system" "$physical/.system"
 ln -s "$source_dir/example" "$physical/legacy-child"
-run_setup "$physical" "$TMP_ROOT/physical/backups" >/dev/null
-[ "$(readlink "$physical")" = "$source_dir" ]
-backup=$(find "$TMP_ROOT/physical/backups" -mindepth 1 -maxdepth 1 -name 'skills.symlink-install.*' -print -quit)
-[ -n "$backup" ] && [ -f "$backup/example/local" ] && [ "$(readlink "$backup/.system")" = "$TMP_ROOT/archive-system" ]
-[ "$(readlink "$backup/legacy-child")" = "$source_dir/example" ]
+physical_before=$(snapshot_tree "$physical")
+if run_setup "$physical" >"$TMP_ROOT/physical.log" 2>&1; then
+    printf '%s\n' '[FAIL] physical Skills target unexpectedly succeeded' >&2
+    exit 1
+fi
+[ "$physical_before" = "$(snapshot_tree "$physical")" ]
+[ ! -e "$TMP_ROOT/physical/backups" ]
 
 for kind in wrong dangling; do
     target="$TMP_ROOT/$kind/skills"
@@ -83,69 +86,31 @@ for kind in wrong dangling; do
         original_target="$TMP_ROOT/no-such"
     fi
     ln -s "$original_target" "$target"
-    run_setup "$target" "$TMP_ROOT/$kind/backups" >/dev/null
-    [ "$(readlink "$target")" = "$source_dir" ]
-    original_backup=$(find "$TMP_ROOT/$kind/backups" -mindepth 1 -maxdepth 1 -name 'skills.symlink-install.*' -print -quit)
-    [ -L "$original_backup" ]
-    [ "$(readlink "$original_backup")" = "$original_target" ]
+    before=$(snapshot_tree "$target")
+    if run_setup "$target" >"$TMP_ROOT/$kind.log" 2>&1; then
+        printf '[FAIL] %s Skills target unexpectedly succeeded\n' "$kind" >&2
+        exit 1
+    fi
+    [ "$before" = "$(snapshot_tree "$target")" ]
+    [ ! -e "$TMP_ROOT/$kind/backups" ]
 done
 
 unknown="$TMP_ROOT/unknown/skills"
-mkdir -p "$unknown" "$TMP_ROOT/unknown/backups"
+mkdir -p "$unknown"
 printf '%s\n' preserve >"$unknown/unknown-data"
-run_setup "$unknown" "$TMP_ROOT/unknown/backups" >/dev/null
-[ "$(readlink "$unknown")" = "$source_dir" ]
-unknown_backup=$(find "$TMP_ROOT/unknown/backups" -mindepth 1 -maxdepth 1 -name 'skills.symlink-install.*' -print -quit)
-[ "$(cat "$unknown_backup/unknown-data")" = preserve ]
-
-collision="$TMP_ROOT/collision/skills"
-mkdir -p "$collision" "$TMP_ROOT/collision/backups"
-printf '%s\n' old >"$collision/old"
-printf '%s\n' existing >"$TMP_ROOT/collision/backups/skills.symlink-install.fixed.1"
-SKILLS_SETUP_BACKUP_TIMESTAMP_OVERRIDE=fixed SKILLS_SETUP_BACKUP_PID_OVERRIDE=1 \
-    run_setup "$collision" "$TMP_ROOT/collision/backups" >/dev/null
-[ -f "$TMP_ROOT/collision/backups/skills.symlink-install.fixed.1" ]
-[ -d "$TMP_ROOT/collision/backups/skills.symlink-install.fixed.1.1" ]
-
-rollback="$TMP_ROOT/rollback/skills"
-mkdir -p "$rollback" "$TMP_ROOT/rollback/backups"
-printf '%s\n' preserve >"$rollback/data"
-printf '%s\n' existing >"$TMP_ROOT/rollback/backups/existing"
-set +e
-SKILLS_SETUP_FAIL_AFTER=1 run_setup "$rollback" "$TMP_ROOT/rollback/backups" >/dev/null 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-[ -d "$rollback" ] && [ "$(cat "$rollback/data")" = preserve ]
-[ ! -L "$rollback" ] && [ "$(cat "$TMP_ROOT/rollback/backups/existing")" = existing ]
-[ -z "$(find "$TMP_ROOT/rollback/backups" -mindepth 1 -maxdepth 1 -name 'skills.symlink-install.*' -print -quit)" ]
-[ "$(cat "$source_dir/.system/state")" = opaque ]
-
-backup_failure="$TMP_ROOT/backup-failure/skills"
-mkdir -p "$(dirname "$backup_failure")" "$TMP_ROOT/backup-failure/backups" "$TMP_ROOT/backup-failure-source"
-ln -s "$TMP_ROOT/backup-failure-source" "$backup_failure"
-backup_failure_target=$(readlink "$backup_failure")
-printf '%s\n' existing >"$TMP_ROOT/backup-failure/backups/existing"
-set +e
-SKILLS_SETUP_FAIL_BACKUP=1 run_setup "$backup_failure" "$TMP_ROOT/backup-failure/backups" >/dev/null 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-[ -L "$backup_failure" ] && [ "$(readlink "$backup_failure")" = "$backup_failure_target" ]
-[ "$(cat "$TMP_ROOT/backup-failure/backups/existing")" = existing ]
-[ -z "$(find "$TMP_ROOT/backup-failure/backups" -mindepth 1 -maxdepth 1 -name 'skills.symlink-install.*' -print -quit)" ]
+unknown_before=$(snapshot_tree "$unknown")
+if run_setup "$unknown" >"$TMP_ROOT/unknown.log" 2>&1; then
+    printf '%s\n' '[FAIL] unknown Skills target unexpectedly succeeded' >&2
+    exit 1
+fi
+[ "$unknown_before" = "$(snapshot_tree "$unknown")" ]
+[ ! -e "$TMP_ROOT/unknown/backups" ]
 
 missing="$TMP_ROOT/missing/.codex/skills"
-missing_parent=$(dirname "$missing")
-set +e
-SKILLS_SETUP_FAIL_AFTER=1 run_setup "$missing" "$TMP_ROOT/missing/.codex/backups" >/dev/null 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-[ ! -e "$missing" ] && [ ! -L "$missing" ]
-[ ! -e "$missing_parent" ]
+run_setup "$missing" >/dev/null
+[ -L "$missing" ]
+[ "$(readlink "$missing")" = "$source_dir" ]
 [ ! -e "$TMP_ROOT/missing/.codex/backups" ]
-[ -z "$(find "$TMP_ROOT/missing" -name '.skills*' -print -quit 2>/dev/null)" ]
 
 default_home="$TMP_ROOT/default-home"
 default_target="$default_home/.codex/skills"

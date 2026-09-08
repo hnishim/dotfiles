@@ -195,19 +195,6 @@ if [ "$authorized_mirror_root" != "$MIRROR_ROOT" ]; then
 fi
 
 target_agents="$CODEX_HOME_DIR/AGENTS.md"
-if [ -L "$target_agents" ]; then
-    backup_dir="$CODEX_HOME_DIR/backups"
-    backup_timestamp=$(date '+%Y%m%d-%H%M%S')
-    backup_path="$backup_dir/AGENTS.md.symlink.$backup_timestamp"
-    mkdir -p "$backup_dir"
-    if [ -e "$backup_path" ] || [ -L "$backup_path" ]; then
-        log_error "バックアップ先が既に存在します: $backup_path"
-        exit 1
-    fi
-    mv "$target_agents" "$backup_path"
-    log_success "既存のAGENTS.mdシムリンクをバックアップしました: $backup_path"
-fi
-
 log_info "Codex用AGENTS.mdの初期同期を実行します。"
 "$HELPER_EXECUTABLE" --sync
 

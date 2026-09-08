@@ -79,45 +79,6 @@ setup_status=$?
 set -e
 [ "$setup_status" -ne 0 ]
 
-snapshot_state() {
-    /usr/bin/python3 - "$@" <<'PY'
-import hashlib
-import os
-import stat
-import sys
-from pathlib import Path
-
-rows = []
-def add(label, path, relative):
-    info = path.lstat()
-    mode = stat.S_IMODE(info.st_mode)
-    if stat.S_ISLNK(info.st_mode):
-        kind = "symlink"
-        value = "link:" + os.readlink(path)
-    elif stat.S_ISREG(info.st_mode):
-        kind = "file"
-        value = "sha256:" + hashlib.sha256(path.read_bytes()).hexdigest()
-    elif stat.S_ISDIR(info.st_mode):
-        kind = "directory"
-        value = ""
-    else:
-        raise SystemExit(f"unsupported state: {path}")
-    rows.append(f"{label}/{relative}|{kind}|{mode:o}|{info.st_ino}|{value}")
-
-for spec in sys.argv[1:]:
-    label, raw = spec.split("=", 1)
-    root = Path(raw)
-    if not os.path.lexists(root):
-        rows.append(f"{label}/.|missing")
-        continue
-    add(label, root, ".")
-    if root.is_dir() and not root.is_symlink():
-        for path in sorted(root.rglob("*")):
-            add(label, path, path.relative_to(root).as_posix())
-print("\n".join(rows))
-PY
-}
-
 for name in gh_normal_context_guard.py textlint-boundary.py textlint-pretool-hook.py textlint-posttool-hook.py; do
     [ -f "$HARNESS_ROOT/hooks/runtime/$name" ]
     [ ! -L "$HARNESS_ROOT/hooks/runtime/$name" ]
@@ -200,6 +161,31 @@ run_install "$home" >"$TMP_ROOT/first-repeat.log"
 [ "$(stat -f '%i' "$home/hooks")" = "$first_hooks_inode" ]
 [ "$(stat -f '%i' "$home/hooks.json")" = "$first_json_inode" ]
 [ "$(stat -f '%i' "$HARNESS_ROOT/hooks/.runtime/hooks.json")" = "$first_runtime_inode" ]
+[ "$(stat -f '%p' "$HARNESS_ROOT/hooks/.runtime/hooks.json")" = 100600 ]
+
+/usr/bin/python3 - "$HARNESS_ROOT/hooks/hooks.json.tmpl" <<'PY'
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+source = path.read_text(encoding="utf-8")
+old = "Require normal macOS context before judging GitHub CLI authentication."
+new = "Updated hooks config for atomic replacement."
+assert old in source
+path.write_text(source.replace(old, new), encoding="utf-8")
+PY
+run_install "$home" >"$TMP_ROOT/changed-template.log"
+changed_json_inode=$(stat -f '%i' "$HARNESS_ROOT/hooks/.runtime/hooks.json")
+[ "$changed_json_inode" != "$first_runtime_inode" ]
+[ "$(stat -f '%p' "$HARNESS_ROOT/hooks/.runtime/hooks.json")" = 100600 ]
+/usr/bin/python3 - "$HARNESS_ROOT/hooks/.runtime/hooks.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+config = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+assert config["description"] == "Updated hooks config for atomic replacement."
+PY
 
 legacy="$TMP_ROOT/legacy"
 mkdir -p "$legacy"
@@ -208,13 +194,7 @@ ln -s "$DOTFILES_ROOT/codex/hooks.json" "$legacy/hooks.json"
 run_install "$legacy" >"$TMP_ROOT/legacy.log"
 [ "$(readlink "$legacy/hooks")" = "$HARNESS_ROOT/hooks/runtime" ]
 [ "$(readlink "$legacy/hooks.json")" = "$HARNESS_ROOT/hooks/.runtime/hooks.json" ]
-[ -d "$legacy/backups" ]
-legacy_hooks_backup=$(find "$legacy/backups" -mindepth 1 -maxdepth 1 -name 'hooks.symlink-install.*' -print -quit)
-legacy_json_backup=$(find "$legacy/backups" -mindepth 1 -maxdepth 1 -name 'hooks.json.symlink-install.*' -print -quit)
-[ -n "$legacy_hooks_backup" ] && [ -L "$legacy_hooks_backup" ]
-[ "$(readlink "$legacy_hooks_backup")" = "$DOTFILES_ROOT/codex/hooks" ]
-[ -n "$legacy_json_backup" ] && [ -L "$legacy_json_backup" ]
-[ "$(readlink "$legacy_json_backup")" = "$DOTFILES_ROOT/codex/hooks.json" ]
+[ ! -e "$legacy/backups" ]
 
 source_missing="$TMP_ROOT/source-missing"
 mkdir -p "$source_missing"
@@ -293,60 +273,6 @@ fi
 [ -d "$directory_conflict/hooks" ]
 [ -d "$directory_conflict/hooks.json" ]
 
-backup_failure="$TMP_ROOT/backup-failure"
-backup_failure_source="$TMP_ROOT/backup-failure-source"
-mkdir -p "$backup_failure/backups" "$backup_failure_source"
-cp -R "$HARNESS_ROOT/hooks/runtime" "$backup_failure_source/runtime"
-cp "$HARNESS_ROOT/hooks/hooks.json.tmpl" "$backup_failure_source/hooks.json.tmpl"
-mkdir -p "$backup_failure_source/.runtime"
-printf '%s\n' generated-before >"$backup_failure_source/.runtime/hooks.json"
-chmod 640 "$backup_failure_source/.runtime/hooks.json"
-backup_failure_runtime_inode=$(stat -f '%i' "$backup_failure_source/.runtime/hooks.json")
-ln -s "$DOTFILES_ROOT/codex/hooks" "$backup_failure/hooks"
-ln -s "$DOTFILES_ROOT/codex/hooks.json" "$backup_failure/hooks.json"
-printf '%s\n' keep >"$backup_failure/backups/existing"
-backup_inode=$(stat -f '%i' "$backup_failure/backups/existing")
-set +e
-HOOKS_INSTALL_FAIL_BACKUP=1 run_install_with_source "$backup_failure" "$backup_failure_source" "$backup_failure_source/hooks.json.tmpl" >"$TMP_ROOT/backup-failure.log" 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-[ "$(readlink "$backup_failure/hooks")" = "$DOTFILES_ROOT/codex/hooks" ]
-[ "$(readlink "$backup_failure/hooks.json")" = "$DOTFILES_ROOT/codex/hooks.json" ]
-[ "$(cat "$backup_failure/backups/existing")" = keep ]
-[ "$(stat -f '%i' "$backup_failure/backups/existing")" = "$backup_inode" ]
-[ "$(cat "$backup_failure_source/.runtime/hooks.json")" = generated-before ]
-[ "$(stat -f '%i' "$backup_failure_source/.runtime/hooks.json")" = "$backup_failure_runtime_inode" ]
-[ "$(stat -f '%p' "$backup_failure_source/.runtime/hooks.json")" = 100640 ]
-[ "$(find "$backup_failure/backups" -mindepth 1 -maxdepth 1 \( -name 'hooks*symlink-install*' -o -name 'hooks.json*symlink-install*' \) -print | wc -l | tr -d ' ')" = 0 ]
-
-backup_snapshot_home="$TMP_ROOT/backup-snapshot-home"
-backup_snapshot_source="$TMP_ROOT/backup-snapshot-source"
-mkdir -p "$backup_snapshot_home/backups" "$backup_snapshot_source"
-cp -R "$HARNESS_ROOT/hooks/runtime" "$backup_snapshot_source/runtime"
-cp "$HARNESS_ROOT/hooks/hooks.json.tmpl" "$backup_snapshot_source/hooks.json.tmpl"
-mkdir -p "$backup_snapshot_source/.runtime"
-printf '%s\n' generated-before >"$backup_snapshot_source/.runtime/hooks.json"
-chmod 640 "$backup_snapshot_source/.runtime/hooks.json"
-ln -s "$DOTFILES_ROOT/codex/hooks" "$backup_snapshot_home/hooks"
-ln -s "$DOTFILES_ROOT/codex/hooks.json" "$backup_snapshot_home/hooks.json"
-printf '%s\n' existing >"$backup_snapshot_home/backups/existing"
-chmod 640 "$backup_snapshot_home/backups/existing"
-snapshot_state \
-    "home=$backup_snapshot_home" \
-    "source=$backup_snapshot_source" \
-    "backups=$backup_snapshot_home/backups" >"$TMP_ROOT/backup-snapshot.before"
-set +e
-HOOKS_INSTALL_FAIL_BACKUP=1 run_install_with_source "$backup_snapshot_home" "$backup_snapshot_source" "$backup_snapshot_source/hooks.json.tmpl" >/dev/null 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-snapshot_state \
-    "home=$backup_snapshot_home" \
-    "source=$backup_snapshot_source" \
-    "backups=$backup_snapshot_home/backups" >"$TMP_ROOT/backup-snapshot.after"
-cmp -s "$TMP_ROOT/backup-snapshot.before" "$TMP_ROOT/backup-snapshot.after"
-
 conflict="$TMP_ROOT/conflict"
 mkdir -p "$conflict"
 printf '%s\n' preserve >"$conflict/hooks"
@@ -372,41 +298,5 @@ fi
 [ "$(stat -f '%i' "$json_conflict/hooks.json")" = "$json_inode" ]
 [ ! -e "$json_conflict/hooks" ]
 [ ! -e "$json_conflict/.runtime/hooks.json" ]
-
-rollback="$TMP_ROOT/rollback"
-rollback_source="$TMP_ROOT/rollback-source"
-mkdir -p "$rollback" "$rollback/backups" "$rollback_source"
-cp -R "$HARNESS_ROOT/hooks/runtime" "$rollback_source/runtime"
-cp "$HARNESS_ROOT/hooks/hooks.json.tmpl" "$rollback_source/hooks.json.tmpl"
-mkdir -p "$rollback_source/.runtime"
-printf '%s\n' old-generated >"$rollback_source/.runtime/hooks.json"
-chmod 640 "$rollback_source/.runtime/hooks.json"
-rollback_runtime_inode=$(stat -f '%i' "$rollback_source/.runtime/hooks.json")
-printf '%s\n' existing >"$rollback/backups/existing"
-rollback_backup_inode=$(stat -f '%i' "$rollback/backups/existing")
-ln -s "$DOTFILES_ROOT/codex/hooks" "$rollback/hooks"
-ln -s "$DOTFILES_ROOT/codex/hooks.json" "$rollback/hooks.json"
-snapshot_state \
-    "home=$rollback" \
-    "source=$rollback_source" \
-    "backups=$rollback/backups" >"$TMP_ROOT/rollback.before"
-set +e
-HOOKS_INSTALL_FAIL_AFTER=1 run_install_with_source "$rollback" "$rollback_source" "$rollback_source/hooks.json.tmpl" >"$TMP_ROOT/rollback.log" 2>&1
-status=$?
-set -e
-[ "$status" -ne 0 ]
-[ "$(readlink "$rollback/hooks")" = "$DOTFILES_ROOT/codex/hooks" ]
-[ "$(readlink "$rollback/hooks.json")" = "$DOTFILES_ROOT/codex/hooks.json" ]
-[ "$(cat "$rollback_source/.runtime/hooks.json")" = old-generated ]
-[ "$(stat -f '%i' "$rollback_source/.runtime/hooks.json")" = "$rollback_runtime_inode" ]
-[ "$(stat -f '%p' "$rollback_source/.runtime/hooks.json")" = 100640 ]
-[ "$(cat "$rollback/backups/existing")" = existing ]
-[ "$(stat -f '%i' "$rollback/backups/existing")" = "$rollback_backup_inode" ]
-[ "$(find "$rollback/backups" -mindepth 1 -maxdepth 1 -name 'hooks*symlink-install*' -o -name 'hooks.json*symlink-install*' | wc -l | tr -d ' ')" = 0 ]
-snapshot_state \
-    "home=$rollback" \
-    "source=$rollback_source" \
-    "backups=$rollback/backups" >"$TMP_ROOT/rollback.after"
-cmp -s "$TMP_ROOT/rollback.before" "$TMP_ROOT/rollback.after"
 
 printf '%s\n' '[PASS] hooks installer scenarios'

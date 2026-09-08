@@ -389,7 +389,7 @@ struct CustomInstructionsSync {
         let profileUpdated = try writePrivatelyIfChanged(stableSources.profile, to: profileMirror)
 
         let outputURL = access.outputURL.appendingPathComponent(outputName, isDirectory: false)
-        let agentsUpdated = try writePrivatelyIfChanged(outputData, to: outputURL)
+        let agentsUpdated = try writePrivatelyIfChanged(outputData, to: outputURL, replaceSymlink: true)
         try replaceSkillsMirror(stableSkills, in: access.mirrorURL)
 
         if customUpdated || profileUpdated {
@@ -762,8 +762,15 @@ struct CustomInstructionsSync {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
 
-    static func writePrivatelyIfChanged(_ data: Data, to url: URL) throws -> Bool {
-        if let current = try? Data(contentsOf: url), current == data {
+    static func writePrivatelyIfChanged(
+        _ data: Data,
+        to url: URL,
+        replaceSymlink: Bool = false
+    ) throws -> Bool {
+        let shouldReplaceSymlink = replaceSymlink && mirrorItemKind(at: url) == .symbolicLink
+        if !shouldReplaceSymlink,
+           let current = try? Data(contentsOf: url),
+           current == data {
             try setPrivatePermissions(on: url)
             return false
         }
