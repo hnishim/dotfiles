@@ -123,23 +123,6 @@ matches:
   - trigger: etal
     markdown: "*et al.*"
 
-  # Correct spelling
-
-  - trigger: modarity
-    replace: modality
-
-  - trigger: Temas
-    replace: Teams
-
-  - trigger: experiemental
-    replace: experimental
-
-  - trigger: quikc
-    replace: quick
-
-  - trigger: titel
-    replace: title
-
   # 記号
 
   - trigger: '\command'
