@@ -41,7 +41,7 @@ if [ ! -d "$parent" ]; then
     mkdir -p "$parent"
 fi
 
-temporary="$parent/.$(basename -- "$TARGET_DIR").symlink-install-${SKILLS_SETUP_INSTALL_ID_OVERRIDE:-$$}"
+temporary="$parent/.$(basename -- "$TARGET_DIR").symlink-install-$$"
 [ ! -e "$temporary" ] && [ ! -L "$temporary" ] || { printf '[ERROR] temporary Skills root link already exists: %s\n' "$temporary" >&2; exit 1; }
 ln -s "$SOURCE_DIR" "$temporary"
 if [ -e "$TARGET_DIR" ] || [ -L "$TARGET_DIR" ]; then

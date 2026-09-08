@@ -105,7 +105,7 @@ if [ ! -d "$parent" ]; then
     mkdir -p "$parent"
 fi
 
-temporary="$parent/.$(basename "$TARGET_DIR").symlink-install-${AGENTS_SETUP_INSTALL_ID_OVERRIDE:-$$}"
+temporary="$parent/.$(basename "$TARGET_DIR").symlink-install-$$"
 [ ! -e "$temporary" ] && [ ! -L "$temporary" ] || {
     printf '[ERROR] temporary Agent root link already exists: %s\n' "$temporary" >&2
     exit 1
