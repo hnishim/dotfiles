@@ -51,13 +51,11 @@ def validate_source(source_root: Path) -> tuple[Path, Path, dict[str, Any]]:
     return runtime, template, read_template(template, runtime)
 
 
-def classify(destination: Path, current: Path, legacy: Path) -> str:
+def classify(destination: Path, current: Path) -> str:
     if not destination.exists() and not destination.is_symlink():
         return "missing"
     if destination.is_symlink() and same_target(destination, current):
         return "correct"
-    if destination.is_symlink() and same_target(destination, legacy):
-        return "legacy"
     return "conflict"
 
 
@@ -74,11 +72,8 @@ def write_generated(path: Path, content: bytes) -> None:
     os.replace(temporary, path)
 
 
-def replace_link(destination: Path, current: Path, legacy: Path, state: str) -> None:
-    if state == "legacy":
-        if not destination.is_symlink() or not same_target(destination, legacy):
-            raise ValueError(f"Hooks legacy destination changed during installation: {destination}")
-    elif state == "missing":
+def replace_link(destination: Path, current: Path, state: str) -> None:
+    if state == "missing":
         if destination.exists() or destination.is_symlink():
             raise ValueError(f"Hooks destination appeared during installation: {destination}")
     else:
@@ -120,23 +115,22 @@ def main() -> int:
     if len(sys.argv) > 2:
         raise SystemExit("使い方: install-hooks.py [codex-home]")
 
-    legacy_root = Path(__file__).resolve().parents[3] / "codex"
     targets = (
-        (home / "hooks", runtime, legacy_root / "hooks"),
-        (home / "hooks.json", generated, legacy_root / "hooks.json"),
+        (home / "hooks", runtime),
+        (home / "hooks.json", generated),
     )
-    states = [classify(destination, current, legacy) for destination, current, legacy in targets]
+    states = [classify(destination, current) for destination, current in targets]
     if "conflict" in states:
         conflict = targets[states.index("conflict")][0]
         raise SystemExit(f"既存のHooks宛先が競合しています: {conflict}")
 
     home.mkdir(parents=True, exist_ok=True)
     write_generated(generated, rendered)
-    for (destination, current, legacy), state in zip(targets, states):
+    for (destination, current), state in zip(targets, states):
         if state == "correct":
             continue
         try:
-            replace_link(destination, current, legacy, state)
+            replace_link(destination, current, state)
         except Exception as error:
             raise SystemExit(f"Hooks install failed: {error}")
 

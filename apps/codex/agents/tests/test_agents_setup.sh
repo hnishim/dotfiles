@@ -75,7 +75,12 @@ assert_root_link() {
     local target="$1"
     local source="$2"
     [ -L "$target" ]
-    [ "$(readlink "$target")" = "$source" ]
+    /usr/bin/python3 - "$target" "$source" <<'PY'
+import os
+import sys
+
+assert os.path.realpath(sys.argv[1]) == os.path.realpath(sys.argv[2])
+PY
     for name in "${agent_names[@]}"; do
         [ -f "$target/$name.toml" ]
     done
@@ -99,96 +104,58 @@ for path in paths:
 PY
 
 source_dir="$TMP_ROOT/source"
-legacy_dir="$TMP_ROOT/legacy"
 write_agent_set "$source_dir" current
-write_agent_set "$legacy_dir" legacy
 
 # Copy the planned setup into an isolated repository-shaped fixture.  Running
 # without source overrides proves that SCRIPT_DIR-relative defaults resolve to
-# the fixture Harness and the old dotfiles/codex/agents source, without
+# the fixture Harness source, without
 # touching the real repository or its Harness.
 default_fixture="$TMP_ROOT/default-layout"
-mkdir -p "$default_fixture/apps/codex/agents" "$default_fixture/harness/agents" \
-    "$default_fixture/codex/agents"
+default_source="$TMP_ROOT/harness/agents"
+mkdir -p "$default_fixture/apps/codex/agents" "$default_source"
 cp "$SETUP" "$default_fixture/apps/codex/agents/agents-setup.sh"
 chmod 755 "$default_fixture/apps/codex/agents/agents-setup.sh"
-write_agent_set "$default_fixture/harness/agents" harness-default
-write_agent_set "$default_fixture/codex/agents" legacy-default
+write_agent_set "$default_source" harness-default
 default_fixture_target="$TMP_ROOT/default-layout-home/.codex/agents"
 env -u CODEX_AGENTS_SOURCE_DIR_OVERRIDE \
-    -u CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE \
     -u CODEX_HARNESS_ROOT_OVERRIDE \
     -u LOCAL_CODEX_AGENTS_DIR_OVERRIDE \
     HOME="$TMP_ROOT/default-layout-home" \
     /bin/bash "$default_fixture/apps/codex/agents/agents-setup.sh" >"$TMP_ROOT/default-layout.log"
-assert_root_link "$default_fixture_target" "$default_fixture/harness/agents"
+assert_root_link "$default_fixture_target" "$default_source"
 [ ! -e "$TMP_ROOT/default-layout-home/.codex/backups" ]
-default_legacy_home="$TMP_ROOT/default-legacy-home"
-mkdir -p "$default_legacy_home/.codex"
-ln -s "$default_fixture/codex/agents" "$default_legacy_home/.codex/agents"
-env -u CODEX_AGENTS_SOURCE_DIR_OVERRIDE \
-    -u CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE \
-    -u CODEX_HARNESS_ROOT_OVERRIDE \
-    -u LOCAL_CODEX_AGENTS_DIR_OVERRIDE \
-    HOME="$default_legacy_home" \
-    /bin/bash "$default_fixture/apps/codex/agents/agents-setup.sh" >"$TMP_ROOT/default-legacy-layout.log"
-assert_root_link "$default_legacy_home/.codex/agents" "$default_fixture/harness/agents"
-[ ! -e "$default_legacy_home/.codex/backups" ]
-
 fresh_target="$TMP_ROOT/fresh-home/.codex/agents"
 CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
 LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$fresh_target" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
     /bin/bash "$SETUP" >"$TMP_ROOT/fresh.log"
 assert_root_link "$fresh_target" "$source_dir"
 fresh_inode=$(stat -f '%i' "$fresh_target")
 fresh_before=$(snapshot_state "target=$fresh_target")
 CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
 LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$fresh_target" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
     /bin/bash "$SETUP" >"$TMP_ROOT/repeat.log"
 assert_root_link "$fresh_target" "$source_dir"
 [ "$(stat -f '%i' "$fresh_target")" = "$fresh_inode" ]
 [ "$fresh_before" = "$(snapshot_state "target=$fresh_target")" ]
 [ ! -e "$TMP_ROOT/fresh-home/.codex/backups" ]
 
-current_target="$TMP_ROOT/current/.codex/agents"
-mkdir -p "$current_target"
+physical_target="$TMP_ROOT/physical-managed/.codex/agents"
+mkdir -p "$physical_target"
 for name in "${agent_names[@]}"; do
-    ln -s "$source_dir/$name.toml" "$current_target/$name.toml"
+    ln -s "$source_dir/$name.toml" "$physical_target/$name.toml"
 done
-CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$current_target" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/current.log"
-assert_root_link "$current_target" "$source_dir"
-[ ! -e "$TMP_ROOT/current-backups" ]
-
-legacy_children_target="$TMP_ROOT/legacy-children/.codex/agents"
-mkdir -p "$legacy_children_target"
+physical_before=$(snapshot_state "target=$physical_target")
+if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
+   LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$physical_target" \
+   /bin/bash "$SETUP" >"$TMP_ROOT/physical-managed.log" 2>&1; then
+    printf '%s\n' '[FAIL] physical managed Agent directory unexpectedly succeeded' >&2
+    exit 1
+fi
+[ "$physical_before" = "$(snapshot_state "target=$physical_target")" ]
+[ -d "$physical_target" ]
 for name in "${agent_names[@]}"; do
-    ln -s "$legacy_dir/$name.toml" "$legacy_children_target/$name.toml"
+    [ -L "$physical_target/$name.toml" ]
 done
-legacy_source_before=$(snapshot_state "legacy=$legacy_dir")
-CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$legacy_children_target" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/legacy-children.log"
-assert_root_link "$legacy_children_target" "$source_dir"
-[ "$legacy_source_before" = "$(snapshot_state "legacy=$legacy_dir")" ]
-[ ! -e "$TMP_ROOT/legacy-children-backups" ]
-
-legacy_root_target="$TMP_ROOT/legacy-root/.codex/agents"
-mkdir -p "$(dirname "$legacy_root_target")"
-ln -s "$legacy_dir" "$legacy_root_target"
-legacy_root_source_before=$(snapshot_state "legacy=$legacy_dir")
-CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
-LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$legacy_root_target" \
-CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
-    /bin/bash "$SETUP" >"$TMP_ROOT/legacy-root.log"
-assert_root_link "$legacy_root_target" "$source_dir"
-[ "$legacy_root_source_before" = "$(snapshot_state "legacy=$legacy_dir")" ]
-[ ! -e "$TMP_ROOT/legacy-root-backups" ]
 
 for kind in wrong-root regular-file unknown-entry; do
     conflict_target="$TMP_ROOT/$kind/.codex/agents"
@@ -211,7 +178,6 @@ for kind in wrong-root regular-file unknown-entry; do
     before=$(snapshot_state "target=$conflict_target")
     if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
        LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$conflict_target" \
-       CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
        /bin/bash "$SETUP" >"$TMP_ROOT/$kind.log" 2>&1; then
         printf '[FAIL] Agent %s conflict unexpectedly succeeded\n' "$kind" >&2
         exit 1
@@ -239,7 +205,6 @@ for child_kind in unrelated-child broken-child; do
     before=$(snapshot_state "target=$child_target")
     if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$source_dir" \
        LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$child_target" \
-       CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
        /bin/bash "$SETUP" >"$TMP_ROOT/$child_kind.log" 2>&1; then
         printf '[FAIL] Agent %s child target unexpectedly succeeded\n' "$child_kind" >&2
         exit 1
@@ -252,7 +217,6 @@ missing_target="$TMP_ROOT/missing-source-target/.codex/agents"
 mkdir -p "$missing_source"
 if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$missing_source" \
    LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$missing_target" \
-   CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
    /bin/bash "$SETUP" >"$TMP_ROOT/missing-source.log" 2>&1; then
     printf '%s\n' '[FAIL] missing Agent source unexpectedly succeeded' >&2
     exit 1
@@ -266,7 +230,6 @@ write_agent_set "$malformed_source"
 printf 'name = "%s"\ndescription = [\n' "$managed_name" >"$malformed_source/$managed_name.toml"
 if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$malformed_source" \
    LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$malformed_target" \
-   CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
    /bin/bash "$SETUP" >"$TMP_ROOT/malformed.log" 2>&1; then
     printf '%s\n' '[FAIL] malformed Agent TOML unexpectedly succeeded\n' >&2
     exit 1
@@ -278,7 +241,6 @@ reviewer_guard_target="$TMP_ROOT/reviewer-guard-target/.codex/agents"
 write_agent_definition "$reviewer_guard_source" reviewer workspace-write
 if CODEX_AGENTS_SOURCE_DIR_OVERRIDE="$reviewer_guard_source" \
    LOCAL_CODEX_AGENTS_DIR_OVERRIDE="$reviewer_guard_target" \
-   CODEX_AGENTS_LEGACY_SOURCE_DIR_OVERRIDE="$legacy_dir" \
    /bin/bash "$SETUP" >"$TMP_ROOT/reviewer-guard.log" 2>&1; then
     printf '%s\n' '[FAIL] writable reviewer Agent unexpectedly succeeded' >&2
     exit 1

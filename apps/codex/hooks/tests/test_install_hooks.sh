@@ -178,15 +178,6 @@ config = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 assert config["description"] == "Updated hooks config for atomic replacement."
 PY
 
-legacy="$TMP_ROOT/legacy"
-mkdir -p "$legacy"
-ln -s "$DOTFILES_ROOT/codex/hooks" "$legacy/hooks"
-ln -s "$DOTFILES_ROOT/codex/hooks.json" "$legacy/hooks.json"
-run_install "$legacy" >"$TMP_ROOT/legacy.log"
-[ "$(readlink "$legacy/hooks")" = "$HARNESS_ROOT/hooks/runtime" ]
-[ "$(readlink "$legacy/hooks.json")" = "$HARNESS_ROOT/hooks/.runtime/hooks.json" ]
-[ ! -e "$legacy/backups" ]
-
 source_missing="$TMP_ROOT/source-missing"
 mkdir -p "$source_missing"
 cp "$HARNESS_ROOT/hooks/hooks.json.tmpl" "$source_missing/hooks.json.tmpl"
