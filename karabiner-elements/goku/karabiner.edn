@@ -3,6 +3,7 @@
     :notion ["^notion\\.id"]
     :slack ["^com\\.tinyspeck\\.slackmacgap$"]
     :excel ["^com\\.microsoft\\.Excel"]
+    :word ["^com\\.microsoft\\.Word$"]
   }
 
   :devices {
@@ -81,7 +82,10 @@
       [:!CCSS9   :!CO4 :notion]  ;; チェックリスト ⌘⇧ 9 -> ⌘⌥ 4
 
       ;; Slack
-      [:!CCe :!CSc :slack];; コード ⌘ E -> ⌘⇧ C (Notion's shortcut)
+      [:!CCe :!CSc :slack] ;; コード ⌘ E -> ⌘⇧ C (Notion's shortcut)
+
+      ;;  Word
+      [:!CS8 :!CSl :word] ;; 箇条書き ⌘⇧ 8 -> ⌘⇧L
     ]}
 
     {:des "Comboで括弧を自動的に閉じてカーソルを中に移動"
