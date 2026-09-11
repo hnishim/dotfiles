@@ -79,7 +79,7 @@ setup_status=$?
 set -e
 [ "$setup_status" -ne 0 ]
 
-for name in gh_normal_context_guard.py textlint-boundary.py textlint-pretool-hook.py textlint-posttool-hook.py; do
+for name in gh_normal_context_guard.py session_start_repo_refresh.py textlint-boundary.py textlint-pretool-hook.py textlint-posttool-hook.py; do
     [ -f "$HARNESS_ROOT/hooks/runtime/$name" ]
     [ ! -L "$HARNESS_ROOT/hooks/runtime/$name" ]
 done
@@ -101,6 +101,15 @@ from pathlib import Path
 config = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
 runtime = str(Path(sys.argv[2]))
 expected = {
+    "SessionStart": [{
+        "matcher": "startup|resume",
+        "hooks": [{
+            "type": "command",
+            "command": f"/usr/bin/python3 {shlex.quote(runtime + '/session_start_repo_refresh.py')}",
+            "timeout": 15,
+            "statusMessage": "Refreshing repository remote state",
+        }],
+    }],
     "PreToolUse": [
         {
             "matcher": "^Bash$",
