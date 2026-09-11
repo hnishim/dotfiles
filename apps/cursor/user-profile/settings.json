@@ -6,6 +6,7 @@
     "diffEditor.renderSideBySide": false,
     "editor.unicodeHighlight.includeComments": false,
     "editor.unicodeHighlight.nonBasicASCII": false,
+    "editor.wordSegmenterLocales": ["ja"],
     "git.enableSmartCommit": true,
     "files.encoding": "utf8",
     "files.autoGuessEncoding": false,
