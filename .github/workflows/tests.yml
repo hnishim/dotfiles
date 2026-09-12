@@ -1,29 +1,8 @@
 name: Tests
 
-# HIR-225 inventory (20 existing test entry points)
-# ubuntu-latest:
-# - defaults/tests/test_powerpoint_shortcut_refactor.py — fixture-only Python test; requires pytest
-# - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
-# - textlint/tests/test_textlint_symlink_contract.py — repository/static contract test
-# macos-latest:
-# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir setup regression; requires rg
-# - apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh — macOS bookmark contract
-# - apps/codex/custom-instructions/tests/test-mirror-layout.sh — Swift/macOS layout test
-# - apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh — fixture-backed contract test
-# - apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh — creates an isolated temporary harness fixture
-# - apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh — macOS setup contract
-# - apps/codex/tests/test_codex_setup_delegation_contract.sh — setup delegation contract
-# - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — macOS setup entry-point contract
-# - apps/ferdium/tests/test_ferdium_setup.sh — fixture/temp-dir setup regression
-# - lib/tests/test_hir119_karabiner_setup.sh — macOS/Karabiner setup regression
-# - lib/tests/test_karabiner_migration.sh — macOS/BSD filesystem semantics
-# - lib/tests/test_setup_call_contracts.sh — shell setup-call contracts
-# - lib/tests/test_symlink_helpers.sh — BSD stat/readlink semantics; includes internal failure-capture scenario
-# excluded (clean single-repository checkout cannot satisfy sibling-repository source dependencies):
-# - apps/codex/agents/tests/test_agents_setup.sh — requires ../harness/agents for its default-path scenario
-# - apps/codex/hooks/tests/test_install_hooks.sh — requires ../harness/hooks to seed its isolated fixture
-# - apps/codex/skills/tests/test_skills_setup.sh — requires ../harness/skills for its default-path scenario
-# - hammerspoon/tests/test_hammerspoon_setup.sh — requires ../scripts/hammerspoon and ../scripts/raycast
+# HIR-225 temporary failure-propagation verification branch.
+# This branch intentionally injects one failing pytest case before running the same
+# existing target command used by the final candidate. It must not be merged.
 
 on:
   pull_request:
@@ -47,6 +26,7 @@ jobs:
       - name: Run portable Python tests
         run: |
           set -euo pipefail
+          printf '\ndef test_hir225_intentional_failure():\n    assert False\n' >> defaults/tests/test_powerpoint_shortcut_refactor.py
           python3 -m pytest -q defaults/tests/test_powerpoint_shortcut_refactor.py
           python3 textlint/tests/test_textlint_runtime_plan.py
           python3 textlint/tests/test_textlint_symlink_contract.py
