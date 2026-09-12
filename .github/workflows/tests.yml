@@ -5,7 +5,7 @@ name: Tests
 # - defaults/tests/test_powerpoint_shortcut_refactor.py — fixture-only Python test; requires pytest
 # - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
 # - textlint/tests/test_textlint_symlink_contract.py — repository/static contract test
-# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir fixture; defaults/plutil are test doubles
+# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir fixture; defaults/plutil are test doubles; requires rg
 # - apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh — Python source-contract inspection only
 # - apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh — temp dirs + fake helper/ntn; standard shell/Ruby/JQ boundary
 # - apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh — isolated temp harness + fake helper/ntn; standard shell/Ruby/JQ boundary
@@ -50,6 +50,10 @@ jobs:
           python3 -m pytest -q defaults/tests/test_powerpoint_shortcut_refactor.py
           python3 textlint/tests/test_textlint_runtime_plan.py
           python3 textlint/tests/test_textlint_symlink_contract.py
+      - name: Install portable shell dependency
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ripgrep
       - name: Run portable shell tests
         run: |
           set -euo pipefail
