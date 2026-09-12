@@ -6,7 +6,7 @@ name: Tests
 # - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
 # - textlint/tests/test_textlint_symlink_contract.py — repository/static contract test
 # macos-latest:
-# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir setup regression
+# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir setup regression; requires rg
 # - apps/codex/agents/tests/test_agents_setup.sh — temp-dir setup regression
 # - apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh — macOS bookmark contract
 # - apps/codex/custom-instructions/tests/test-mirror-layout.sh — Swift/macOS layout test
@@ -55,6 +55,8 @@ jobs:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install macOS test dependency
+        run: brew install ripgrep
       - name: Run macOS shell tests
         run: |
           set -euo pipefail
