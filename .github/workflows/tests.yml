@@ -1,24 +1,24 @@
 name: Tests
 
 # HIR-225 inventory (20 existing test entry points)
-# ubuntu-latest:
+# ubuntu-latest (portable: no macOS runtime/API dependency in the exercised boundary):
 # - defaults/tests/test_powerpoint_shortcut_refactor.py — fixture-only Python test; requires pytest
 # - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
 # - textlint/tests/test_textlint_symlink_contract.py — repository/static contract test
-# macos-latest:
-# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir setup regression; requires rg
-# - apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh — macOS bookmark contract
-# - apps/codex/custom-instructions/tests/test-mirror-layout.sh — Swift/macOS layout test
-# - apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh — fixture-backed contract test
-# - apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh — creates an isolated temporary harness fixture
-# - apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh — macOS setup contract
-# - apps/codex/tests/test_codex_setup_delegation_contract.sh — setup delegation contract
-# - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — macOS setup entry-point contract
-# - apps/ferdium/tests/test_ferdium_setup.sh — fixture/temp-dir setup regression
-# - lib/tests/test_hir119_karabiner_setup.sh — macOS/Karabiner setup regression
-# - lib/tests/test_karabiner_migration.sh — macOS/BSD filesystem semantics
-# - lib/tests/test_setup_call_contracts.sh — shell setup-call contracts
-# - lib/tests/test_symlink_helpers.sh — BSD stat/readlink semantics; includes internal failure-capture scenario
+# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir fixture; defaults/plutil are test doubles
+# - apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh — Python source-contract inspection only
+# - apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh — temp dirs + fake helper/ntn; standard shell/Ruby/JQ boundary
+# - apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh — isolated temp harness + fake helper/ntn; standard shell/Ruby/JQ boundary
+# - apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh — xcrun/codesign/ditto/plutil/launchctl/defaults/PlistBuddy are test doubles
+# - apps/codex/tests/test_codex_setup_delegation_contract.sh — temporary repository-shaped fixture + Bash/Python/stub delegates
+# - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — static Python source-contract inspection only
+# - apps/ferdium/tests/test_ferdium_setup.sh — temporary HOME + filesystem/symlink fixture only
+# - lib/tests/test_hir119_karabiner_setup.sh — temporary fixture; goku/launchctl/common helpers are test doubles
+# - lib/tests/test_karabiner_migration.sh — temp filesystem + static contracts; optional goku runtime check self-skips when unavailable
+# - lib/tests/test_setup_call_contracts.sh — Bash/AWK/Python/rg static contract checks
+# macos-latest (macOS-specific runtime/semantics required):
+# - apps/codex/custom-instructions/tests/test-mirror-layout.sh — compiles Swift with `-framework AppKit`
+# - lib/tests/test_symlink_helpers.sh — validates BSD/macOS `stat -f '%i'` inode semantics
 # excluded (clean single-repository checkout cannot satisfy sibling-repository source dependencies):
 # - apps/codex/agents/tests/test_agents_setup.sh — requires ../harness/agents for its default-path scenario
 # - apps/codex/hooks/tests/test_install_hooks.sh — requires ../harness/hooks to seed its isolated fixture
@@ -50,19 +50,11 @@ jobs:
           python3 -m pytest -q defaults/tests/test_powerpoint_shortcut_refactor.py
           python3 textlint/tests/test_textlint_runtime_plan.py
           python3 textlint/tests/test_textlint_symlink_contract.py
-
-  macos:
-    runs-on: macos-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install macOS test dependency
-        run: brew install ripgrep
-      - name: Run macOS shell tests
+      - name: Run portable shell tests
         run: |
           set -euo pipefail
           bash apps/amphetamine/tests/test_amphetamine_setup.sh
           bash apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh
-          bash apps/codex/custom-instructions/tests/test-mirror-layout.sh
           bash apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh
           bash apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh
           bash apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh
@@ -72,4 +64,13 @@ jobs:
           bash lib/tests/test_hir119_karabiner_setup.sh
           bash lib/tests/test_karabiner_migration.sh
           bash lib/tests/test_setup_call_contracts.sh
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run macOS-specific tests
+        run: |
+          set -euo pipefail
+          bash apps/codex/custom-instructions/tests/test-mirror-layout.sh
           bash lib/tests/test_symlink_helpers.sh
