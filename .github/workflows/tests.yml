@@ -1,0 +1,76 @@
+name: Tests
+
+# HIR-225 inventory (20 existing test entry points)
+# ubuntu-latest:
+# - defaults/tests/test_powerpoint_shortcut_refactor.py — fixture-only Python test; requires pytest
+# - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
+# - textlint/tests/test_textlint_symlink_contract.py — repository/static contract test
+# macos-latest:
+# - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir setup regression
+# - apps/codex/agents/tests/test_agents_setup.sh — temp-dir setup regression
+# - apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh — macOS bookmark contract
+# - apps/codex/custom-instructions/tests/test-mirror-layout.sh — Swift/macOS layout test
+# - apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh — fixture-backed contract test
+# - apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh — macOS custom-instructions sync regression
+# - apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh — macOS setup contract
+# - apps/codex/hooks/tests/test_install_hooks.sh — temp-dir hook installer regression
+# - apps/codex/skills/tests/test_skills_setup.sh — temp-dir setup regression
+# - apps/codex/tests/test_codex_setup_delegation_contract.sh — setup delegation contract
+# - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — macOS setup entry-point contract
+# - apps/ferdium/tests/test_ferdium_setup.sh — fixture/temp-dir setup regression
+# - lib/tests/test_hir119_karabiner_setup.sh — macOS/Karabiner setup regression
+# - lib/tests/test_karabiner_migration.sh — macOS/BSD filesystem semantics
+# - lib/tests/test_setup_call_contracts.sh — shell setup-call contracts
+# - lib/tests/test_symlink_helpers.sh — BSD stat/readlink semantics; includes internal failure-capture scenario
+# excluded:
+# - hammerspoon/tests/test_hammerspoon_setup.sh — requires repository-external ../scripts/hammerspoon and ../scripts/raycast sources
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  portable:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - name: Install Python test dependency
+        run: python3 -m pip install pytest
+      - name: Run portable Python tests
+        run: |
+          set -euo pipefail
+          python3 -m pytest -q defaults/tests/test_powerpoint_shortcut_refactor.py
+          python3 textlint/tests/test_textlint_runtime_plan.py
+          python3 textlint/tests/test_textlint_symlink_contract.py
+
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run macOS shell tests
+        run: |
+          set -euo pipefail
+          bash apps/amphetamine/tests/test_amphetamine_setup.sh
+          bash apps/codex/agents/tests/test_agents_setup.sh
+          bash apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh
+          bash apps/codex/custom-instructions/tests/test-mirror-layout.sh
+          bash apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh
+          bash apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh
+          bash apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh
+          bash apps/codex/hooks/tests/test_install_hooks.sh
+          bash apps/codex/skills/tests/test_skills_setup.sh
+          bash apps/codex/tests/test_codex_setup_delegation_contract.sh
+          bash apps/codex/tests/test_setup_macos_codex_entrypoint.sh
+          bash apps/ferdium/tests/test_ferdium_setup.sh
+          bash lib/tests/test_hir119_karabiner_setup.sh
+          bash lib/tests/test_karabiner_migration.sh
+          bash lib/tests/test_setup_call_contracts.sh
+          bash lib/tests/test_symlink_helpers.sh
