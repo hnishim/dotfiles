@@ -51,7 +51,9 @@ fi
 mkdir -p "$RUNTIME_DIR"
 create_symlink "$PACKAGE_JSON" "$RUNTIME_DIR/package.json" "runtimeのpackage.json" || exit 1
 create_symlink "$LOCKFILE" "$RUNTIME_DIR/pnpm-lock.yaml" "runtimeのpnpm-lock.yaml" || exit 1
-create_symlink "$PRH_CONFIG" "$HOME/my-prh.yml" "textlint PRH辞書" || exit 1
+if ! create_symlink "$PRH_CONFIG" "$HOME/my-prh.yml" "textlint PRH辞書"; then
+    exit 1
+fi
 
 log_info "Application Support側に依存関係をインストールしています..."
 if ! pnpm --dir "$RUNTIME_DIR" install --frozen-lockfile; then
@@ -60,7 +62,7 @@ if ! pnpm --dir "$RUNTIME_DIR" install --frozen-lockfile; then
 fi
 
 if [ ! -d "$RUNTIME_NODE_MODULES" ] || [ -L "$RUNTIME_NODE_MODULES" ]; then
-    log_error "runtimeのnode_modulesが物理ディレクトリとして作成されませんでした: $RUNTIME_NODE_MODULES"
+    log_error "runtimeのnode_modulesは物理ディレクトリとして作成されませんでした: $RUNTIME_NODE_MODULES"
     exit 1
 fi
 
