@@ -48,10 +48,17 @@ class NotionTextlintReviewContractTests(unittest.TestCase):
             self.assertNotEqual(old, new)
             self.assertNotEqual(old, original)
             self.assertNotEqual(new, fixed)
-            self.assertFalse(
-                "UNRELATED-TOP" in old and "UNRELATED-BOTTOM" in old,
-                "a targeted replacement must not span unrelated distant regions",
-            )
+            for marker in ("UNRELATED-TOP", "UNRELATED-BOTTOM"):
+                self.assertNotIn(
+                    marker,
+                    old,
+                    f"target old_str must not include distant unchanged region {marker}",
+                )
+                self.assertNotIn(
+                    marker,
+                    new,
+                    f"target new_str must not include distant unchanged region {marker}",
+                )
             self.assertEqual(reconstructed.count(old), 1)
             reconstructed = reconstructed.replace(old, new, 1)
         self.assertEqual(reconstructed, fixed)
@@ -101,10 +108,26 @@ class NotionTextlintReviewContractTests(unittest.TestCase):
                 self.assertTrue(self.fixture.textlint_log.exists())
 
     def test_initial_get_api_failure_stops_before_lint_or_write(self) -> None:
-        fake_ntn = self.fixture.fake_bin / "ntn"
-        fake_ntn.write_text(
-            dedent(
-                r'''#!/usr/bin/env python3
+        cases = [
+            {
+                "object": "error",
+                "status": 403,
+                "code": "restricted_resource",
+                "message": "permission denied",
+            },
+            {
+                "object": "error",
+                "status": 502,
+                "code": "internal_server_error",
+                "message": "upstream failure",
+            },
+        ]
+        for error in cases:
+            with self.subTest(error=error):
+                fake_ntn = self.fixture.fake_bin / "ntn"
+                fake_ntn.write_text(
+                    dedent(
+                        f'''#!/usr/bin/env python3
 import json
 import os
 import sys
@@ -112,31 +135,27 @@ from pathlib import Path
 
 args = sys.argv[1:]
 log_path = Path(os.environ["FAKE_NTN_LOG"])
-record = {"args": args, "method": "GET"}
+record = {{"args": args, "method": "GET"}}
 with log_path.open("a", encoding="utf-8") as handle:
-    handle.write(json.dumps(record, ensure_ascii=False) + "\n")
-print(json.dumps({
-    "object": "error",
-    "status": 403,
-    "code": "restricted_resource",
-    "message": "permission denied",
-}))
+    handle.write(json.dumps(record, ensure_ascii=False) + "\\n")
+error = {error!r}
+print(json.dumps(error))
 sys.exit(1)
 '''
-            ),
-            encoding="utf-8",
-        )
-        base.make_executable(fake_ntn)
-        self.fixture.ntn_log.write_text("", encoding="utf-8")
-        self.fixture.textlint_log.unlink(missing_ok=True)
+                    ),
+                    encoding="utf-8",
+                )
+                base.make_executable(fake_ntn)
+                self.fixture.ntn_log.write_text("", encoding="utf-8")
+                self.fixture.textlint_log.unlink(missing_ok=True)
 
-        result = self.fixture.run_cli()
+                result = self.fixture.run_cli()
 
-        self.assertNotEqual(result.returncode, 0)
-        calls = self.fixture.ntn_calls()
-        self.assertEqual([call["method"] for call in calls], ["GET"])
-        self.assertEqual(self.fixture.patch_calls(), [])
-        self.assertFalse(self.fixture.textlint_log.exists())
+                self.assertNotEqual(result.returncode, 0)
+                calls = self.fixture.ntn_calls()
+                self.assertEqual([call["method"] for call in calls], ["GET"])
+                self.assertEqual(self.fixture.patch_calls(), [])
+                self.assertFalse(self.fixture.textlint_log.exists())
 
 
 if __name__ == "__main__":
