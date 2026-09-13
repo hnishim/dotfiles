@@ -51,6 +51,7 @@ fi
 mkdir -p "$RUNTIME_DIR"
 create_symlink "$PACKAGE_JSON" "$RUNTIME_DIR/package.json" "runtimeのpackage.json" || exit 1
 create_symlink "$LOCKFILE" "$RUNTIME_DIR/pnpm-lock.yaml" "runtimeのpnpm-lock.yaml" || exit 1
+create_symlink "$PRH_CONFIG" "$HOME/my-prh.yml" "textlint PRH辞書" || exit 1
 
 log_info "Application Support側に依存関係をインストールしています..."
 if ! pnpm --dir "$RUNTIME_DIR" install --frozen-lockfile; then
