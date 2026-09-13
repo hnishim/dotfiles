@@ -1,10 +1,13 @@
 name: Tests
 
-# HIR-225 inventory (20 existing test entry points)
+# HIR-225 inventory (23 existing test entry points)
 # ubuntu-latest (portable: no macOS runtime/API dependency in the exercised boundary):
 # - defaults/tests/test_powerpoint_shortcut_refactor.py — fixture-only Python test; requires pytest
 # - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
 # - textlint/tests/test_textlint_symlink_contract.py — repository/static contract test
+# - textlint/tests/test_notion_textlint.py — temporary HOME + fake ntn/textlint subprocess boundary
+# - textlint/tests/test_notion_textlint_review_contract.py — Test Review regression coverage for targeted updates and API failures
+# - textlint/tests/test_notion_textlint_setup_contract.py — temporary HOME + fake node/pnpm PRH link contract
 # - apps/amphetamine/tests/test_amphetamine_setup.sh — temp-dir fixture; defaults/plutil are test doubles; requires rg
 # - apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh — Python source-contract inspection only
 # - apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh — temp dirs + fake helper/ntn; standard shell/Ruby/JQ boundary
@@ -50,6 +53,9 @@ jobs:
           python3 -m pytest -q defaults/tests/test_powerpoint_shortcut_refactor.py
           python3 textlint/tests/test_textlint_runtime_plan.py
           python3 textlint/tests/test_textlint_symlink_contract.py
+          python3 textlint/tests/test_notion_textlint.py
+          python3 textlint/tests/test_notion_textlint_review_contract.py
+          python3 textlint/tests/test_notion_textlint_setup_contract.py
       - name: Install portable shell dependency
         run: |
           sudo apt-get update
