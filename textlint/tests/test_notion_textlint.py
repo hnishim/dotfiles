@@ -224,6 +224,7 @@ target.write_text(text.replace("teh", "the", 1), encoding="utf-8")
         endpoint = calls[0]["args"][1]
         self.assertIn(PAGE_ID, endpoint.replace("-", ""))
         self.assertEqual(self.patch_calls(), [])
+        self.assertTrue(self.textlint_log.exists())
 
     def test_success_uses_targeted_update_and_verifies_readback(self) -> None:
         base = "# Title\n\nteh value\n"
@@ -265,7 +266,10 @@ target.write_text(text.replace("teh", "the", 1), encoding="utf-8")
         result = self.run_cli()
 
         self.assertNotEqual(result.returncode, 0)
+        calls = self.ntn_calls()
+        self.assertEqual([call["method"] for call in calls], ["GET", "GET"])
         self.assertEqual(self.patch_calls(), [])
+        self.assertTrue(self.textlint_log.exists())
 
     def test_incomplete_markdown_stops_before_lint_or_patch(self) -> None:
         cases = [
@@ -281,6 +285,8 @@ target.write_text(text.replace("teh", "the", 1), encoding="utf-8")
                 result = self.run_cli()
 
                 self.assertNotEqual(result.returncode, 0)
+                calls = self.ntn_calls()
+                self.assertEqual([call["method"] for call in calls], ["GET"])
                 self.assertEqual(self.patch_calls(), [])
                 self.assertFalse(self.textlint_log.exists())
 
@@ -300,9 +306,12 @@ target.write_text(text.replace("teh", "the", 1), encoding="utf-8")
         result = self.run_cli()
 
         self.assertNotEqual(result.returncode, 0)
+        calls = self.ntn_calls()
+        self.assertEqual([call["method"] for call in calls], ["GET", "GET", "PATCH"])
         patches = self.patch_calls()
         self.assertEqual(len(patches), 1)
         self.assertEqual(patches[0]["data"]["type"], "update_content")
+        self.assertTrue(self.textlint_log.exists())
 
     def test_post_write_concurrent_edit_reports_failure_without_extra_write(self) -> None:
         base = "# Title\n\nteh value\n"
@@ -316,7 +325,13 @@ target.write_text(text.replace("teh", "the", 1), encoding="utf-8")
         result = self.run_cli()
 
         self.assertNotEqual(result.returncode, 0)
+        calls = self.ntn_calls()
+        self.assertEqual(
+            [call["method"] for call in calls],
+            ["GET", "GET", "PATCH", "GET"],
+        )
         self.assertEqual(len(self.patch_calls()), 1)
+        self.assertTrue(self.textlint_log.exists())
 
     def test_duplicate_text_requires_unique_target_context(self) -> None:
         base = "# Title\n\nteh first\n\nteh second\n"
