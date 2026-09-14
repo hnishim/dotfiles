@@ -84,6 +84,12 @@ matches:
     replace: 'git switch main && git add . && git commit -m "$|$" && git push'
     force_mode: clipboard
 
+  - trigger: '\human'
+    replace: |
+      HUMAN_AUTHORED_START
+      $|$
+      HUMAN_AUTHORED_END
+
   # テキスト補完
 
   - trigger: mesot
