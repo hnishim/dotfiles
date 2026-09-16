@@ -5,6 +5,7 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 DOTFILES_ROOT=$(cd -- "$SCRIPT_DIR/../../.." && pwd)
 SETUP="$DOTFILES_ROOT/setup-macos.sh"
+BREW_SETUP="$DOTFILES_ROOT/brew/brew-setup.sh"
 PACKAGES="$DOTFILES_ROOT/brew/packages.yml"
 AGENTS_SETUP="$DOTFILES_ROOT/apps/codex/agents/agents-setup.sh"
 
@@ -33,6 +34,36 @@ assert source.count('"$DOTFILES_ROOT/$script"') == 1
 
 print("[PASS] setup-macos Codex entrypoint-only contract")
 PY
+
+assert_brew_argument_error() {
+    local label="$1"
+    shift
+    local log_file
+    log_file=$(mktemp "${TMPDIR:-/tmp}/brew-setup-argument-test.XXXXXX")
+
+    set +e
+    "$@" >"$log_file" 2>&1
+    local status=$?
+    set -e
+
+    if [ "$status" -ne 1 ] || ! grep -Fq '[ERROR] 未対応の引数です: --hir-261-invalid' "$log_file"; then
+        printf '[FAIL] %s did not reach brew-setup argument parsing as expected\n' "$label" >&2
+        cat "$log_file" >&2
+        rm -f -- "$log_file"
+        exit 1
+    fi
+
+    rm -f -- "$log_file"
+    printf '[PASS] %s reaches brew-setup argument parsing\n' "$label"
+}
+
+assert_brew_argument_error \
+    'direct brew-setup execution' \
+    /bin/bash "$BREW_SETUP" --hir-261-invalid
+
+assert_brew_argument_error \
+    'sourced brew-setup execution' \
+    /bin/bash -euo pipefail -c 'source "$1" --hir-261-invalid' bash "$BREW_SETUP"
 
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/setup-macos-python-path-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
