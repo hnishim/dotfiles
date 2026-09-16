@@ -37,12 +37,16 @@ PY
 
 assert_brew_argument_error() {
     local label="$1"
-    shift
+    local working_dir="$2"
+    shift 2
     local log_file
     log_file=$(mktemp "${TMPDIR:-/tmp}/brew-setup-argument-test.XXXXXX")
 
     set +e
-    "$@" >"$log_file" 2>&1
+    (
+        cd -- "$working_dir"
+        "$@"
+    ) >"$log_file" 2>&1
     local status=$?
     set -e
 
@@ -57,13 +61,19 @@ assert_brew_argument_error() {
     printf '[PASS] %s reaches brew-setup argument parsing\n' "$label"
 }
 
+BREW_TEST_CWD=$(mktemp -d "${TMPDIR:-/tmp}/brew-setup-cwd-test.XXXXXX")
+
 assert_brew_argument_error \
-    'direct brew-setup execution' \
+    'direct brew-setup execution outside repository cwd' \
+    "$BREW_TEST_CWD" \
     /bin/bash "$BREW_SETUP" --hir-261-invalid
 
 assert_brew_argument_error \
-    'sourced brew-setup execution' \
+    'sourced brew-setup execution outside repository cwd' \
+    "$BREW_TEST_CWD" \
     /bin/bash -euo pipefail -c 'source "$1" --hir-261-invalid' bash "$BREW_SETUP"
+
+rm -rf -- "$BREW_TEST_CWD"
 
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/setup-macos-python-path-test.XXXXXX")
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
