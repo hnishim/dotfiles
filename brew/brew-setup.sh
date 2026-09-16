@@ -4,7 +4,7 @@
 # packages.yml ファイルに定義されたリストを元にインストールを行います。
 
 # 共通ライブラリを読み込み
-source "$(dirname "$0")/../lib/common.sh"
+source "$(dirname "${BASH_SOURCE[0]}")/../lib/common.sh"
 
 # --- Configuration ---
 # スクリプトと同じディレクトリにあるpackages.ymlを指すように変更

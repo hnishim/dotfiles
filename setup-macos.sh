@@ -16,7 +16,7 @@ log_header "macOS セットアップ開始"
 # 1. Homebrew & アプリケーションのインストール
 # このスクリプトに渡された引数（--personal, --business, --update）をそのままbrew.shに渡す
 log_header "Step 1: Homebrew & アプリケーションのインストール"
-if "$DOTFILES_ROOT/brew/brew-setup.sh" "$@"; then
+if source "$DOTFILES_ROOT/brew/brew-setup.sh" "$@"; then
     log_success "Homebrew & アプリケーションのインストール完了"
 else
     brew_status=$?
