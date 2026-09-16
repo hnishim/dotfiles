@@ -105,7 +105,10 @@ SH
     chmod 755 "$path"
 done
 
-PATH="/usr/bin:/bin" /bin/bash "$FIXTURE_ROOT/setup-macos.sh" >"$TMP_ROOT/setup.log" 2>&1
+if ! PATH="/usr/bin:/bin" /bin/bash "$FIXTURE_ROOT/setup-macos.sh" >"$TMP_ROOT/setup.log" 2>&1; then
+    cat "$TMP_ROOT/setup.log" >&2
+    exit 1
+fi
 printf '%s\n' '[PASS] setup-macos propagates Homebrew PATH to Codex setup'
 
 python3 - "$PACKAGES" "$AGENTS_SETUP" <<'PY'
