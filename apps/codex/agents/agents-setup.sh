@@ -8,7 +8,33 @@ DEFAULT_HARNESS_ROOT="$DOTFILES_ROOT/../harness"
 HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$DEFAULT_HARNESS_ROOT}"
 SOURCE_DIR="${CODEX_AGENTS_SOURCE_DIR_OVERRIDE:-$HARNESS_ROOT/agents}"
 TARGET_DIR="${LOCAL_CODEX_AGENTS_DIR_OVERRIDE:-$HOME/.codex/agents}"
-PYTHON_EXECUTABLE="${PYTHON_EXECUTABLE:-$(command -v python3 2>/dev/null || true)}"
+
+python_has_tomllib() {
+    local candidate=$1
+    [ -x "$candidate" ] && "$candidate" -c 'import tomllib' >/dev/null 2>&1
+}
+
+resolve_python_executable() {
+    local candidate
+
+    candidate="$(command -v python3 2>/dev/null || true)"
+    if [ -n "$candidate" ] && python_has_tomllib "$candidate"; then
+        printf '%s\n' "$candidate"
+        return 0
+    fi
+
+    printf '%s\n' ''
+}
+
+if [ -z "${PYTHON_EXECUTABLE:-}" ]; then
+    PYTHON_EXECUTABLE="$(resolve_python_executable)"
+fi
+
+if [ -z "$PYTHON_EXECUTABLE" ] || ! python_has_tomllib "$PYTHON_EXECUTABLE"; then
+    printf '%s\n' '[ERROR] Python 3.11+ with tomllib is required to validate Agent TOML.' >&2
+    printf '%s\n' '[INFO] Run brew-setup.sh first, or set PYTHON_EXECUTABLE to a Python 3.11+ executable.' >&2
+    exit 1
+fi
 
 [ -d "$SOURCE_DIR" ] || { printf '[ERROR] Agent source is missing: %s\n' "$SOURCE_DIR" >&2; exit 1; }
 

@@ -63,6 +63,18 @@ values_equal() {
   esac
 }
 
+explain_defaults_failure() {
+  local domain=$1
+
+  if [ "$domain" = "com.apple.universalaccess" ]; then
+    echo "[INFO] $domain はmacOSの保護対象です。"
+    echo "[INFO] この設定を変更するには、実行元アプリにフルディスクアクセスが必要な場合があります。"
+    echo "[INFO] システム設定 > プライバシーとセキュリティ > フルディスクアクセスで、"
+    echo "[INFO] このスクリプトを実行しているターミナルアプリ（Terminal、iTerm、Codexなど）を許可し、"
+    echo "[INFO] アプリを再起動してから再実行してください。"
+  fi
+}
+
 # $1: scope (user/current-host/system), $2: domain, $3: key
 # $4: type, $5: expected value, $6: process to restart (optional)
 set_default() {
@@ -104,6 +116,7 @@ set_default() {
 
   if ! "${defaults_command[@]}" write "$domain" "$key" "$value_type" "$expected"; then
     echo "[WARN] Failed to set: $domain $key"
+    explain_defaults_failure "$domain"
     DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
     return
   fi
@@ -113,6 +126,7 @@ set_default() {
   if [ "$actual_type" != "Type is $required_type" ] ||
      ! values_equal "$value_type" "$current" "$expected"; then
     echo "[WARN] Verification failed: $domain $key"
+    explain_defaults_failure "$domain"
     DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
     return
   fi
@@ -183,6 +197,7 @@ set_user_array_default() {
 
   if ! defaults write "$domain" "$key" -array "$@"; then
     echo "[WARN] Failed to set: $domain $key"
+    explain_defaults_failure "$domain"
     DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
     return
   fi
@@ -191,6 +206,7 @@ set_user_array_default() {
     plutil -convert json -o - -- - 2>/dev/null || true)
   if [ "$current_json" != "$expected_json" ]; then
     echo "[WARN] Verification failed: $domain $key"
+    explain_defaults_failure "$domain"
     DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
     return
   fi
@@ -226,6 +242,7 @@ set_user_dict_entry() {
 
   if ! defaults write "$domain" "$dictionary_key" -dict-add "$entry_key" "$write_value"; then
     echo "[WARN] Failed to set: $domain ${dictionary_key}[$entry_key]"
+    explain_defaults_failure "$domain"
     DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
     return
   fi
@@ -234,6 +251,7 @@ set_user_dict_entry() {
     plutil -extract "$key_path" raw -o - -- - 2>/dev/null || true)
   if [ "$current" != "$expected" ]; then
     echo "[WARN] Verification failed: $domain ${dictionary_key}[$entry_key]"
+    explain_defaults_failure "$domain"
     DEFAULTS_FAILURES=$((DEFAULTS_FAILURES + 1))
     return
   fi
