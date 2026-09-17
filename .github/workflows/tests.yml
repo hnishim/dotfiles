@@ -1,6 +1,6 @@
 name: Tests
 
-# HIR-225 inventory (20 existing test entry points)
+# HIR-225 inventory (21 existing test entry points)
 # ubuntu-latest (portable: no macOS runtime/API dependency in the exercised boundary):
 # - defaults/tests/test_powerpoint_shortcut_refactor.py — fixture-only Python test; requires pytest
 # - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
@@ -13,6 +13,7 @@ name: Tests
 # - apps/codex/tests/test_codex_setup_delegation_contract.sh — temporary repository-shaped fixture + Bash/Python/stub delegates
 # - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — static Python source-contract inspection only
 # - apps/ferdium/tests/test_ferdium_setup.sh — temporary HOME + filesystem/symlink fixture only
+# - hammerspoon/tests/test_commands_path_contract.sh — repository/static contract test; requires rg
 # - lib/tests/test_hir119_karabiner_setup.sh — temporary fixture; goku/launchctl/common helpers are test doubles
 # - lib/tests/test_karabiner_migration.sh — temp filesystem + static contracts; optional goku runtime check self-skips when unavailable
 # - lib/tests/test_setup_call_contracts.sh — Bash/AWK/Python/rg static contract checks
@@ -23,7 +24,7 @@ name: Tests
 # - apps/codex/agents/tests/test_agents_setup.sh — requires ../harness/agents for its default-path scenario
 # - apps/codex/hooks/tests/test_install_hooks.sh — requires ../harness/hooks to seed its isolated fixture
 # - apps/codex/skills/tests/test_skills_setup.sh — requires ../harness/skills for its default-path scenario
-# - hammerspoon/tests/test_hammerspoon_setup.sh — requires ../scripts/hammerspoon and ../scripts/raycast
+# - hammerspoon/tests/test_hammerspoon_setup.sh — requires ../scripts/hammerspoon and ../scripts/commands
 
 on:
   pull_request:
@@ -65,6 +66,7 @@ jobs:
           bash apps/codex/tests/test_codex_setup_delegation_contract.sh
           bash apps/codex/tests/test_setup_macos_codex_entrypoint.sh
           bash apps/ferdium/tests/test_ferdium_setup.sh
+          bash hammerspoon/tests/test_commands_path_contract.sh
           bash lib/tests/test_hir119_karabiner_setup.sh
           bash lib/tests/test_karabiner_migration.sh
           bash lib/tests/test_setup_call_contracts.sh
