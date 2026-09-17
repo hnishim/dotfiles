@@ -20,7 +20,6 @@ casks:
   common:
     - 1password
     - alt-tab
-    - arc
     - chatgpt
     - cursor
     - deskpad
@@ -42,6 +41,7 @@ casks:
     - slack
     - snapzy
     - warp
+    - zen
     - zoom
 
     # 外したもの
@@ -61,6 +61,7 @@ casks:
     # - battery
     # - logi-options+
     # - shottr
+    # - arc
 
   personal:
     - fujitsu-scansnap-home
