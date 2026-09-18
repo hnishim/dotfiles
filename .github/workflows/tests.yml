@@ -1,7 +1,9 @@
 name: Tests
 
-# HIR-225 inventory (20 existing test entry points)
+# HIR-225 inventory + HIR-273 additions (22 test entry points)
 # ubuntu-latest (portable: no macOS runtime/API dependency in the exercised boundary):
+# - apps/cursor/path-paste-extension/tests/path-conversion.test.js — Node.js behavior tests for path extraction and language-specific formatting
+# - apps/cursor/tests/test_path_paste_setup.sh — temporary HOME + fake pnpm/cursor/code setup contract
 # - defaults/tests/test_powerpoint_shortcut_refactor.py — fixture-only Python test; requires pytest
 # - textlint/tests/test_textlint_runtime_plan.py — temporary HOME + fake node/pnpm
 # - textlint/tests/test_textlint_symlink_contract.py — repository/static contract test
@@ -39,6 +41,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Run Cursor path-paste Node tests
+        run: node --test apps/cursor/path-paste-extension/tests/path-conversion.test.js
       - uses: actions/setup-python@v5
         with:
           python-version: "3.x"
@@ -58,6 +65,7 @@ jobs:
         run: |
           set -euo pipefail
           bash apps/amphetamine/tests/test_amphetamine_setup.sh
+          bash apps/cursor/tests/test_path_paste_setup.sh
           bash apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh
           bash apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh
           bash apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh
