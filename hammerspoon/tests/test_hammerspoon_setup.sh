@@ -8,7 +8,7 @@ PRODUCTION_SETUP="$DOTFILES_ROOT/hammerspoon/hammerspoon-setup.sh"
 PRODUCTION_INIT="$DOTFILES_ROOT/hammerspoon/init.lua"
 PRODUCTION_COMMON="$DOTFILES_ROOT/lib/common.sh"
 PRODUCTION_HAMMERSPOON_ROOT=$(cd -- "$DOTFILES_ROOT/../scripts/hammerspoon" && pwd)
-PRODUCTION_RAYCAST_ROOT=$(cd -- "$DOTFILES_ROOT/../scripts/raycast" && pwd)
+PRODUCTION_COMMANDS_ROOT=$(cd -- "$DOTFILES_ROOT/../scripts/commands" && pwd)
 TMP_ROOT=$(cd -- "$(mktemp -d "${TMPDIR:-/tmp}/hammerspoon-setup-test.XXXXXX")" && pwd -P)
 trap 'rm -rf -- "$TMP_ROOT"' EXIT
 
@@ -18,7 +18,7 @@ FIXTURE_SETUP="$FIXTURE_DOTFILES_ROOT/hammerspoon/hammerspoon-setup.sh"
 FIXTURE_INIT="$FIXTURE_DOTFILES_ROOT/hammerspoon/init.lua"
 FIXTURE_SOURCE_DIR="$FIXTURE_ROOT/scripts/hammerspoon"
 FIXTURE_SOURCE_MAIN="$FIXTURE_SOURCE_DIR/main.lua"
-FIXTURE_RAYCAST_ROOT="$FIXTURE_ROOT/scripts/raycast"
+FIXTURE_COMMANDS_ROOT="$FIXTURE_ROOT/scripts/commands"
 
 external_script_names=(
     title-case-chicago.py
@@ -29,28 +29,28 @@ external_script_names=(
 initialize_fixture() {
     rm -rf -- "$FIXTURE_ROOT"
     mkdir -p "$FIXTURE_DOTFILES_ROOT/hammerspoon" "$FIXTURE_DOTFILES_ROOT/lib" \
-        "$FIXTURE_SOURCE_DIR" "$FIXTURE_RAYCAST_ROOT"
+        "$FIXTURE_SOURCE_DIR" "$FIXTURE_COMMANDS_ROOT"
 
     cp -- "$PRODUCTION_SETUP" "$FIXTURE_SETUP"
     cp -- "$PRODUCTION_INIT" "$FIXTURE_INIT"
     cp -- "$PRODUCTION_COMMON" "$FIXTURE_DOTFILES_ROOT/lib/common.sh"
     cp -- "$PRODUCTION_HAMMERSPOON_ROOT/main.lua" "$FIXTURE_SOURCE_MAIN"
     for name in "${external_script_names[@]}"; do
-        cp -- "$PRODUCTION_RAYCAST_ROOT/$name" "$FIXTURE_RAYCAST_ROOT/$name"
+        cp -- "$PRODUCTION_COMMANDS_ROOT/$name" "$FIXTURE_COMMANDS_ROOT/$name"
     done
 }
 
-assert_raycast_sources() {
+assert_commands_sources() {
     for name in "${external_script_names[@]}"; do
-        [ -f "$FIXTURE_RAYCAST_ROOT/$name" ]
-        [ ! -L "$FIXTURE_RAYCAST_ROOT/$name" ]
+        [ -f "$FIXTURE_COMMANDS_ROOT/$name" ]
+        [ ! -L "$FIXTURE_COMMANDS_ROOT/$name" ]
     done
 }
 
 assert_no_repository_external_scripts() {
     [ ! -e "$FIXTURE_SOURCE_DIR/external_scripts" ]
     [ ! -L "$FIXTURE_SOURCE_DIR/external_scripts" ]
-    assert_raycast_sources
+    assert_commands_sources
 }
 
 assert_runtime_external_scripts_absent() {
@@ -83,9 +83,9 @@ run_setup() {
 assert_legacy_external_scripts_side_effect() {
     [ -d "$FIXTURE_SOURCE_DIR/external_scripts" ]
     [ ! -L "$FIXTURE_SOURCE_DIR/external_scripts" ]
-    [ "$(readlink "$FIXTURE_SOURCE_DIR/external_scripts/title-case-chicago.py")" = "$FIXTURE_RAYCAST_ROOT/title-case-chicago.py" ]
-    [ "$(readlink "$FIXTURE_SOURCE_DIR/external_scripts/title-case-chicago.sh")" = "$FIXTURE_RAYCAST_ROOT/title-case-chicago.sh" ]
-    [ "$(readlink "$FIXTURE_SOURCE_DIR/external_scripts/two-panes-finder.applescript")" = "$FIXTURE_RAYCAST_ROOT/two-panes-finder.applescript" ]
+    [ "$(readlink "$FIXTURE_SOURCE_DIR/external_scripts/title-case-chicago.py")" = "$FIXTURE_COMMANDS_ROOT/title-case-chicago.py" ]
+    [ "$(readlink "$FIXTURE_SOURCE_DIR/external_scripts/title-case-chicago.sh")" = "$FIXTURE_COMMANDS_ROOT/title-case-chicago.sh" ]
+    [ "$(readlink "$FIXTURE_SOURCE_DIR/external_scripts/two-panes-finder.applescript")" = "$FIXTURE_COMMANDS_ROOT/two-panes-finder.applescript" ]
 }
 
 finish_success_scenario() {
