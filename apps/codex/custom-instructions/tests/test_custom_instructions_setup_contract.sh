@@ -5,6 +5,10 @@ set -euo pipefail
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 SETUP="$SCRIPT_DIR/../custom-instructions-setup.sh"
 
+# Namespace migration is part of this setup contract. Run the focused
+# namespace test first so a stale active identifier fails before fixture work.
+bash "$SCRIPT_DIR/test-namespace-contract.sh"
+
 python3 - "$SETUP" <<'PY'
 import re
 import sys
@@ -14,7 +18,9 @@ setup = Path(sys.argv[1]).resolve()
 assert setup.is_file(), f"missing planned setup: {setup}"
 source = setup.read_text(encoding="utf-8")
 assert re.search(r"SCRIPT_DIR=\$\(get_script_dir\)", source)
-assert "com.hnishim.custom-instructions-sync" in source
+assert "LABEL='my.notion.sync'" in source
+assert "BOOKMARK_DOMAIN='my.notion.sync.helper'" in source
+assert "com.hnishim.custom-instructions-sync" not in source
 assert "CustomInstructionsSync" in source
 assert "sync-custom-instructions" in source
 assert 'status_output=$' in source
@@ -147,7 +153,7 @@ run_setup
 
 assert_path_mismatch_stops_before_sync() {
     local state=$1
-    local plist="$fake_launch_agents/com.hnishim.custom-instructions-sync.plist"
+    local plist="$fake_launch_agents/my.notion.sync.plist"
     local plist_before="$TMP_ROOT/$state.plist.before"
     : >"$TMP_ROOT/events"
     : >"$TMP_ROOT/auth"
