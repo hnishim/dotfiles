@@ -384,7 +384,7 @@ sys.exit(1 if mode in ("remaining", "no_fix_remaining", "invalid_json", "no_json
             self.assertEqual(base.count(update["old_str"]), 1)
 
     def test_unfixed_findings_do_not_discard_valid_fixes(self) -> None:
-        original = "# Title\\n\\nMacOSはは動きます。\\n"
+        original = "# Title\n\nMacOSはは動きます。\n"
         fixed = original.replace("MacOS", "macOS")
         self.textlint_mode = "remaining"
         self.write_state([page(original), page(original), page(fixed)], patch_response=page(fixed))
@@ -406,7 +406,7 @@ sys.exit(1 if mode in ("remaining", "no_fix_remaining", "invalid_json", "no_json
 
     def test_unfixed_findings_without_fix_do_not_write(self) -> None:
         self.textlint_mode = "no_fix_remaining"
-        self.write_state([page("# Title\\n\\nNo changes.\\n")])
+        self.write_state([page("# Title\n\nNo changes.\n")])
 
         result = self.run_cli()
 
@@ -418,7 +418,7 @@ sys.exit(1 if mode in ("remaining", "no_fix_remaining", "invalid_json", "no_json
         for mode in ("invalid_json", "no_json", "wrong_path", "mismatch_output", "malformed_results", "missing_file"):
             with self.subTest(mode=mode):
                 self.textlint_mode = mode
-                self.write_state([page("# Title\\n\\nMacOS\\n")])
+                self.write_state([page("# Title\n\nMacOS\n")])
                 result = self.run_cli()
                 self.assertNotEqual(result.returncode, 0, result.stdout + result.stderr)
                 self.assertEqual(self.patch_calls(), [])
@@ -426,7 +426,7 @@ sys.exit(1 if mode in ("remaining", "no_fix_remaining", "invalid_json", "no_json
 
     def test_textlint_process_error_never_writes(self) -> None:
         self.textlint_mode = "process_error"
-        self.write_state([page("# Title\\n\\nMacOS\\n")])
+        self.write_state([page("# Title\n\nMacOS\n")])
 
         result = self.run_cli()
 
