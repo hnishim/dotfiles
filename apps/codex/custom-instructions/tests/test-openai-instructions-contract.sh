@@ -103,8 +103,11 @@ printf '%s\n\n%s\n\n%s\n' \
     '# profile marker' >"$expected_agents"
 
 scenario_success() {
-    run_sync >"$TMP_ROOT/success.log" 2>&1
-    cmp -s "$expected_agents" "$CODEX_HOME/AGENTS.md" || return 1
+    if ! run_sync >"$TMP_ROOT/success.log" 2>&1; then
+        cat "$TMP_ROOT/success.log" >&2
+        return 1
+    fi
+    cmp -s "$expected_agents" "$CODEX_HOME/AGENTS.md" || { cat "$TMP_ROOT/success.log" >&2; return 1; }
     [ "$(count_marker '# shared marker' "$CODEX_HOME/AGENTS.md")" -eq 1 ] || return 1
     [ "$(count_marker '## スキルの作成・更新と検証' "$CODEX_HOME/AGENTS.md")" -eq 1 ] || return 1
 }
