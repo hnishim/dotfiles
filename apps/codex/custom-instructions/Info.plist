@@ -5,7 +5,7 @@
     <key>CFBundleExecutable</key>
     <string>CustomInstructionsSync</string>
     <key>CFBundleIdentifier</key>
-    <string>com.hnishim.custom-instructions-sync-helper</string>
+    <string>my.notion.sync.helper</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

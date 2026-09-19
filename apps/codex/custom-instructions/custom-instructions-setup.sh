@@ -19,7 +19,7 @@ SCRIPT_DIR=$(get_script_dir)
 HARNESS_ROOT="${CODEX_HARNESS_ROOT_OVERRIDE:-$(cd "$SCRIPT_DIR/../../../.." && pwd)/harness}"
 ASSET_DIR="$SCRIPT_DIR"
 
-LABEL='com.hnishim.custom-instructions-sync'
+LABEL='my.notion.sync'
 APP_NAME='Custom Instructions Sync.app'
 EXECUTABLE_NAME='CustomInstructionsSync'
 SWIFT_SOURCE="$ASSET_DIR/CustomInstructionsSync.swift"
@@ -52,7 +52,7 @@ STDOUT_PATH="$LOG_DIR/$LABEL.log"
 STDERR_PATH="$LOG_DIR/$LABEL.err.log"
 DOMAIN="gui/$(id -u)"
 MODULE_CACHE_DIR="${CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE:-$HOME/Library/Caches/$LABEL/SwiftModuleCache}"
-BOOKMARK_DOMAIN='com.hnishim.custom-instructions-sync-helper'
+BOOKMARK_DOMAIN='my.notion.sync.helper'
 
 for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$MIRROR_LAYOUT_SOURCE" "$SYNC_SOURCE"; do
     if [ ! -f "$required_file" ]; then

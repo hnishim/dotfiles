@@ -3,7 +3,7 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.hnishim.custom-instructions-sync</string>
+    <string>my.notion.sync</string>
     <key>ProgramArguments</key>
     <array>
         <string>__SYNC_EXECUTABLE__</string>
