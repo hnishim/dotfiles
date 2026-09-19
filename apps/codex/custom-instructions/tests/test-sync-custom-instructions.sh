@@ -40,6 +40,19 @@ if [ "${FAKE_HELPER_MODE:-0}" = "1" ]; then
             fi
             exit 0
             ;;
+        --snapshot)
+            [ "$#" -eq 2 ] || exit 64
+            [ -d "$2" ] && [ ! -L "$2" ] || exit 1
+            [ "$(dirname -- "$2")" = "$FAKE_STATUS_MIRROR" ] || exit 1
+            # Legacy frontmatter/Notion normalization scenarios use the
+            # preconstructed fixture as their independent fake source.
+            cp -R "$FAKE_STATUS_MIRROR/custom-instructions-sync" "$2/custom-instructions-sync"
+            cp -R "$FAKE_STATUS_MIRROR/skills-notion-sync" "$2/skills-notion-sync"
+            if [ -n "${FAKE_EVENTS:-}" ]; then
+                printf '%s\n' helper:snapshot >>"$FAKE_EVENTS"
+            fi
+            exit 0
+            ;;
     esac
 fi
 

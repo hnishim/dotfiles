@@ -22,6 +22,7 @@ name: Tests
 # - lib/tests/test_setup_call_contracts.sh — Bash/AWK/Python/rg static contract checks
 # macos-latest (macOS-specific runtime/semantics required):
 # - apps/codex/custom-instructions/tests/test-mirror-layout.sh — compiles Swift with `-framework AppKit`
+# - apps/codex/custom-instructions/tests/test-temporary-snapshot-swift.sh — real Swift snapshot generation, source bytes, permissions, path safety
 # - lib/tests/test_symlink_helpers.sh — validates BSD/macOS `stat -f '%i'` inode semantics
 # excluded (clean single-repository checkout cannot satisfy sibling-repository source dependencies):
 # - apps/codex/agents/tests/test_agents_setup.sh — requires ../harness/agents for its default-path scenario
@@ -68,6 +69,7 @@ jobs:
           bash apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh
           bash apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh
           bash apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh
+          python3 apps/codex/custom-instructions/tests/test_temporary_notion_snapshot.py
           bash apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh
           bash apps/codex/tests/test_codex_setup_delegation_contract.sh
           bash apps/codex/tests/test_setup_macos_codex_entrypoint.sh
@@ -85,4 +87,5 @@ jobs:
         run: |
           set -euo pipefail
           bash apps/codex/custom-instructions/tests/test-mirror-layout.sh
+          bash apps/codex/custom-instructions/tests/test-temporary-snapshot-swift.sh
           bash lib/tests/test_symlink_helpers.sh

@@ -16,6 +16,13 @@ case "${1:-}" in
         exit 0
         ;;
     --sync)
+        mode=sync
+        ;;
+    --snapshot)
+        [ "$#" -eq 2 ] || exit 64
+        [ -d "$2" ] && [ ! -L "$2" ] || exit 1
+        [ "$(dirname -- "$2")" = "$TEST_MIRROR_ROOT" ] || exit 1
+        mode=snapshot
         ;;
     *)
         exit 64
@@ -68,11 +75,13 @@ read_utf8_source "$TEST_SOURCE_DIR/user-profile.md" user-profile.md
 }
 
 output="$TEST_CODEX_HOME/AGENTS.md"
-mirror="$TEST_MIRROR_ROOT/custom-instructions-sync"
-skills="$TEST_MIRROR_ROOT/skills-notion-sync"
-mkdir -p "$mirror" "$skills/example" "$skills/writing-references"
-
-printf '%s\n\n%s\n\n%s\n' "$custom_data" "$openai_data" "$profile_data" >"$output"
+if [ "$mode" = sync ]; then
+    printf '%s\n\n%s\n\n%s\n' "$custom_data" "$openai_data" "$profile_data" >"$output"
+    exit 0
+fi
+mirror="$2/custom-instructions-sync"
+skills="$2/skills-notion-sync"
+mkdir -m 700 -p "$mirror" "$skills/example" "$skills/writing-references"
 printf '%s\n\n%s\n' "$custom_data" "$openai_data" >"$mirror/custom-instructions.md"
 printf '%s\n' "$profile_data" >"$mirror/user-profile.md"
 printf '%s\n' '---' 'name: example' 'notion_sync: true' '---' '# example' >"$skills/example/SKILL.md"

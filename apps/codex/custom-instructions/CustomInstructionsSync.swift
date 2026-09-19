@@ -17,7 +17,7 @@ enum SyncError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .usage:
-            return "使い方: CustomInstructionsSync --authorize <.codexフォルダー> [custom-instructions候補] [skills候補] [Notion同期ミラーroot] | --sync | --status"
+            return "使い方: CustomInstructionsSync --authorize <.codexフォルダー> [custom-instructions候補] [skills候補] [Notion同期ミラーroot] | --sync | --snapshot <実行専用ディレクトリ> | --status"
         case .cancelled:
             return "フォルダー選択がキャンセルされました。"
         case .invalidSelection(let message), .bookmarkResolution(let message),
@@ -86,6 +86,11 @@ struct CustomInstructionsSync {
             case "--sync":
                 guard arguments.count == 1 else { throw SyncError.usage }
                 try sync()
+            case "--snapshot":
+                guard arguments.count == 2 else { throw SyncError.usage }
+                try syncNotionSnapshot(
+                    to: URL(fileURLWithPath: arguments[1], isDirectory: true)
+                )
             case "--status":
                 guard arguments.count == 1 else { throw SyncError.usage }
                 let access = try resolveStoredAccess()
@@ -298,109 +303,170 @@ struct CustomInstructionsSync {
 
     static func sync() throws {
         let access = try resolveStoredAccess()
-        let sourceGranted = access.sourceURL.startAccessingSecurityScopedResource()
-        guard sourceGranted else {
+        guard access.sourceURL.startAccessingSecurityScopedResource() else {
             throw SyncError.accessDenied("正本フォルダーへのアクセス権を開始できませんでした。setup.shを再実行してください。")
         }
         defer { access.sourceURL.stopAccessingSecurityScopedResource() }
 
-        let skillsGranted = access.skillsURL.startAccessingSecurityScopedResource()
-        guard skillsGranted else {
-            throw SyncError.accessDenied("Skills正本フォルダーへのアクセス権を開始できませんでした。setup.shを再実行してください。")
-        }
-        defer { access.skillsURL.stopAccessingSecurityScopedResource() }
-
-        let mirrorGranted = access.mirrorURL.startAccessingSecurityScopedResource()
-        guard mirrorGranted else {
-            throw SyncError.accessDenied("Notion同期ミラーrootへのアクセス権を開始できませんでした。setup.shを再実行してください。")
-        }
-        defer { access.mirrorURL.stopAccessingSecurityScopedResource() }
-
-        let outputGranted = access.outputURL.startAccessingSecurityScopedResource()
-        guard outputGranted else {
+        guard access.outputURL.startAccessingSecurityScopedResource() else {
             throw SyncError.accessDenied("出力フォルダーへのアクセス権を開始できませんでした。setup.shを再実行してください。")
         }
         defer { access.outputURL.stopAccessingSecurityScopedResource() }
 
         let stableSources = try readStableSources(from: access.sourceURL)
-        let stableSkills = try readStableSkills(from: access.skillsURL)
         let outputData = try compose(
             custom: stableSources.custom,
             openai: stableSources.openai,
             profile: stableSources.profile
         )
-
-        let latestPair = try readSources(from: access.sourceURL)
-        guard latestPair.custom == stableSources.custom,
-              latestPair.openai == stableSources.openai,
-              latestPair.profile == stableSources.profile else {
+        let latest = try readSources(from: access.sourceURL)
+        guard latest.custom == stableSources.custom,
+              latest.openai == stableSources.openai,
+              latest.profile == stableSources.profile else {
             throw SyncError.unstableSources
         }
-        let latestSkills = try readSkills(from: access.skillsURL)
-        guard latestSkills == stableSkills else {
-            throw SyncError.unstableSources
-        }
-
-        try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))
-
-        let fileManager = FileManager.default
-        switch mirrorItemKind(at: access.mirrorURL) {
-        case .absent:
-            try fileManager.createDirectory(
-                at: access.mirrorURL,
-                withIntermediateDirectories: true,
-                attributes: [.posixPermissions: 0o700]
-            )
-        case .directory:
-            break
-        case .symbolicLink, .regularFile, .other:
-            throw SyncError.invalidMirrorLayout(
-                "Notion同期ミラーrootが通常のフォルダーではありません: \(access.mirrorURL.path)"
-            )
-        }
-        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: access.mirrorURL.path)
-        try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))
-
-        let mirrorDirectory = access.mirrorURL.appendingPathComponent(mirrorDirectoryName, isDirectory: true)
-        switch mirrorItemKind(at: mirrorDirectory) {
-        case .absent:
-            try fileManager.createDirectory(
-                at: mirrorDirectory,
-                withIntermediateDirectories: true,
-                attributes: [.posixPermissions: 0o700]
-            )
-        case .directory:
-            break
-        case .symbolicLink, .regularFile, .other:
-            throw SyncError.invalidMirrorLayout(
-                "Notion同期ミラーが通常のフォルダーではありません: \(mirrorDirectory.path)"
-            )
-        }
-        try fileManager.setAttributes([.posixPermissions: 0o700], ofItemAtPath: mirrorDirectory.path)
-        try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))
-
-        let customMirror = mirrorDirectory.appendingPathComponent(customInstructionsName, isDirectory: false)
-        let profileMirror = mirrorDirectory.appendingPathComponent(userProfileName, isDirectory: false)
-        let customMirrorData = try composeCustomMirror(
-            custom: stableSources.custom,
-            openai: stableSources.openai
-        )
-        let customUpdated = try writePrivatelyIfChanged(customMirrorData, to: customMirror)
-        let profileUpdated = try writePrivatelyIfChanged(stableSources.profile, to: profileMirror)
 
         let outputURL = access.outputURL.appendingPathComponent(outputName, isDirectory: false)
-        let agentsUpdated = try writePrivatelyIfChanged(outputData, to: outputURL, replaceSymlink: true)
-        try replaceSkillsMirror(stableSkills, in: access.mirrorURL)
-
-        if customUpdated || profileUpdated {
-            print("[SUCCESS] Notion同期用のローカルコピーを更新しました。")
-        } else {
-            print("[SUCCESS] Notion同期用のローカルコピーは最新です。")
-        }
-        print(agentsUpdated
+        let updated = try writePrivatelyIfChanged(outputData, to: outputURL, replaceSymlink: true)
+        print(updated
             ? "[SUCCESS] AGENTS.mdを更新しました: \(outputURL.path)"
             : "[SUCCESS] AGENTS.mdは最新です。更新をスキップしました。")
-        print("[SUCCESS] SkillsのNotion同期用ミラーを更新しました（\(stableSkills.count)ファイル）。")
+    }
+
+    static func syncNotionSnapshot(to snapshotURL: URL) throws {
+        let access = try resolveStoredAccess()
+        guard access.sourceURL.startAccessingSecurityScopedResource() else {
+            throw SyncError.accessDenied("正本フォルダーへのアクセス権を開始できませんでした。")
+        }
+        defer { access.sourceURL.stopAccessingSecurityScopedResource() }
+        guard access.skillsURL.startAccessingSecurityScopedResource() else {
+            throw SyncError.accessDenied("Skills正本フォルダーへのアクセス権を開始できませんでした。")
+        }
+        defer { access.skillsURL.stopAccessingSecurityScopedResource() }
+        guard access.mirrorURL.startAccessingSecurityScopedResource() else {
+            throw SyncError.accessDenied("一時作業領域へのアクセス権を開始できませんでした。")
+        }
+        defer { access.mirrorURL.stopAccessingSecurityScopedResource() }
+
+        try generateNotionSnapshot(
+            sourceURL: access.sourceURL,
+            skillsURL: access.skillsURL,
+            authorizedRootURL: access.mirrorURL,
+            snapshotURL: snapshotURL
+        )
+    }
+
+    // The caller owns the empty, private run directory and removes only that
+    // directory after the entire Notion write/readback transaction.
+    static func generateNotionSnapshot(
+        sourceURL: URL,
+        skillsURL: URL,
+        authorizedRootURL: URL,
+        snapshotURL: URL
+    ) throws {
+        let fm = FileManager.default
+        let root = authorizedRootURL.standardizedFileURL
+        let run = snapshotURL.standardizedFileURL
+        guard run.deletingLastPathComponent().path == root.path,
+              run.lastPathComponent.hasPrefix("run-"),
+              run.path != root.path,
+              mirrorItemKind(at: root) == .directory,
+              mirrorItemKind(at: run) == .directory else {
+            throw SyncError.invalidMirrorLayout("認可された一時作業領域直下の通常ディレクトリではありません: \(snapshotURL.path)")
+        }
+
+        func requireMode(_ url: URL, _ expected: Int) throws {
+            let attributes = try fm.attributesOfItem(atPath: url.path)
+            guard let actual = attributes[.posixPermissions] as? NSNumber,
+                  actual.intValue == expected else {
+                throw SyncError.invalidMirrorLayout("一時領域の権限が不正です: \(url.path)")
+            }
+        }
+
+        try requireMode(root, 0o700)
+        try requireMode(run, 0o700)
+        guard try fm.contentsOfDirectory(atPath: run.path).isEmpty else {
+            throw SyncError.invalidMirrorLayout("実行専用ディレクトリが空ではありません: \(run.path)")
+        }
+
+        let stableSources = try readStableSources(from: sourceURL)
+        let stableSkills = try readStableSkills(from: skillsURL)
+        let latestSources = try readSources(from: sourceURL)
+        guard latestSources.custom == stableSources.custom,
+              latestSources.openai == stableSources.openai,
+              latestSources.profile == stableSources.profile,
+              try readSkills(from: skillsURL) == stableSkills else {
+            throw SyncError.unstableSources
+        }
+
+        // No prior mirror is read, validated as an input, or replaced.
+        let customDirectory = run.appendingPathComponent(mirrorDirectoryName, isDirectory: true)
+        let skillsDirectory = run.appendingPathComponent(skillsMirrorDirectoryName, isDirectory: true)
+        try fm.createDirectory(at: customDirectory, withIntermediateDirectories: false,
+                               attributes: [.posixPermissions: 0o700])
+        try fm.createDirectory(at: skillsDirectory, withIntermediateDirectories: false,
+                               attributes: [.posixPermissions: 0o700])
+        try requireMode(customDirectory, 0o700)
+        try requireMode(skillsDirectory, 0o700)
+
+        let customData = try composeCustomMirror(custom: stableSources.custom, openai: stableSources.openai)
+        let customFile = customDirectory.appendingPathComponent(customInstructionsName, isDirectory: false)
+        let profileFile = customDirectory.appendingPathComponent(userProfileName, isDirectory: false)
+        try customData.write(to: customFile, options: .atomic)
+        try setPrivatePermissions(on: customFile)
+        try stableSources.profile.write(to: profileFile, options: .atomic)
+        try setPrivatePermissions(on: profileFile)
+
+        for relative in stableSkills.keys.sorted() {
+            guard let data = stableSkills[relative] else {
+                throw SyncError.invalidMirrorLayout("Skills正本の一覧が変更されました。")
+            }
+            let components = relative.split(separator: "/").map(String.init)
+            guard components.count == 2,
+                  !components[0].isEmpty,
+                  !components[1].isEmpty,
+                  (components[1] == "SKILL.md" || components[0] == writingReferencesDirectoryName) else {
+                throw SyncError.invalidMirrorLayout("Skills正本の相対パスが不正です: \(relative)")
+            }
+            let folder = skillsDirectory.appendingPathComponent(components[0], isDirectory: true)
+            switch mirrorItemKind(at: folder) {
+            case .absent:
+                try fm.createDirectory(at: folder, withIntermediateDirectories: false,
+                                       attributes: [.posixPermissions: 0o700])
+            case .directory:
+                break
+            case .symbolicLink, .regularFile, .other:
+                throw SyncError.invalidMirrorLayout("Skills出力先が通常ディレクトリではありません: \(folder.path)")
+            }
+            try requireMode(folder, 0o700)
+            let file = folder.appendingPathComponent(components[1], isDirectory: false)
+            guard mirrorItemKind(at: file) == .absent else {
+                throw SyncError.invalidMirrorLayout("Skills出力先が空ではありません: \(file.path)")
+            }
+            try data.write(to: file, options: .atomic)
+            try setPrivatePermissions(on: file)
+        }
+
+        try validateMirrorLayout(run, expectedSkills: Set(stableSkills.keys))
+        guard Set(try fm.contentsOfDirectory(atPath: run.path)) ==
+                Set([mirrorDirectoryName, skillsMirrorDirectoryName]),
+              Set(try fm.contentsOfDirectory(atPath: customDirectory.path)) ==
+                Set([customInstructionsName, userProfileName]),
+              try Data(contentsOf: customFile) == customData,
+              try Data(contentsOf: profileFile) == stableSources.profile else {
+            throw SyncError.invalidMirrorLayout("一時スナップショットの内容または構造が不正です。")
+        }
+        try requireMode(customFile, 0o600)
+        try requireMode(profileFile, 0o600)
+        for (relative, data) in stableSkills {
+            let file = skillsDirectory.appendingPathComponent(relative, isDirectory: false)
+            guard mirrorItemKind(at: file) == .regularFile,
+                  try Data(contentsOf: file) == data else {
+                throw SyncError.invalidMirrorLayout("一時Skillsの内容が不正です: \(relative)")
+            }
+            try requireMode(file, 0o600)
+        }
+        print("[SUCCESS] 一時Notion同期用スナップショットを生成しました（\(stableSkills.count)ファイル）。")
     }
 
     enum MirrorItemKind {
