@@ -68,6 +68,7 @@ jobs:
           bash apps/codex/custom-instructions/tests/test-mirror-bookmark-contract.sh
           bash apps/codex/custom-instructions/tests/test-openai-instructions-contract.sh
           bash apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh
+          python3 apps/codex/custom-instructions/tests/test_temporary_notion_snapshot.py
           bash apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh
           bash apps/codex/tests/test_codex_setup_delegation_contract.sh
           bash apps/codex/tests/test_setup_macos_codex_entrypoint.sh
