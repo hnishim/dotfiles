@@ -34,10 +34,12 @@ swift_contracts = (
     'access.skillsURL.startAccessingSecurityScopedResource()',
     'access.outputURL.startAccessingSecurityScopedResource()',
     'access.mirrorURL.startAccessingSecurityScopedResource()',
-    'try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))',
+    'try generateNotionSnapshot(',
+    'authorizedRootURL: access.mirrorURL,',
+    'snapshotURL: snapshotURL',
     'static func mirrorItemKind(at url: URL) -> MirrorItemKind',
     'case .symbolicLink, .regularFile, .other:',
-    'try replaceSkillsMirror(stableSkills, in: access.mirrorURL)',
+    'try validateMirrorLayout(run, expectedSkills: Set(stableSkills.keys))',
 )
 for contract in swift_contracts:
     if contract not in swift_source:
@@ -68,19 +70,21 @@ for contract in setup_contracts:
 
 sync_contracts = (
     'MIRROR_ROOT="${NOTION_SYNC_MIRROR_ROOT_OVERRIDE:-$(dirname -- "$NOTION_CONFIG")/mirrors}"',
-    'MIRROR_DIR="$MIRROR_ROOT/custom-instructions-sync"',
-    'SKILLS_MIRROR_DIR="$MIRROR_ROOT/skills-notion-sync"',
+    'MIRROR_DIR="$snapshot_dir/custom-instructions-sync"',
+    'SKILLS_MIRROR_DIR="$snapshot_dir/skills-notion-sync"',
+    '"$HELPER_EXECUTABLE" --snapshot "$snapshot_dir"',
 )
 for contract in sync_contracts:
     if contract not in sync_source.replace("$", "$"):
         raise AssertionError(f"missing sync mirror root contract: {contract}")
 
-if swift_source.index('try validateMirrorLayout(access.mirrorURL, expectedSkills: Set(stableSkills.keys))') \
-        > swift_source.index('let mirrorDirectory ='):
-    raise AssertionError("mirror layout must be validated before mirror writes")
-if swift_source.index('try validateMirrorLayout(outputFolderURL, expectedSkills: Set(files.keys))') \
-        > swift_source.index('try fileManager.removeItem(at: mirrorURL)'):
-    raise AssertionError("Skills mirror layout must be revalidated before replacement")
+if swift_source.index('guard run.deletingLastPathComponent().path == root.path') > \
+        swift_source.index('let stableSources = try readStableSources(from: sourceURL)'):
+    raise AssertionError("snapshot destination must be validated before reading and writing")
+if swift_source.index('try validateMirrorLayout(run, expectedSkills: Set(stableSkills.keys))') < \
+        swift_source.index('try customData.write(to: customFile, options: .atomic)'):
+    raise AssertionError("generated snapshot must be checked after writing")
+
 if setup_source.index('preflight_mirror_root "$MIRROR_ROOT"') \
         > setup_source.index('mkdir -p "$CODEX_HOME_DIR"'):
     raise AssertionError("mirror root must be preflighted before setup creates or chmods it")

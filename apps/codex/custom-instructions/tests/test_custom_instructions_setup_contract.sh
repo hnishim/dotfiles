@@ -102,11 +102,7 @@ printf '%s\n' '#!/bin/bash' 'output=' \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '--sync)'" \
     "printf '%s\\n' 'printf \"sync\\n\" >>\"\$FAKE_SETUP_EVENTS\"'" \
-    "printf '%s\\n' \"mkdir -p '$fake_support/mirrors/custom-instructions-sync' '$fake_support/mirrors/skills-notion-sync/example' '$fake_support/mirrors/skills-notion-sync/writing-references'\"" \
-    "printf '%s\\n' \"printf '%s\\n\\n%s\\n' custom openai >'$fake_support/mirrors/custom-instructions-sync/custom-instructions.md'\"" \
-    "printf '%s\\n' \"printf '%s\\n' profile >'$fake_support/mirrors/custom-instructions-sync/user-profile.md'\"" \
-    "printf '%s\\n' \"printf '%s\\n' skill >'$fake_support/mirrors/skills-notion-sync/example/SKILL.md'\"" \
-    "printf '%s\\n' \"printf '%s\\n' reference >'$fake_support/mirrors/skills-notion-sync/writing-references/example.md'\"" \
+    "printf '%s\\n' \"printf '%s\\n\\n%s\\n\\n%s\\n' custom openai profile >'$codex_home/AGENTS.md'\""
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '*) exit 1 ;;'" \
     "printf '%s\\n' 'esac'" >"$fake_swiftc"

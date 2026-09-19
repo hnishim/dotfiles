@@ -16,11 +16,57 @@ NTN_EXECUTABLE=$2
 CODEX_HOME_DIR=$3
 NOTION_CONFIG=$4
 MIRROR_ROOT="${NOTION_SYNC_MIRROR_ROOT_OVERRIDE:-$(dirname -- "$NOTION_CONFIG")/mirrors}"
-MIRROR_DIR="$MIRROR_ROOT/custom-instructions-sync"
-SKILLS_MIRROR_DIR="$MIRROR_ROOT/skills-notion-sync"
 STATE_DIR="$(dirname -- "$NOTION_CONFIG")/state"
 JQ_EXECUTABLE=/usr/bin/jq
 RUBY_EXECUTABLE=/usr/bin/ruby
+
+# A Ruby process acquires an OS-backed lock, then execs this script while
+# inheriting the descriptor. This spans all Notion writes and hash readback,
+# including concurrent LaunchAgent and manual invocations.
+if [ "${NOTION_SYNC_LOCK_OWNER:-0}" != 1 ]; then
+    "$RUBY_EXECUTABLE" - "$STATE_DIR" "$0" "$@" <<'RUBY_LOCK'
+require "timeout"
+state = ARGV.shift
+script = ARGV.shift
+parent = File.dirname(state)
+begin
+  root = File.lstat(parent)
+  abort "[ERROR] 状態保存先の親が通常のディレクトリではありません。" unless root.directory? && !root.symlink?
+  Dir.mkdir(state, 0700) unless File.exist?(state) || File.symlink?(state)
+  dir = File.lstat(state)
+  abort "[ERROR] 状態保存先が安全なディレクトリではありません。" unless dir.directory? && !dir.symlink? && dir.uid == Process.uid
+  File.chmod(0700, state)
+  name = File.join(state, "notion-sync.lock")
+  unless !File.exist?(name) && !File.symlink?(name)
+    info = File.lstat(name)
+    abort "[ERROR] ロックファイルが通常の所有ファイルではありません。" unless
+      info.file? && !info.symlink? && info.uid == Process.uid && (info.mode & 0777) == 0600
+  end
+  flags = File::RDWR | File::CREAT
+  flags |= File::NOFOLLOW if defined?(File::NOFOLLOW)
+  lock = File.open(name, flags, 0600)
+  info = lock.stat
+  abort "[ERROR] ロックファイルの権限が不正です。" unless
+    info.file? && info.uid == Process.uid && (info.mode & 0777) == 0600
+  deadline = Process.clock_gettime(Process::CLOCK_MONOTONIC) + 120
+  until lock.flock(File::LOCK_EX | File::LOCK_NB)
+    abort "[ERROR] Notion同期ロックの取得がタイムアウトしました。" if
+      Process.clock_gettime(Process::CLOCK_MONOTONIC) > deadline
+    sleep 0.1
+  end
+  lock.close_on_exec = false
+  ENV["NOTION_SYNC_LOCK_OWNER"] = "1"
+  exec script, *ARGV, close_others: false
+rescue SystemCallError, IOError => e
+  abort "[ERROR] Notion同期の排他制御に失敗しました: #{e.message}"
+end
+RUBY_LOCK
+    exit $?
+fi
+
+MIRROR_DIR=''
+SKILLS_MIRROR_DIR=''
+snapshot_dir=''
 
 if [ ! -x "$HELPER_EXECUTABLE" ]; then
     printf '[ERROR] 実行ファイルが見つかりません: %s\n' "$HELPER_EXECUTABLE" >&2
@@ -64,8 +110,14 @@ if [ "$authorized_mirror" != "$MIRROR_ROOT" ]; then
     exit 1
 fi
 
+if [ -L "$MIRROR_ROOT" ] || [ ! -d "$MIRROR_ROOT" ]; then
+    printf '[ERROR] 認可済み一時作業領域が通常ディレクトリではありません。\n' >&2
+    exit 1
+fi
+chmod 700 "$MIRROR_ROOT"
+
 if ! "$HELPER_EXECUTABLE" --sync; then
-    printf '[ERROR] 正本のローカルミラー作成に失敗しました。\n' >&2
+    printf '[ERROR] Codex用AGENTS.mdの更新に失敗しました。\n' >&2
     exit 1
 fi
 
@@ -130,12 +182,51 @@ case "${temp_dir:?}" in
 esac
 
 cleanup() {
+    local status=$?
+    if [ -n "${snapshot_dir:-}" ]; then
+        case "$snapshot_dir" in
+            "$MIRROR_ROOT"/run-*)
+                if [ -d "$snapshot_dir" ] && [ ! -L "$snapshot_dir" ]; then
+                    rm -rf -- "$snapshot_dir" || status=1
+                else
+                    printf '[ERROR] 一時作業領域の種別が変わったため削除しません: %s\n' "$snapshot_dir" >&2
+                    status=1
+                fi
+                ;;
+            *) printf '[ERROR] 想定外のスナップショット領域を削除しません: %s\n' "$snapshot_dir" >&2; status=1 ;;
+        esac
+    fi
     case "${temp_dir:?}" in
-        "${TMPDIR:-/tmp}"/custom-instructions-notion.*) rm -rf -- "$temp_dir" ;;
-        *) printf '[ERROR] 一時ディレクトリを削除しません: %s\n' "$temp_dir" >&2 ;;
+        "${TMPDIR:-/tmp}"/custom-instructions-notion.*)
+            if [ -d "$temp_dir" ] && [ ! -L "$temp_dir" ]; then
+                rm -rf -- "$temp_dir" || status=1
+            else
+                status=1
+            fi
+            ;;
+        *) printf '[ERROR] 一時ディレクトリを削除しません: %s\n' "$temp_dir" >&2; status=1 ;;
     esac
+    exit "$status"
 }
 trap cleanup EXIT
+
+snapshot_dir=$(mktemp -d "$MIRROR_ROOT/run-XXXXXXXX")
+case "$snapshot_dir" in
+    "$MIRROR_ROOT"/run-*) ;;
+    *) printf '[ERROR] 想定外のスナップショットパスです: %s\n' "$snapshot_dir" >&2; exit 1 ;;
+esac
+chmod 700 "$snapshot_dir"
+if ! "$HELPER_EXECUTABLE" --snapshot "$snapshot_dir"; then
+    printf '[ERROR] 正本からの一時スナップショット生成に失敗しました。\n' >&2
+    exit 1
+fi
+MIRROR_DIR="$snapshot_dir/custom-instructions-sync"
+SKILLS_MIRROR_DIR="$snapshot_dir/skills-notion-sync"
+if [ ! -d "$MIRROR_DIR" ] || [ -L "$MIRROR_DIR" ] ||
+   [ ! -d "$SKILLS_MIRROR_DIR" ] || [ -L "$SKILLS_MIRROR_DIR" ]; then
+    printf '[ERROR] 一時スナップショットの構造が不正です。\n' >&2
+    exit 1
+fi
 
 normalize_markdown() {
     "$RUBY_EXECUTABLE" - "$1" <<'RUBY'
