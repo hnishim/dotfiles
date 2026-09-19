@@ -95,8 +95,33 @@ class TemporarySnapshotContract(unittest.TestCase):
     def assert_ok(self, result):
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_deleted_skill_and_corrupt_legacy_mirror_do_not_block(self):
-        # The legacy mirror is not an input. Its foreign content is never removed.
+    def test_deleted_skill_does_not_reappear(self):
+        # A deleted source Skill must not be sent again; existing Notion pages
+        # are not deleted by synchronization.
+        self.assert_ok(self.run_sync())
+        expected_custom = (self.source / "custom-instructions.md").read_bytes()
+        expected_openai = (self.source / "openai-instructions.md").read_bytes()
+        expected_custom += b"\n" + expected_openai
+        self.assertEqual((self.pages / (CUSTOM_ID + ".md")).read_bytes(),
+                         expected_custom)
+        self.assertEqual((self.pages / (PROFILE_ID + ".md")).read_bytes(),
+                         (self.source / "user-profile.md").read_bytes())
+        self.assertEqual((self.pages / "page-example.md").read_bytes(),
+                         (self.skills / "example" / "SKILL.md").read_bytes())
+
+        old_page = self.pages / "page-example.md"
+        original_page = old_page.read_bytes()
+        edits_before = len(self.events_of("notion:edit-start:page-example"))
+        shutil.rmtree(self.skills / "example")
+        self.assert_ok(self.run_sync())
+        self.assertEqual(len(self.events_of("notion:edit-start:page-example")),
+                         edits_before, "a removed Skill was re-sent")
+        self.assertEqual(old_page.read_bytes(), original_page,
+                         "a removed Skill's Notion page was deleted or modified")
+        self.assertEqual(self.snapshots(), [])
+
+    def test_corrupt_legacy_mirror_is_preserved(self):
+        # Legacy files are not inputs and unrecognized entries are not deleted.
         old = self.mirrors / "skills-notion-sync"
         old.mkdir()
         (old / "deleted-skill").mkdir()
@@ -106,19 +131,14 @@ class TemporarySnapshotContract(unittest.TestCase):
         marker = self.root / "unrelated"
         marker.write_text("preserve")
         self.assert_ok(self.run_sync())
-        self.assertTrue((self.pages / "page-example.md").exists())
         self.assertFalse((self.pages / "page-deleted-skill.md").exists())
         self.assertTrue((old / "foreign").is_symlink())
+        self.assertTrue((old / "deleted-skill" / "SKILL.md").exists())
         self.assertEqual(marker.read_text(), "preserve")
         self.assertEqual(self.snapshots(), [])
         self.assertTrue((self.codex / "AGENTS.md").is_file())
         self.assertFalse((self.codex / "AGENTS.md").is_symlink())
         self.assertTrue(self.events_of("helper:snapshot:"))
-        # A removed real skill does not reappear from the old mirror on the next run.
-        shutil.rmtree(self.skills / "example")
-        self.assert_ok(self.run_sync())
-        self.assertFalse((self.pages / "page-deleted-skill.md").exists())
-        self.assertEqual(self.snapshots(), [])
 
     def test_readback_failure_preserves_hash_and_cleans_snapshot(self):
         bad = self.run_sync(FAKE_READBACK_MISMATCH="1")
