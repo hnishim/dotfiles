@@ -25,6 +25,7 @@ RUBY_EXECUTABLE=/usr/bin/ruby
 # including concurrent LaunchAgent and manual invocations.
 if [ "${NOTION_SYNC_LOCK_OWNER:-0}" != 1 ]; then
     "$RUBY_EXECUTABLE" - "$STATE_DIR" "$0" "$@" <<'RUBY_LOCK'
+# encoding: UTF-8
 require "timeout"
 state = ARGV.shift
 script = ARGV.shift
