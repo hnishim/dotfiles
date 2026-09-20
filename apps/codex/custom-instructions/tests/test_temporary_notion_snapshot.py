@@ -278,7 +278,8 @@ elif args[:2] == ["pages", "get"]:
     content = (pages / (args[2] + ".md")).read_text()
     if os.environ.get("FAKE_READBACK_MISMATCH") == "1":
         content = "# deliberately mismatched\n"
-    print("---\n---\n" + content)
+    # Readback must reflect the bytes saved by pages edit; do not add a second frontmatter.
+    print(content, end="")
 elif args[0] == "api":
     print(json.dumps({"object":"page", "properties":{}}))
 else:
