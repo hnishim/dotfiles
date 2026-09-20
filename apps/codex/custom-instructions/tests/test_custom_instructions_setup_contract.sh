@@ -102,7 +102,7 @@ printf '%s\n' '#!/bin/bash' 'output=' \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '--sync)'" \
     "printf '%s\\n' 'printf \"sync\\n\" >>\"\$FAKE_SETUP_EVENTS\"'" \
-    "printf '%s\\n' \"printf '%s\\n\\n%s\\n\\n%s\\n' custom openai profile >'$codex_home/AGENTS.md'\""
+    "printf '%s\\n' \"printf '%s\\n\\n%s\\n\\n%s\\n' custom openai profile >'$codex_home/AGENTS.md'\"" \
     "printf '%s\\n' ';;'" \
     "printf '%s\\n' '*) exit 1 ;;'" \
     "printf '%s\\n' 'esac'" >"$fake_swiftc"
