@@ -478,8 +478,7 @@ while IFS= read -r source_file; do
 done < <(find "$SKILLS_MIRROR_DIR" -type f -name '*.md' -print | sort)
 
 if [ ! -s "$skills_manifest" ]; then
-    printf '[ERROR] frontmatterを持つSkillsファイルが見つかりません。\n' >&2
-    exit 1
+    printf '[INFO] 同期対象のSkillsは0件です。既存Notionページを削除せず、その他の同期を継続します。\n'
 fi
 
 page_rows="$temp_dir/page-rows.tsv"
