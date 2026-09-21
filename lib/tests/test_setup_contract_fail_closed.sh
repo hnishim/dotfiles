@@ -61,7 +61,7 @@ mutate_and_check() {
     cp -- "$source" "$backup"
     sed "$pattern" "$backup" >"$source"
     if cmp -s "$backup" "$source"; then
-        printf '[FAIL] %s mutation did not change its fixture\\n' "$name" >&2
+        printf '%s\n' "[FAIL] $name mutation did not change its fixture" >&2
         return 1
     fi
     expect_failure "$name"
