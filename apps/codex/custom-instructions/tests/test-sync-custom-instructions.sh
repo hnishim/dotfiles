@@ -609,7 +609,7 @@ if run_sync >"$TMP_ROOT/missing-name.log" 2>&1; then
     printf '[ERROR] frontmatter name欠落を検出できませんでした。\n' >&2
     exit 1
 fi
-/usr/bin/grep -Fq 'frontmatterのnameがありません' "$TMP_ROOT/missing-name.log" || {
+/usr/bin/grep -Fq 'フロントマターのnameがありません' "$TMP_ROOT/missing-name.log" || {
     /bin/cat "$TMP_ROOT/missing-name.log" >&2
     printf '[ERROR] frontmatter name欠落の固有エラーがありません。\n' >&2
     exit 1
