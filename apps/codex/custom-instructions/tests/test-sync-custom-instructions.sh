@@ -117,6 +117,7 @@ fake_notion() {
             local page_id=${api_path##*/}
             if [ "$method" = "PATCH" ]; then
                 printf '%s' "$data" >"$FAKE_META_DIR/$page_id.json"
+                printf '%s\n' "$page_id" >>"$FAKE_PATCH_LOG"
                 printf '{"object":"page","id":"%s"}\n' "$page_id"
             else
                 if [ -f "$FAKE_META_DIR/$page_id.json" ]; then
@@ -203,6 +204,7 @@ CONFIG_DIR="$TMP_ROOT/config"
 FAKE_STATE_DIR="$TMP_ROOT/pages"
 FAKE_META_DIR="$TMP_ROOT/meta"
 FAKE_EDIT_LOG="$TMP_ROOT/edits.log"
+FAKE_PATCH_LOG="$TMP_ROOT/patches.log"
 FAKE_QUERY_JSON="$TMP_ROOT/query.json"
 CONFIG="$CONFIG_DIR/notion-pages.conf"
 HELPER="$TMP_ROOT/helper"
@@ -223,18 +225,25 @@ if [ -z "${CODEX_HARNESS_ROOT_OVERRIDE:-}" ]; then
     printf '%s\n' '# profile fixture' >"$HARNESS_ROOT/custom-instructions/user-profile.md"
     for skill_name in "${TRUE_SKILLS[@]}"; do
         mkdir -p "$HARNESS_ROOT/skills/$skill_name"
-        printf '%s\n' '---' "name: $skill_name" 'notion_sync: true' '---' "# $skill_name" \
+        printf '%s\n' '---' "name: $skill_name" 'metadata:' '  notion_sync: "true"' '---' "# $skill_name" \
             >"$HARNESS_ROOT/skills/$skill_name/SKILL.md"
     done
     for skill_name in "${FALSE_SKILLS[@]}"; do
         mkdir -p "$HARNESS_ROOT/skills/$skill_name"
-        printf '%s\n' '---' "name: $skill_name" 'notion_sync: false' '---' "# $skill_name" \
+        printf '%s\n' '---' "name: $skill_name" 'metadata:' '  notion_sync: "false"' '---' "# $skill_name" \
             >"$HARNESS_ROOT/skills/$skill_name/SKILL.md"
     done
     for reference_name in "${TRUE_REFERENCES[@]}"; do
-        printf '%s\n' '---' "name: $reference_name" 'notion_sync: true' '---' "# $reference_name" \
+        printf '%s\n' '---' "name: $reference_name" 'metadata:' '  notion_sync: "true"' '---' "# $reference_name" \
             >"$HARNESS_ROOT/skills/writing-references/$reference_name.md"
     done
+    printf '%s\n' '---' 'name: explain' 'description: explain fixture' 'metadata:' \
+        '  notion_sync: "true"' '  notion_role: "Main"' \
+        "  notion_tags: '[\"explanation\",\"text\"]'" '---' '# explain' \
+        >"$HARNESS_ROOT/skills/explain/SKILL.md"
+    printf '%s\n' '---' 'name: business-email' 'metadata:' \
+        '  notion_sync: "true"' "  notion_tags: '[]'" '---' '# business-email' \
+        >"$HARNESS_ROOT/skills/writing-references/business-email.md"
 fi
 
 for source_file in \
@@ -274,7 +283,7 @@ names = paths.sort.map do |path|
   text = File.read(path, encoding: "UTF-8")
   match = text.match(/\A---\r?\n(.*?)\r?\n---\r?\n?/m)
   metadata = YAML.safe_load(match[1], permitted_classes: [], aliases: false)
-  metadata.fetch("name") if metadata["notion_sync"] == true
+  metadata.fetch("name") if metadata.fetch("metadata", {})["notion_sync"] == "true"
 end.compact
 results = names.each_with_index.map do |name, index|
   {
@@ -299,6 +308,7 @@ run_sync() {
     FAKE_STATE_DIR="$FAKE_STATE_DIR" \
     FAKE_META_DIR="$FAKE_META_DIR" \
     FAKE_EDIT_LOG="$FAKE_EDIT_LOG" \
+    FAKE_PATCH_LOG="$FAKE_PATCH_LOG" \
     FAKE_QUERY_JSON="$FAKE_QUERY_JSON" \
     NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
     "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
@@ -319,6 +329,7 @@ run_sync_with_preflight_fixture() {
     FAKE_STATE_DIR="$FAKE_STATE_DIR" \
     FAKE_META_DIR="$FAKE_META_DIR" \
     FAKE_EDIT_LOG="$FAKE_EDIT_LOG" \
+    FAKE_PATCH_LOG="$FAKE_PATCH_LOG" \
     FAKE_QUERY_JSON="$FAKE_QUERY_JSON" \
     NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
     "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
@@ -412,9 +423,9 @@ syncable_file_count=$((true_skill_count + true_reference_count))
     printf '[ERROR] fixture件数が不正です: expected=%s actual=%s\n' "$total_file_count" "$mirror_file_count" >&2
     exit 1
 }
-[ "$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -path '*/SKILL.md' -type f | while read -r f; do grep -c '^notion_sync: true$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$true_skill_count" ] || exit 1
-[ "$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -path '*/SKILL.md' -type f | while read -r f; do grep -c '^notion_sync: false$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$false_skill_count" ] || exit 1
-[ "$(find "$SKILLS_MIRROR_DIR/writing-references" -type f -name '*.md' | while read -r f; do grep -c '^notion_sync: true$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$true_reference_count" ] || exit 1
+[ "$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -path '*/SKILL.md' -type f | while read -r f; do grep -c '^  notion_sync: "true"$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$true_skill_count" ] || exit 1
+[ "$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -path '*/SKILL.md' -type f | while read -r f; do grep -c '^  notion_sync: "false"$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$false_skill_count" ] || exit 1
+[ "$(find "$SKILLS_MIRROR_DIR/writing-references" -type f -name '*.md' | while read -r f; do grep -c '^  notion_sync: "true"$' "$f"; done | awk '{s+=$1} END {print s+0}')" -eq "$true_reference_count" ] || exit 1
 [ "$false_reference_count" -eq 0 ] || exit 1
 skill_names=$(find "$SKILLS_MIRROR_DIR" -mindepth 2 -maxdepth 2 -type f -name 'SKILL.md' -exec sh -c 'basename "$(dirname "$1")"' _ {} \; | sort)
 expected_skill_names=$(printf '%s\n' "${TRUE_SKILLS[@]}" "${FALSE_SKILLS[@]}" | sort)
@@ -429,17 +440,17 @@ expected_reference_names=$(printf '%s\n' "${TRUE_REFERENCES[@]}" | sort)
 ! /usr/bin/grep -Fqx 'linear-issue-plan-review' <<<"$reference_names" || exit 1
 for skill_name in "${TRUE_SKILLS[@]}"; do
     /usr/bin/grep -Fqx "name: $skill_name" "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
-    /usr/bin/grep -Fqx 'notion_sync: true' "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
+    /usr/bin/grep -Fqx '  notion_sync: "true"' "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
 done
 for skill_name in "${FALSE_SKILLS[@]}"; do
     /usr/bin/grep -Fqx "name: $skill_name" "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
-    /usr/bin/grep -Fqx 'notion_sync: false' "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
+    /usr/bin/grep -Fqx '  notion_sync: "false"' "$SKILLS_MIRROR_DIR/$skill_name/SKILL.md" || exit 1
 done
 /usr/bin/grep -Fqx 'name: jobcan-fill-attendance' "$SKILLS_MIRROR_DIR/jobcan-fill-attendance/SKILL.md" || exit 1
-/usr/bin/grep -Fqx 'notion_sync: false' "$SKILLS_MIRROR_DIR/jobcan-fill-attendance/SKILL.md" || exit 1
+/usr/bin/grep -Fqx '  notion_sync: "false"' "$SKILLS_MIRROR_DIR/jobcan-fill-attendance/SKILL.md" || exit 1
 for reference_name in "${TRUE_REFERENCES[@]}"; do
     /usr/bin/grep -Fqx "name: $reference_name" "$SKILLS_MIRROR_DIR/writing-references/$reference_name.md" || exit 1
-    /usr/bin/grep -Fqx 'notion_sync: true' "$SKILLS_MIRROR_DIR/writing-references/$reference_name.md" || exit 1
+    /usr/bin/grep -Fqx '  notion_sync: "true"' "$SKILLS_MIRROR_DIR/writing-references/$reference_name.md" || exit 1
 done
 if ! run_sync >"$TMP_ROOT/first.log" 2>&1; then
     /bin/cat "$TMP_ROOT/first.log" >&2
@@ -483,6 +494,15 @@ run_sync >"$TMP_ROOT/third.log" 2>&1
     exit 1
 }
 baseline_count=$(edit_count)
+/usr/bin/jq -e '.properties.Role.select.name == "Main" and
+    ([.properties.Tags.multi_select[].name] == ["explanation","text"])' \
+    "$FAKE_META_DIR/page-explain.json" >/dev/null || exit 1
+/usr/bin/jq -e '(.properties.Tags.multi_select | length) == 0' \
+    "$FAKE_META_DIR/page-business-email.json" >/dev/null || exit 1
+patch_count() {
+    if [ -f "$FAKE_PATCH_LOG" ]; then wc -l <"$FAKE_PATCH_LOG" | tr -d ' '; else printf '0\n'; fi
+}
+baseline_patch_count=$(patch_count)
 
 assert_rejected_without_updates() {
     local label=$1
@@ -500,7 +520,7 @@ assert_rejected_without_updates() {
         printf '[ERROR] %sの固有エラーがありません。\n' "$label" >&2
         exit 1
     }
-    [ "$(edit_count)" -eq "$baseline_count" ] || {
+    [ "$(edit_count)" -eq "$baseline_count" ] && [ "$(patch_count)" -eq "$baseline_patch_count" ] || {
         /bin/cat "$log_file" >&2
         printf '[ERROR] %sで部分更新が発生しました。\n' "$label" >&2
         exit 1
@@ -529,15 +549,22 @@ fi
 cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
 cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
-printf '%s\n' '---' 'name: missing-notion-sync' '---' '# missing notion_sync' \
-    >"$SKILLS_MIRROR_DIR/writing-references/missing-notion-sync.md"
-assert_rejected_without_updates 'notion-sync-missing' 'frontmatterのnotion_syncがありません'
+# 全候補の検証が終わるまで、本文・プロパティのいずれも更新しない。
+printf '%s\n' '---' 'name: missing-notion-sync' 'metadata:' '  notion_role: "Main"' '---' '# missing' >"$SKILLS_MIRROR_DIR/writing-references/missing-notion-sync.md"
+assert_rejected_without_updates 'notion-sync-missing' 'notion_sync'
 rm -f "$SKILLS_MIRROR_DIR/writing-references/missing-notion-sync.md"
 
-printf '%s\n' '---' 'name: invalid-notion-sync' 'notion_sync: "true"' '---' '# invalid notion_sync' \
-    >"$SKILLS_MIRROR_DIR/writing-references/invalid-notion-sync.md"
-assert_rejected_without_updates 'notion-sync-type' 'frontmatterのnotion_syncがbooleanではありません'
+printf '%s\n' '---' 'name: invalid-notion-sync' 'metadata:' '  notion_sync: "maybe"' '---' '# invalid' >"$SKILLS_MIRROR_DIR/writing-references/invalid-notion-sync.md"
+assert_rejected_without_updates 'notion-sync-value' 'notion_sync'
 rm -f "$SKILLS_MIRROR_DIR/writing-references/invalid-notion-sync.md"
+
+printf '%s\n' '---' 'name: boolean-notion-sync' 'metadata:' '  notion_sync: true' '---' '# boolean' >"$SKILLS_MIRROR_DIR/writing-references/boolean-notion-sync.md"
+assert_rejected_without_updates 'notion-sync-boolean' 'notion_sync'
+rm -f "$SKILLS_MIRROR_DIR/writing-references/boolean-notion-sync.md"
+
+printf '%s\n' '---' 'name: legacy-notion-sync' 'notion_sync: true' '---' '# legacy' >"$SKILLS_MIRROR_DIR/writing-references/legacy-notion-sync.md"
+assert_rejected_without_updates 'notion-sync-legacy' 'notion_sync'
+rm -f "$SKILLS_MIRROR_DIR/writing-references/legacy-notion-sync.md"
 
 /usr/bin/jq '.results += [.results[0]]' "$FAKE_QUERY_JSON" >"$TMP_ROOT/duplicate.json"
 printf '\n# pending update before Codex ID duplicate validation\n' >>"$MIRROR_DIR/custom-instructions.md"
@@ -556,7 +583,7 @@ fi
 cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
 cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
-printf '%s\n' '---' 'name: explain' 'notion_sync: true' '---' '# duplicate source' >"$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
+printf '%s\n' '---' 'name: explain' 'metadata:' '  notion_sync: "true"' '---' '# duplicate source' >"$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
 printf '\n# pending update before source duplicate validation\n' >>"$MIRROR_DIR/custom-instructions.md"
 printf '\n# pending profile update before source duplicate validation\n' >>"$MIRROR_DIR/user-profile.md"
 if run_sync >"$TMP_ROOT/source-duplicate.log" 2>&1; then
@@ -574,7 +601,7 @@ rm -f "$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
 cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
 cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
-printf '%s\n' '---' 'notion_sync: true' 'description: missing name' '---' '# missing name' >"$SKILLS_MIRROR_DIR/writing-references/missing-name.md"
+printf '%s\n' '---' 'description: missing name' 'metadata:' '  notion_sync: "true"' '---' '# missing name' >"$SKILLS_MIRROR_DIR/writing-references/missing-name.md"
 printf '\n# pending update before missing name validation\n' >>"$MIRROR_DIR/custom-instructions.md"
 printf '\n# pending profile update before missing name validation\n' >>"$MIRROR_DIR/user-profile.md"
 if run_sync >"$TMP_ROOT/missing-name.log" 2>&1; then
@@ -594,5 +621,19 @@ fi
 rm -f "$SKILLS_MIRROR_DIR/writing-references/missing-name.md"
 cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
 cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
+
+assert_invalid_reference() {
+    local label=$1
+    local expected_error=$2
+    shift 2
+    printf '%s\n' '---' "name: $label" 'metadata:' "$@" '---' "# $label" >"$SKILLS_MIRROR_DIR/writing-references/$label.md"
+    assert_rejected_without_updates "$label" "$expected_error"
+    rm -f "$SKILLS_MIRROR_DIR/writing-references/$label.md"
+}
+assert_invalid_reference 'role-invalid-type' 'notion_role' '  notion_sync: "true"' '  notion_role: [Main]'
+assert_invalid_reference 'tags-invalid-json' 'notion_tags' '  notion_sync: "true"' "  notion_tags: 'not-json'"
+assert_invalid_reference 'tags-not-array' 'notion_tags' '  notion_sync: "true"' "  notion_tags: '{}'"
+assert_invalid_reference 'tags-non-string' 'notion_tags' '  notion_sync: "true"' "  notion_tags: '[1,\"text\"]'"
+assert_invalid_reference 'tags-invalid-type' 'notion_tags' '  notion_sync: "true"' '  notion_tags: [text]'
 
 printf '[SUCCESS] isolated sync tests passed (%s mirror files, %s synced files, %s excluded skills).\n' "$mirror_file_count" "$syncable_file_count" "$false_skill_count"
