@@ -60,6 +60,10 @@ mutate_and_check() {
     local backup="$TMP_ROOT/original"
     cp -- "$source" "$backup"
     sed "$pattern" "$backup" >"$source"
+    if cmp -s "$backup" "$source"; then
+        printf '[FAIL] %s mutation did not change its fixture\\n' "$name" >&2
+        return 1
+    fi
     expect_failure "$name"
     cp -- "$backup" "$source"
 }
