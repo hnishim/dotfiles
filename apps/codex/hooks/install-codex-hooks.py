@@ -11,7 +11,6 @@ from typing import Any
 
 
 HOOK_FILES = (
-    "gh_normal_context_guard.py",
     "session_start_repo_refresh.py",
     "textlint-boundary.py",
     "textlint-pretool-hook.py",
