@@ -298,25 +298,31 @@ raise "frontmatterがMapではありません" unless frontmatter.is_a?(Hash)
 name = frontmatter["name"]
 raise "frontmatterのnameがありません" unless name.is_a?(String) && !name.empty?
 
-raise "frontmatterのnotion_syncがありません" unless frontmatter.key?("notion_sync")
-notion_sync = frontmatter["notion_sync"]
-raise "frontmatterのnotion_syncがbooleanではありません" unless notion_sync == true || notion_sync == false
+raise "frontmatterの旧トップレベルキーが残っています" if %w[notion_sync role tags].any? { |key| frontmatter.key?(key) }
+metadata = frontmatter["metadata"]
+raise "metadataがMapではありません" unless metadata.is_a?(Hash)
+raise "notion_syncがありません" unless metadata.key?("notion_sync")
+notion_sync = metadata["notion_sync"]
+raise "notion_syncが文字列true/falseではありません" unless notion_sync.is_a?(String) && %w[true false].include?(notion_sync)
+raise "metadataの値が文字列ではありません" unless metadata.values.all? { |value| value.is_a?(String) }
 
-result = { "name" => name, "notion_sync" => notion_sync }
+result = { "name" => name, "notion_sync" => notion_sync == "true" }
 if frontmatter.key?("description")
   value = frontmatter["description"]
   raise "descriptionが文字列ではありません" unless value.is_a?(String)
   result["description"] = value
 end
-if frontmatter.key?("role")
-  value = frontmatter["role"]
-  raise "roleが文字列ではありません" unless value.is_a?(String)
-  result["role"] = value
+if metadata.key?("notion_role")
+  result["role"] = metadata["notion_role"]
 end
-if frontmatter.key?("tags")
-  value = frontmatter["tags"]
-  raise "tagsが配列ではありません" unless value.is_a?(Array) && value.all? { |item| item.is_a?(String) }
-  result["tags"] = value
+if metadata.key?("notion_tags")
+  begin
+    tags = JSON.parse(metadata["notion_tags"])
+  rescue JSON::ParserError
+    raise "notion_tagsが有効なJSONではありません"
+  end
+  raise "notion_tagsが文字列配列ではありません" unless tags.is_a?(Array) && tags.all? { |item| item.is_a?(String) }
+  result["tags"] = tags
 end
 
 puts JSON.generate(result)
