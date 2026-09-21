@@ -290,21 +290,24 @@ require "yaml"
 path = ARGV.fetch(0)
 text = File.read(path, encoding: "UTF-8")
 match = text.match(/\A---\r?\n(.*?)\r?\n---\r?\n?/m)
-raise "frontmatterがありません" unless match
+raise "フロントマターがありません" unless match
 
 frontmatter = YAML.safe_load(match[1], permitted_classes: [], aliases: false)
-raise "frontmatterがMapではありません" unless frontmatter.is_a?(Hash)
+raise "フロントマターがMapではありません" unless frontmatter.is_a?(Hash)
 
 name = frontmatter["name"]
-raise "frontmatterのnameがありません" unless name.is_a?(String) && !name.empty?
+raise "フロントマターのnameがありません" unless name.is_a?(String) && !name.empty?
 
-raise "frontmatterの旧トップレベルキーが残っています" if %w[notion_sync role tags].any? { |key| frontmatter.key?(key) }
-metadata = frontmatter["metadata"]
-raise "metadataがMapではありません" unless metadata.is_a?(Hash)
-raise "notion_syncがありません" unless metadata.key?("notion_sync")
-notion_sync = metadata["notion_sync"]
-raise "notion_syncが文字列true/falseではありません" unless notion_sync.is_a?(String) && %w[true false].include?(notion_sync)
-raise "metadataの値が文字列ではありません" unless metadata.values.all? { |value| value.is_a?(String) }
+legacy_keys = %w[notion_sync role tags].select { |key| frontmatter.key?(key) }
+raise "旧トップレベルのフロントマター項目は使用できません: #{legacy_keys.join(', ')}" unless legacy_keys.empty?
+
+notion_metadata = frontmatter["metadata"]
+raise "metadataがMapではありません" unless notion_metadata.is_a?(Hash)
+invalid_metadata = notion_metadata.find { |key, value| !key.is_a?(String) || !value.is_a?(String) }
+raise "metadata.#{invalid_metadata[0]}は文字列である必要があります" if invalid_metadata
+raise "metadata.notion_syncがありません" unless notion_metadata.key?("notion_sync")
+notion_sync = notion_metadata["notion_sync"]
+raise "metadata.notion_syncは文字列true/falseのみ使用できます" unless %w[true false].include?(notion_sync)
 
 result = { "name" => name, "notion_sync" => notion_sync == "true" }
 if frontmatter.key?("description")
@@ -312,16 +315,20 @@ if frontmatter.key?("description")
   raise "descriptionが文字列ではありません" unless value.is_a?(String)
   result["description"] = value
 end
-if metadata.key?("notion_role")
-  result["role"] = metadata["notion_role"]
+if notion_metadata.key?("notion_role")
+  value = notion_metadata["notion_role"]
+  raise "metadata.notion_roleが文字列ではありません" unless value.is_a?(String)
+  result["role"] = value
 end
-if metadata.key?("notion_tags")
+if notion_metadata.key?("notion_tags")
+  value = notion_metadata["notion_tags"]
+  raise "metadata.notion_tagsが文字列ではありません" unless value.is_a?(String)
   begin
-    tags = JSON.parse(metadata["notion_tags"])
+    tags = JSON.parse(value)
   rescue JSON::ParserError
-    raise "notion_tagsが有効なJSONではありません"
+    raise "metadata.notion_tagsが有効なJSONではありません"
   end
-  raise "notion_tagsが文字列配列ではありません" unless tags.is_a?(Array) && tags.all? { |item| item.is_a?(String) }
+  raise "metadata.notion_tagsは文字列配列のJSONである必要があります" unless tags.is_a?(Array) && tags.all? { |tag| tag.is_a?(String) }
   result["tags"] = tags
 end
 
