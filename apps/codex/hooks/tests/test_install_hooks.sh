@@ -15,6 +15,8 @@ HARNESS_ROOT="$TMP_ROOT/harness source"
 mkdir -p "$HARNESS_ROOT/hooks"
 HARNESS_ROOT=$(cd -P -- "$HARNESS_ROOT" && pwd)
 cp -R "$SOURCE_HARNESS_ROOT/hooks/runtime" "$HARNESS_ROOT/hooks/"
+# The retired GitHub CLI guard must not be required by the installer.
+rm -f -- "$HARNESS_ROOT/hooks/runtime/gh_normal_context_guard.py"
 cp "$SOURCE_HARNESS_ROOT/hooks/hooks.json.tmpl" "$HARNESS_ROOT/hooks/hooks.json.tmpl"
 
 run_install() {
@@ -79,7 +81,7 @@ setup_status=$?
 set -e
 [ "$setup_status" -ne 0 ]
 
-for name in gh_normal_context_guard.py session_start_repo_refresh.py textlint-boundary.py textlint-pretool-hook.py textlint-posttool-hook.py; do
+for name in session_start_repo_refresh.py textlint-boundary.py textlint-pretool-hook.py textlint-posttool-hook.py; do
     [ -f "$HARNESS_ROOT/hooks/runtime/$name" ]
     [ ! -L "$HARNESS_ROOT/hooks/runtime/$name" ]
 done
@@ -112,15 +114,6 @@ expected = {
     }],
     "PreToolUse": [
         {
-            "matcher": "^Bash$",
-            "hooks": [{
-                "type": "command",
-                "command": f"/usr/bin/python3 {shlex.quote(runtime + '/gh_normal_context_guard.py')}",
-                "timeout": 5,
-                "statusMessage": "Checking GitHub CLI execution context",
-            }],
-        },
-        {
             "matcher": ".*",
             "hooks": [{
                 "type": "command",
@@ -141,6 +134,7 @@ expected = {
     }],
 }
 assert config["hooks"] == expected
+assert "gh_normal_context_guard.py" not in Path(sys.argv[1]).read_text(encoding="utf-8")
 
 for entries in config["hooks"].values():
     for entry in entries:
@@ -169,7 +163,7 @@ from pathlib import Path
 
 path = Path(sys.argv[1])
 source = path.read_text(encoding="utf-8")
-old = "Require normal macOS context before judging GitHub CLI authentication."
+old = "Codex session refresh and textlint hooks."
 new = "Updated hooks config for atomic replacement."
 assert old in source
 path.write_text(source.replace(old, new), encoding="utf-8")
