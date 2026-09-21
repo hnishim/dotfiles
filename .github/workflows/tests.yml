@@ -18,6 +18,7 @@ name: Tests
 # - lib/tests/test_hir119_karabiner_setup.sh — temporary fixture; goku/launchctl/common helpers are test doubles
 # - lib/tests/test_karabiner_migration.sh — temp filesystem + static contracts; optional goku runtime check self-skips when unavailable
 # - lib/tests/test_setup_call_contracts.sh — Bash/AWK/Python/rg static contract checks
+# - lib/tests/test_setup_contract_fail_closed.sh — isolated negative mutations of the setup contract runner
 # macos-latest (macOS-specific runtime/semantics required):
 # - apps/codex/custom-instructions/tests/test-mirror-layout.sh — compiles Swift with `-framework AppKit`
 # - apps/codex/custom-instructions/tests/test-temporary-snapshot-swift.sh — real Swift snapshot generation, source bytes, permissions, path safety
@@ -74,6 +75,7 @@ jobs:
           bash lib/tests/test_hir119_karabiner_setup.sh
           bash lib/tests/test_karabiner_migration.sh
           bash lib/tests/test_setup_call_contracts.sh
+          bash lib/tests/test_setup_contract_fail_closed.sh
 
   macos:
     runs-on: macos-latest
