@@ -39,9 +39,9 @@ class TemporarySnapshotContract(unittest.TestCase):
             path.mkdir(parents=True, exist_ok=True)
         self.write_sources("v1")
         (self.skills / "example" / "SKILL.md").write_text(
-            "---\nname: example\nnotion_sync: true\n---\n# example\n", encoding="utf-8")
+            "---\nname: example\nmetadata:\n  notion_sync: \"true\"\n---\n# example\n", encoding="utf-8")
         (self.skills / "writing-references" / "guide.md").write_text(
-            "---\nname: guide\nnotion_sync: false\n---\n# guide\n", encoding="utf-8")
+            "---\nname: guide\nmetadata:\n  notion_sync: \"false\"\n---\n# guide\n", encoding="utf-8")
         self.config.write_text(
             "workspace_id=" + "1" * 32 + "\n"
             "custom_instructions_page_id=" + CUSTOM_ID + "\n"
