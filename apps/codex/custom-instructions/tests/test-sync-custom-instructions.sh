@@ -542,7 +542,7 @@ fi
     printf '[ERROR] Notionページ不足の固有エラーがありません。\n' >&2
     exit 1
 }
-[ "$(edit_count)" -eq "$baseline_count" ] || {
+[ "$(edit_count)" -eq "$baseline_count" ] && [ "$(patch_count)" -eq "$baseline_patch_count" ] || {
     printf '[ERROR] ページ不足時に部分更新が発生しました。\n' >&2
     exit 1
 }
@@ -579,7 +579,7 @@ fi
     printf '[ERROR] Codex ID重複の固有エラーがありません。\n' >&2
     exit 1
 }
-[ "$(edit_count)" -eq "$baseline_count" ] || { printf '[ERROR] Codex ID重複時に部分更新が発生しました。\n' >&2; exit 1; }
+[ "$(edit_count)" -eq "$baseline_count" ] && [ "$(patch_count)" -eq "$baseline_patch_count" ] || { printf '[ERROR] Codex ID重複時に部分更新が発生しました。\n' >&2; exit 1; }
 cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
 cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
 
@@ -596,7 +596,7 @@ fi
     printf '[ERROR] frontmatter name重複の固有エラーがありません。\n' >&2
     exit 1
 }
-[ "$(edit_count)" -eq "$baseline_count" ] || { printf '[ERROR] frontmatter name重複時に部分更新が発生しました。\n' >&2; exit 1; }
+[ "$(edit_count)" -eq "$baseline_count" ] && [ "$(patch_count)" -eq "$baseline_patch_count" ] || { printf '[ERROR] frontmatter name重複時に部分更新が発生しました。\n' >&2; exit 1; }
 rm -f "$SKILLS_MIRROR_DIR/writing-references/duplicate.md"
 cp "$HARNESS_ROOT/custom-instructions/custom-instructions.md" "$MIRROR_DIR/custom-instructions.md"
 cp "$HARNESS_ROOT/custom-instructions/user-profile.md" "$MIRROR_DIR/user-profile.md"
@@ -614,7 +614,7 @@ fi
     printf '[ERROR] frontmatter name欠落の固有エラーがありません。\n' >&2
     exit 1
 }
-[ "$(edit_count)" -eq "$baseline_count" ] || {
+[ "$(edit_count)" -eq "$baseline_count" ] && [ "$(patch_count)" -eq "$baseline_patch_count" ] || {
     printf '[ERROR] name欠落時に部分更新が発生しました。\n' >&2
     exit 1
 }
@@ -630,10 +630,19 @@ assert_invalid_reference() {
     assert_rejected_without_updates "$label" "$expected_error"
     rm -f "$SKILLS_MIRROR_DIR/writing-references/$label.md"
 }
+printf '%s\n' '---' 'name: metadata-invalid-type' 'metadata: [bad]' '---' '# metadata invalid type' >"$SKILLS_MIRROR_DIR/writing-references/metadata-invalid-type.md"
+assert_rejected_without_updates 'metadata-invalid-type' 'metadata'
+rm -f "$SKILLS_MIRROR_DIR/writing-references/metadata-invalid-type.md"
 assert_invalid_reference 'role-invalid-type' 'notion_role' '  notion_sync: "true"' '  notion_role: [Main]'
 assert_invalid_reference 'tags-invalid-json' 'notion_tags' '  notion_sync: "true"' "  notion_tags: 'not-json'"
 assert_invalid_reference 'tags-not-array' 'notion_tags' '  notion_sync: "true"' "  notion_tags: '{}'"
 assert_invalid_reference 'tags-non-string' 'notion_tags' '  notion_sync: "true"' "  notion_tags: '[1,\"text\"]'"
 assert_invalid_reference 'tags-invalid-type' 'notion_tags' '  notion_sync: "true"' '  notion_tags: [text]'
+printf '%s\n' '---' 'name: legacy-role' 'metadata:' '  notion_sync: "true"' 'role: "Main"' '---' '# legacy role' >"$SKILLS_MIRROR_DIR/writing-references/legacy-role.md"
+assert_rejected_without_updates 'legacy-role' 'role'
+rm -f "$SKILLS_MIRROR_DIR/writing-references/legacy-role.md"
+printf '%s\n' '---' 'name: legacy-tags' 'metadata:' '  notion_sync: "true"' 'tags: [text]' '---' '# legacy tags' >"$SKILLS_MIRROR_DIR/writing-references/legacy-tags.md"
+assert_rejected_without_updates 'legacy-tags' 'tags'
+rm -f "$SKILLS_MIRROR_DIR/writing-references/legacy-tags.md"
 
 printf '[SUCCESS] isolated sync tests passed (%s mirror files, %s synced files, %s excluded skills).\n' "$mirror_file_count" "$syncable_file_count" "$false_skill_count"
