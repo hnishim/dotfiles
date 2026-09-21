@@ -5,6 +5,7 @@ formulae:
   - gh
   - jq # Google Drive File Locker スクリプト用
   - mas
+  - mole
   - nextdns
   - node
   - pnpm
@@ -37,7 +38,6 @@ casks:
     - microsoft-teams
     - monitorcontrol
     - notion
-    - pearcleaner
     - slack
     - snapzy
     - warp
@@ -62,6 +62,7 @@ casks:
     # - logi-options+
     # - shottr
     # - arc
+    # - pearcleaner
 
   personal:
     - fujitsu-scansnap-home
