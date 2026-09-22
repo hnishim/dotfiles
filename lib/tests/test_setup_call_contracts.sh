@@ -127,6 +127,17 @@ run_contract apps/snapzy/snapzy-setup.sh 1
 run_contract textlint/textlint-setup.sh 2
 run_contract hammerspoon/hammerspoon-setup.sh 1
 
+if bash -n "$DOTFILES_ROOT/launchd/weekly-maintenance-setup.sh" \
+    && rg -q 'RUNTIME_DIR=.*my\.launchd\.weekly-maintenance' "$DOTFILES_ROOT/launchd/weekly-maintenance-setup.sh" \
+    && rg -q 'install -m 755' "$DOTFILES_ROOT/launchd/weekly-maintenance-setup.sh" \
+    && rg -q 'launchctl bootstrap' "$DOTFILES_ROOT/launchd/weekly-maintenance-setup.sh" \
+    && ! rg -q 'create_symlink|com\.hnishim' "$DOTFILES_ROOT/launchd/weekly-maintenance-setup.sh"; then
+    printf '%s\n' '[PASS] launchd/weekly-maintenance-setup.sh uses one local runtime copy and the my.launchd label'
+else
+    printf '%s\n' '[FAIL] launchd/weekly-maintenance-setup.sh runtime and label contract' >&2
+    failures=$((failures + 1))
+fi
+
 # Agents and Skills install root links without create_symlink. Their actual
 # installation and conflict behavior is covered by their existing setup tests.
 if assert_karabiner_goku_contract; then

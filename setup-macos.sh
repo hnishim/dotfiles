@@ -41,6 +41,7 @@ setup_scripts=(
     "apps/amphetamine/amphetamine-setup.sh"
     "textlint/textlint-setup.sh"
     "hammerspoon/hammerspoon-setup.sh"
+    "launchd/weekly-maintenance-setup.sh"
 )
 
 for script in "${setup_scripts[@]}"; do

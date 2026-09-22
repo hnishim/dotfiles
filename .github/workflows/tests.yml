@@ -23,6 +23,7 @@ name: Tests
 # - apps/codex/custom-instructions/tests/test-mirror-layout.sh — compiles Swift with `-framework AppKit`
 # - apps/codex/custom-instructions/tests/test-temporary-snapshot-swift.sh — real Swift snapshot generation, source bytes, permissions, path safety
 # - lib/tests/test_symlink_helpers.sh — validates BSD/macOS `stat -f '%i'` inode semantics
+# - lib/tests/test_weekly_maintenance_setup.py — fake launchctl, real macOS PlistBuddy/plutil
 # excluded (clean single-repository checkout cannot satisfy sibling-repository source dependencies):
 # - apps/codex/agents/tests/test_agents_setup.sh — requires ../harness/agents for its default-path scenario
 # - apps/codex/hooks/tests/test_install_hooks.sh — requires ../harness/hooks to seed its isolated fixture
@@ -87,3 +88,4 @@ jobs:
           bash apps/codex/custom-instructions/tests/test-mirror-layout.sh
           bash apps/codex/custom-instructions/tests/test-temporary-snapshot-swift.sh
           bash lib/tests/test_symlink_helpers.sh
+          python3 -m unittest discover -s lib/tests -p 'test_weekly_maintenance_setup.py'
