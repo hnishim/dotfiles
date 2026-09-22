@@ -13,6 +13,7 @@ name: Tests
 # - apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh — xcrun/codesign/ditto/plutil/launchctl/defaults/PlistBuddy are test doubles
 # - apps/codex/tests/test_codex_setup_delegation_contract.sh — temporary repository-shaped fixture + Bash/Python/stub delegates
 # - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — static Python source-contract inspection only
+# - apps/cursor/tests/test_mac_path_paste_setup.sh — isolated mock git/npm/Cursor + temporary HOME; not real macOS/Cursor
 # - apps/ferdium/tests/test_ferdium_setup.sh — temporary HOME + filesystem/symlink fixture only
 # - hammerspoon/tests/test_commands_path_contract.sh — repository/static contract test; requires rg
 # - lib/tests/test_hir119_karabiner_setup.sh — temporary fixture; goku/launchctl/common helpers are test doubles
@@ -71,6 +72,8 @@ jobs:
           bash apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh
           bash apps/codex/tests/test_codex_setup_delegation_contract.sh
           bash apps/codex/tests/test_setup_macos_codex_entrypoint.sh
+          bash -n apps/cursor/tests/test_mac_path_paste_setup.sh
+          bash apps/cursor/tests/test_mac_path_paste_setup.sh
           bash apps/ferdium/tests/test_ferdium_setup.sh
           bash hammerspoon/tests/test_commands_path_contract.sh
           bash lib/tests/test_hir119_karabiner_setup.sh
