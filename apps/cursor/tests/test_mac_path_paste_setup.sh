@@ -85,8 +85,7 @@ case "$1" in
         printf 'list\n' >> "$TEST_DIR/events"
         [ "$TEST_FAULT" != list-fail ] || exit 25
         if [ "$TEST_FAULT" = post-list-fail ]; then
-            calls=$(grep -c '^list$' "$TEST_DIR/events")
-            [ "$calls" -eq 1 ] || exit 26
+            ! grep -q '^vsix$' "$TEST_DIR/events" || exit 26
         fi
         cat "$TEST_DIR/installed" ;;
     --install-extension)
@@ -184,6 +183,9 @@ for fault in remote-fail clone-fail npm-ci-fail package-fail no-vsix install-fai
     install-no-register post-list-fail record-fail list-fail; do
     make_case "$fault"
     printf 'HNISHIM.VSCODE-PATH-PASTE\n' >> "$ROOT/$fault/installed"
+    if [ "$fault" = install-no-register ]; then
+        printf 'openai.chatgpt\n' > "$ROOT/$fault/installed"
+    fi
     mkdir -p "$ROOT/$fault/home/Library/Application Support/my.cursor.mac-path-paste"
     printf 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\n' \
         > "$ROOT/$fault/home/Library/Application Support/my.cursor.mac-path-paste/installed-commit"
