@@ -159,4 +159,4 @@ for scenario in list-fail download-fail empty-download hash-mismatch install-fai
     esac
     printf '[PASS] %s fails closed\n' "$scenario"
 done
-printf '[PASS] HIR-310 isolated installation contract\n
+printf '[PASS] HIR-310 isolated installation contract\n'
