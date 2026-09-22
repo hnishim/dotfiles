@@ -11,6 +11,7 @@ trap 'rm -rf -- "$TMP_ROOT"' EXIT
 fixture="$TMP_ROOT/dotfiles"
 paths=(
     lib/tests/test_setup_call_contracts.sh
+    launchd/weekly-maintenance-setup.sh
     setup-macos.sh
     apps/cursor/cursor-setup.sh
     apps/espanso/espanso-setup.sh
