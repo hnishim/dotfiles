@@ -39,7 +39,9 @@ class WeeklyMaintenanceSetupTests(unittest.TestCase):
         self.fake_command(
             "launchctl",
             '#!/bin/sh\nprintf "%s\\n" "$*" >> "$LAUNCHCTL_TEST_LOG"\n'
-            'case "$1" in\n  print) exit 1 ;;\n'
+            'case "$1" in\n'
+            '  print) exit "${PRINT_RC:-1}" ;;\n'
+            '  bootout) exit "${BOOTOUT_FAIL:-0}" ;;\n'
             '  bootstrap) exit "${BOOTSTRAP_FAIL:-0}" ;;\nesac\n',
         )
         self.runtime = (
@@ -129,6 +131,40 @@ class WeeklyMaintenanceSetupTests(unittest.TestCase):
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(self.runtime.read_text(), self.source_script.read_text())
         self.assertEqual(calls.count("bootstrap"), 2)
+
+
+    @unittest.skipUnless(sys.platform == "darwin", "macOS plist tools required")
+    def test_bootstrap_failure_is_reported_as_failure(self):
+        result, calls = self.run_setup(BOOTSTRAP_FAIL="42")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(
+            [line.split(" ", 1)[0] for line in calls.splitlines()],
+            ["print", "bootstrap"],
+        )
+        self.assertNotIn("Registered ", result.stdout)
+
+    @unittest.skipUnless(sys.platform == "darwin", "macOS plist tools required")
+    def test_existing_registration_boots_out_before_bootstrap(self):
+        result, calls = self.run_setup(PRINT_RC="0")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            calls.splitlines(),
+            [
+                f"print gui/{os.getuid()}/my.launchd.weekly-maintenance",
+                f"bootout gui/{os.getuid()}/my.launchd.weekly-maintenance",
+                f"bootstrap gui/{os.getuid()} {self.target_plist}",
+            ],
+        )
+
+    @unittest.skipUnless(sys.platform == "darwin", "macOS plist tools required")
+    def test_failed_bootout_prevents_bootstrap(self):
+        result, calls = self.run_setup(PRINT_RC="0", BOOTOUT_FAIL="42")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(
+            [line.split(" ", 1)[0] for line in calls.splitlines()],
+            ["print", "bootout"],
+        )
+        self.assertNotIn("Registered ", result.stdout)
 
 
 if __name__ == "__main__":
