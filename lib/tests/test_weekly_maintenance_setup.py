@@ -70,7 +70,7 @@ class WeeklyMaintenanceSetupTests(unittest.TestCase):
         env.update(extra)
         result = subprocess.run(
             ["/bin/bash", str(SETUP)], env=env, cwd=ROOT,
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, errors="replace", timeout=30,
         )
         calls = self.log.read_text(encoding="utf-8") if self.log.exists() else ""
         return result, calls
