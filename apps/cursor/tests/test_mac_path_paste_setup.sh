@@ -165,6 +165,15 @@ run_setup fresh pass none
 assert_eq "$(record fresh)" "4444444444444444444444444444444444444444" 'actual cloned HEAD must be recorded'
 assert_count fresh force 2
 
+make_case preinstalled
+printf 'HNISHIM.VSCODE-PATH-PASTE\n' >> "$ROOT/preinstalled/installed"
+mkdir -p "$ROOT/preinstalled/home/Library/Application Support/my.cursor.mac-path-paste"
+cp "$ROOT/preinstalled/remote_sha" "$ROOT/preinstalled/home/Library/Application Support/my.cursor.mac-path-paste/installed-commit"
+run_setup preinstalled pass none
+assert_count preinstalled clone 0
+assert_count preinstalled ci 0
+assert_count preinstalled vsix 0
+
 make_case missing
 mkdir -p "$ROOT/missing/home/Library/Application Support/my.cursor.mac-path-paste"
 cp "$ROOT/missing/remote_sha" "$ROOT/missing/home/Library/Application Support/my.cursor.mac-path-paste/installed-commit"
