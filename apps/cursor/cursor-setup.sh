@@ -57,7 +57,10 @@ echo ""
 log_info "Cursor拡張機能の状態を確認・インストールします..."
 
 # インストール済み拡張機能のリストを取得
-installed_extensions=$(cursor --list-extensions)
+if ! installed_extensions=$(cursor --list-extensions); then
+    log_error "Cursor拡張機能の一覧を取得できませんでした。"
+    exit 1
+fi
 log_info "インストール済み拡張機能のリストを取得しました。"
 
 # yqでインストール対象の拡張機能リストを取得
@@ -84,6 +87,103 @@ done <<< "$extensions_to_install"
 
 if [ "$extension_failures" -gt 0 ]; then
     log_error "$extension_failures 件のCursor拡張機能をインストールできませんでした。"
+    exit 1
+fi
+
+# --- Mac Path Paste: GitHub mainのソースから導入・更新 ---
+sync_mac_path_paste() (
+    local source_url="https://github.com/hnishim/vscode-path-paste.git"
+    local extension_id="hnishim.vscode-path-paste"
+    local state_dir="$HOME/Library/Application Support/my.cursor.mac-path-paste"
+    local record_file="$state_dir/installed-commit"
+    local remote_output remote_sha remote_ref installed=0 saved_sha=""
+    local temporary_dir="" temporary_record="" checkout_dir actual_sha vsix post_extensions
+
+    if printf '%s\n' "$installed_extensions" | grep -Fxiq "$extension_id"; then
+        installed=1
+    fi
+
+    if ! check_command "git" "Gitをインストールしてください。"; then return 1; fi
+    if ! remote_output=$(git ls-remote "$source_url" refs/heads/main); then
+        log_error "Mac Path Pasteのmainを確認できませんでした。"
+        return 1
+    fi
+    read -r remote_sha remote_ref <<< "$remote_output"
+    if [[ ! "$remote_sha" =~ ^[[:xdigit:]]{40}$ || "$remote_ref" != "refs/heads/main" ]]; then
+        log_error "Mac Path Pasteのmainのコミットを確認できませんでした。"
+        return 1
+    fi
+    if [ -f "$record_file" ]; then
+        saved_sha=$(cat "$record_file") || return 1
+    fi
+    if [ "$installed" -eq 1 ] && [ "$saved_sha" = "$remote_sha" ]; then
+        log_success "Mac Path Pasteは最新の導入済みコミットです。"
+        return 0
+    fi
+
+    if ! check_command "node" "Node.jsをインストールしてください。"; then return 1; fi
+    if ! check_command "npm" "npmをインストールしてください。"; then return 1; fi
+    if ! temporary_dir=$(mktemp -d "${TMPDIR:-/tmp}/mac-path-paste.XXXXXX"); then
+        log_error "Mac Path Pasteの一時ディレクトリを作成できませんでした。"
+        return 1
+    fi
+    trap 'rm -rf -- "$temporary_dir"; if [ -n "$temporary_record" ]; then rm -f -- "$temporary_record"; fi' EXIT
+    checkout_dir="$temporary_dir/source"
+    if ! git clone --depth 1 --single-branch --branch main "$source_url" "$checkout_dir"; then
+        log_error "Mac Path Pasteのソース取得に失敗しました。"
+        return 1
+    fi
+    if ! actual_sha=$(git -C "$checkout_dir" rev-parse HEAD) ||
+        [[ ! "$actual_sha" =~ ^[[:xdigit:]]{40}$ ]]; then
+        log_error "取得したMac Path Pasteのコミットを確認できませんでした。"
+        return 1
+    fi
+    if ! (cd "$checkout_dir" && npm ci && npm run package:vsix); then
+        log_error "Mac Path PasteのVSIX生成に失敗しました。"
+        return 1
+    fi
+    vsix="$checkout_dir/vscode-path-paste.vsix"
+    if [ ! -s "$vsix" ]; then
+        log_error "生成されたMac Path PasteのVSIXがありません。"
+        return 1
+    fi
+
+    if [ "$installed" -eq 1 ]; then
+        if ! cursor --install-extension "$vsix" --force; then
+            log_error "Mac Path Pasteの更新に失敗しました。"
+            return 1
+        fi
+    elif ! cursor --install-extension "$vsix"; then
+        log_error "Mac Path Pasteの導入に失敗しました。"
+        return 1
+    fi
+    if ! post_extensions=$(cursor --list-extensions); then
+        log_error "Mac Path Pasteの導入結果を確認できませんでした。"
+        return 1
+    fi
+    if ! printf '%s\n' "$post_extensions" | grep -Fxiq "$extension_id"; then
+        log_error "Mac Path Pasteの拡張機能IDを確認できませんでした。"
+        return 1
+    fi
+
+    if ! mkdir -p "$state_dir"; then
+        log_error "Mac Path Pasteの導入記録ディレクトリを作成できませんでした。"
+        return 1
+    fi
+    if ! temporary_record=$(mktemp "$state_dir/.installed-commit.XXXXXX"); then
+        log_error "Mac Path Pasteの一時記録ファイルを作成できませんでした。"
+        return 1
+    fi
+    if ! printf '%s\n' "$actual_sha" > "$temporary_record" ||
+        ! mv -f -- "$temporary_record" "$record_file"; then
+        log_error "Mac Path Pasteの導入コミットを記録できませんでした。"
+        return 1
+    fi
+    log_success "Mac Path Pasteをコミット $actual_sha から導入・更新しました。"
+)
+
+if ! sync_mac_path_paste; then
+    log_error "Mac Path Pasteの同期に失敗しました。"
     exit 1
 fi
 
