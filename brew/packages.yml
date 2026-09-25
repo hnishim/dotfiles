@@ -10,6 +10,7 @@ formulae:
   - node
   - pnpm
   - python3
+  - terminal-notifier
   - yq # brew-setup.sh スクリプト用（このYAMLファイルを処理するため）
   - yqrashawn/goku/goku
 
