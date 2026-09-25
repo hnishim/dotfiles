@@ -122,7 +122,7 @@ run_contract apps/espanso/espanso-setup.sh 2
 run_contract apps/ferdium/ferdium-setup.sh 2
 run_contract gitignore/global-gitignore-setup.sh 1
 run_contract karabiner-elements/karabiner-setup.sh 1
-run_contract apps/warp/warp-setup.sh 1
+run_contract apps/warp/warp-setup.sh 2
 run_contract apps/snapzy/snapzy-setup.sh 1
 run_contract textlint/textlint-setup.sh 2
 run_contract hammerspoon/hammerspoon-setup.sh 1
