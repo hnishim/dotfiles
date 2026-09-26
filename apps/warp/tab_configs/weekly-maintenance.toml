@@ -1,0 +1,7 @@
+# HIR-312: Warp starts the installed, explicitly approved maintenance entry in a new tab.
+name = "weekly-maintenance"
+
+[[panes]]
+id = "main"
+type = "terminal"
+commands = ['bash "$HOME/Library/Application Support/my.launchd.weekly-maintenance/weekly-maintenance.sh" confirm-run']
