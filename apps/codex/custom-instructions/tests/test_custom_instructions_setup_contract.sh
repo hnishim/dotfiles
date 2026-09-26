@@ -116,6 +116,65 @@ printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/plutil"
 printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/launchctl"
 printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/defaults"
 printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/PlistBuddy"
+cat >"$TMP_ROOT/fake-ntn" <<'NTN_FAKE'
+#!/bin/bash
+set -euo pipefail
+command=${1:-}
+shift || true
+token=${NOTION_API_TOKEN:-}
+account=none
+if [ "$token" = "${FAKE_PERSONAL_TOKEN:-}" ] && [ -n "$token" ]; then
+    account=personal
+elif [ "$token" = "${FAKE_MOLCURE_TOKEN:-}" ] && [ -n "$token" ]; then
+    account=molcure
+elif [ "${FAKE_NTN_SETUP_ACCOUNT:-}" = personal ]; then
+    account=personal
+fi
+if [ "${FAKE_NTN_ENFORCE_TOKEN:-0}" = 1 ] && [ "$account" != personal ]; then
+    printf 'wrong-account:%s:%s\n' "$account" "$command" >>"${FAKE_NTN_EVENTS:?}"
+    exit 91
+fi
+case "$command" in
+    whoami)
+        printf 'whoami:%s\n' "$account" >>"${FAKE_NTN_EVENTS:?}"
+        if [ "${1:-}" = --json ]; then
+            printf '{"object":"bot","id":"bot-personal","type":"bot","bot":{"owner":{"type":"user","user":{"id":"user-personal"}},"workspace_id":"44444444444444444444444444444444"}}\n'
+        fi
+        ;;
+    auth)
+        if [ "${1:-}" = token ]; then
+            printf 'credential:default\n' >>"${FAKE_NTN_EVENTS:?}"
+            printf '%s' "${FAKE_MOLCURE_TOKEN:?}"
+        fi
+        ;;
+    api|datasources|pages)
+        printf 'notion:%s:%s\n' "$account" "$command" >>"${FAKE_NTN_EVENTS:?}"
+        case " $* " in
+            *' -X PATCH '*) printf 'write:%s:patch\n' "$account" >>"${FAKE_NTN_EVENTS:?}" ;;
+            *' edit '*) printf 'write:%s:edit\n' "$account" >>"${FAKE_NTN_EVENTS:?}" ;;
+        esac
+        exit 79
+        ;;
+    *) exit 64 ;;
+esac
+NTN_FAKE
+cat >"$fake_bin/security" <<'SECURITY_FAKE'
+#!/bin/bash
+set -euo pipefail
+service=''
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -s) service=${2:-}; shift 2 ;;
+        *) shift ;;
+    esac
+done
+printf 'security:%s\n' "$service" >>"${FAKE_LAUNCH_SECURITY_EVENTS:?}"
+case "$service" in
+    my.notion.personal) printf '%s' "${FAKE_PERSONAL_TOKEN:?}" ;;
+    *) exit 44 ;;
+esac
+SECURITY_FAKE
+chmod 755 "$TMP_ROOT/fake-ntn" "$fake_bin/security"
 chmod 755 "$fake_bin"/*
 
 run_setup() {
@@ -125,7 +184,7 @@ run_setup() {
     CUSTOM_INSTRUCTIONS_SUPPORT_DIR_OVERRIDE="$fake_support" LAUNCH_AGENTS_DIR_OVERRIDE="$fake_launch_agents" \
     CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE="$fake_logs" CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE="$fake_cache" \
     CODEX_HARNESS_ROOT_OVERRIDE="$fixture_harness" CODEX_HOME_DIR_OVERRIDE="$codex_home" \
-    NTN_EXECUTABLE_OVERRIDE="$TMP_ROOT/missing-ntn" CODEX_HARNESS_PREPARE_ONLY=1 \
+    NTN_EXECUTABLE_OVERRIDE="${SETUP_NTN_OVERRIDE:-$TMP_ROOT/missing-ntn}" CODEX_HARNESS_PREPARE_ONLY=1 \
         /bin/bash "$SETUP" >"$TMP_ROOT/setup.log" 2>&1 || {
             cat "$TMP_ROOT/setup.log" >&2
             return 1
@@ -181,4 +240,70 @@ assert_path_mismatch_stops_before_sync() {
 
 assert_path_mismatch_stops_before_sync output-only
 assert_path_mismatch_stops_before_sync mirror-only
+
+# Verify that the account settings written during safe setup are the same
+# settings reached by executing the exact ProgramArguments saved in the
+# generated LaunchAgent plist.  The mock Notion CLI rejects accidental use of
+# the legacy token and writes an account name, never a token, to its event log.
+personal_config="$fake_support/notion-pages.conf"
+cat >"$personal_config" <<'PERSONAL_CONFIG'
+account_id=personal
+credential_source=keychain
+expected_user_id=user-personal
+workspace_id=44444444444444444444444444444444
+custom_instructions_page_id=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+user_profile_page_id=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBC
+skills_data_source_id=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBD
+PERSONAL_CONFIG
+chmod 600 "$personal_config"
+: >"$TMP_ROOT/launch-ntn.events"
+: >"$TMP_ROOT/launch-security.events"
+printf '%s\n' authorized >"$TMP_ROOT/state"
+export FAKE_PERSONAL_TOKEN='test-personal-token-never-print'
+export FAKE_MOLCURE_TOKEN='test-molcure-token-never-print'
+export FAKE_NTN_EVENTS="$TMP_ROOT/launch-ntn.events"
+export FAKE_LAUNCH_SECURITY_EVENTS="$TMP_ROOT/launch-security.events"
+export FAKE_NTN_SETUP_ACCOUNT=personal
+SETUP_NTN_OVERRIDE="$TMP_ROOT/fake-ntn" run_setup
+launch_plist="$fake_launch_agents/my.notion.sync.plist"
+launch_program=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:0' "$launch_plist")
+launch_helper=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:1' "$launch_plist")
+launch_ntn=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:2' "$launch_plist")
+launch_codex_home=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:3' "$launch_plist")
+launch_notion_config=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:4' "$launch_plist")
+[ "$launch_ntn" = "$TMP_ROOT/fake-ntn" ]
+[ -f "$launch_notion_config" ]
+/usr/bin/grep -Fqx 'account_id=personal' "$launch_notion_config" || {
+    printf '[ERROR] LaunchAgentが個人用アカウント設定を保持していません。\n' >&2
+    exit 1
+}
+/usr/bin/grep -Fqx 'credential_source=keychain' "$launch_notion_config" || {
+    printf '[ERROR] LaunchAgent設定に個人用資格情報の選択がありません。\n' >&2
+    exit 1
+}
+set +e
+PATH="$fake_bin:$PATH" HOME="$TMP_ROOT/home" FAKE_NTN_ENFORCE_TOKEN=1 \
+    FAKE_SETUP_EVENTS="$TMP_ROOT/launch-helper.events" FAKE_SETUP_STATE_FILE="$TMP_ROOT/state" \
+    FAKE_SETUP_AUTH="$TMP_ROOT/auth" FAKE_SWIFTC="$fake_swiftc" \
+    NOTION_READBACK_WAIT_SECONDS=0 "$launch_program" "$launch_helper" "$launch_ntn" \
+    "$launch_codex_home" "$launch_notion_config" >"$TMP_ROOT/launch-run.log" 2>&1
+launch_status=$?
+set -e
+[ "$launch_status" -ne 0 ] || {
+    printf '[ERROR] 不完全なLaunchAgent用模擬環境で同期が成功扱いになりました。\n' >&2
+    exit 1
+}
+/usr/bin/grep -Fqx 'security:my.notion.personal' "$TMP_ROOT/launch-security.events" || {
+    printf '[ERROR] LaunchAgent実行が個人用Keychain項目を選びませんでした。\n' >&2
+    exit 1
+}
+/usr/bin/grep -Fqx 'whoami:personal' "$TMP_ROOT/launch-ntn.events" || {
+    printf '[ERROR] LaunchAgent実行時のNotion認証先が個人用ではありません。\n' >&2
+    exit 1
+}
+! /usr/bin/grep -q '^wrong-account:\|^credential:default$\|^write:' "$TMP_ROOT/launch-ntn.events" || {
+    printf '[ERROR] LaunchAgent実行で既定資格情報へのフォールバックまたは更新を検出しました。\n' >&2
+    exit 1
+}
+printf '%s\n' '[PASS] generated LaunchAgent arguments preserve the explicit Personal Notion account'
 printf '%s\n' '[PASS] custom-instructions setup authorization transaction contract'
