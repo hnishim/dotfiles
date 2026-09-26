@@ -40,7 +40,10 @@ class WarpWeeklyMaintenanceTests(unittest.TestCase):
             config = tomllib.load(stream)
         self.assertEqual(config["name"], "weekly-maintenance")
         self.assertEqual(len(config["panes"]), 1)
-        commands = config["panes"][0]["commands"]
+        pane = config["panes"][0]
+        self.assertEqual(pane["id"], "main")
+        self.assertEqual(pane["type"], "terminal")
+        commands = pane["commands"]
         self.assertIsInstance(commands, list)
         self.assertEqual(len(commands), 1)
         self.assertEqual(
