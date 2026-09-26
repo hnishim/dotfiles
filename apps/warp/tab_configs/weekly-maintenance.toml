@@ -4,4 +4,4 @@ name = "weekly-maintenance"
 [[panes]]
 id = "main"
 type = "terminal"
-commands = ['bash "$HOME/Library/Application Support/my.launchd.weekly-maintenance/weekly-maintenance.sh" run']
+commands = ['bash "$HOME/Library/Application Support/my.launchd.weekly-maintenance/weekly-maintenance.sh" confirm-run']
