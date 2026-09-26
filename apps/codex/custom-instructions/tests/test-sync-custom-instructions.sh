@@ -61,32 +61,106 @@ fi
 fake_notion() {
     local command=$1
     shift
+    local fake_account=legacy
+    local state_dir="$FAKE_STATE_DIR"
+    local meta_dir="$FAKE_META_DIR"
+
+    if [ "$command" = "auth" ] && [ "${1:-}" = "token" ]; then
+        if [ -n "${FAKE_EVENTS:-}" ]; then
+            printf '%s\n' 'credential:ntn-default' >>"$FAKE_EVENTS"
+        fi
+        printf '%s' "${FAKE_MOLCURE_TOKEN:-}"
+        exit 0
+    fi
+
+    if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ]; then
+        case "${NOTION_API_TOKEN:-}" in
+            "${FAKE_MOLCURE_TOKEN:-__missing_molcure_token__}") fake_account=molcure ;;
+            "${FAKE_PERSONAL_TOKEN:-__missing_personal_token__}") fake_account=personal ;;
+            *)
+                printf '[FAKE ERROR] アカウント別トークンが設定されていません。\n' >&2
+                return 91
+                ;;
+        esac
+        if [ "$fake_account" = "molcure" ]; then
+            [ "${NOTION_WORKSPACE_ID:-}" = "$FAKE_MOLCURE_WORKSPACE_ID" ] || return 93
+            state_dir="$state_dir/molcure"
+            meta_dir="$meta_dir/molcure"
+        else
+            [ "${NOTION_WORKSPACE_ID:-}" = "$FAKE_PERSONAL_WORKSPACE_ID" ] || return 93
+            state_dir="$state_dir/personal"
+            meta_dir="$meta_dir/personal"
+        fi
+        mkdir -p "$state_dir" "$meta_dir"
+    fi
 
     if [ -n "${FAKE_EVENTS:-}" ]; then
-        printf 'notion:%s\n' "$command" >>"$FAKE_EVENTS"
+        if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ]; then
+            printf 'notion:%s:%s\n' "$fake_account" "$command" >>"$FAKE_EVENTS"
+        else
+            printf 'notion:%s\n' "$command" >>"$FAKE_EVENTS"
+        fi
     fi
 
     case "$command" in
         whoami)
+            if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ] && [ "${1:-}" = "--json" ]; then
+                local fake_user_id=${FAKE_ACTUAL_USER_ID:-}
+                if [ -z "$fake_user_id" ]; then
+                    if [ "$fake_account" = "molcure" ]; then
+                        fake_user_id=$FAKE_MOLCURE_USER_ID
+                    else
+                        fake_user_id=$FAKE_PERSONAL_USER_ID
+                    fi
+                fi
+                if [ "$fake_account" = "molcure" ]; then
+                    printf '{"object":"bot","id":"bot-molcure","type":"bot","bot":{"owner":{"type":"user","user":{"id":"%s"}},"workspace_id":"%s"}}\n' \
+                        "$fake_user_id" "$FAKE_MOLCURE_WORKSPACE_ID"
+                else
+                    printf '{"object":"bot","id":"bot-personal","type":"bot","bot":{"owner":{"type":"user","user":{"id":"%s"}},"workspace_id":"%s"}}\n' \
+                        "$fake_user_id" "$FAKE_PERSONAL_WORKSPACE_ID"
+                fi
+            fi
             exit 0
             ;;
         datasources)
-            /bin/cat "$FAKE_QUERY_JSON"
+            if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ]; then
+                if [ "$fake_account" = "molcure" ]; then
+                    [ "${2:-}" = "$FAKE_MOLCURE_DATA_SOURCE_ID" ] || return 94
+                    /bin/cat "$FAKE_MOLCURE_QUERY_JSON"
+                else
+                    [ "${2:-}" = "$FAKE_PERSONAL_DATA_SOURCE_ID" ] || return 94
+                    /bin/cat "$FAKE_PERSONAL_QUERY_JSON"
+                fi
+            else
+                /bin/cat "$FAKE_QUERY_JSON"
+            fi
             exit 0
             ;;
         pages)
             local subcommand=$1
             local page_id=$2
+            if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ]; then
+                case "$fake_account:$page_id" in
+                    "molcure:$FAKE_MOLCURE_CUSTOM_PAGE_ID"|"molcure:$FAKE_MOLCURE_PROFILE_PAGE_ID"|molcure:molcure-page-*) ;;
+                    "personal:$FAKE_PERSONAL_CUSTOM_PAGE_ID"|"personal:$FAKE_PERSONAL_PROFILE_PAGE_ID"|personal:personal-page-*) ;;
+                    *) return 94 ;;
+                esac
+            fi
             case "$subcommand" in
                 edit)
-                    local page_file="$FAKE_STATE_DIR/$page_id.md"
+                    local page_file="$state_dir/$page_id.md"
                     /usr/bin/ruby -e 'path = ARGV.fetch(0); text = STDIN.read.force_encoding("UTF-8"); text = text.sub(/\A---\r?\n.*?\r?\n---\r?\n?/m, ""); File.write(path, text, mode: "w", encoding: "UTF-8")' "$page_file"
-                    printf '%s\n' "$page_id" >>"$FAKE_EDIT_LOG"
+                    if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ]; then
+                        printf '%s:%s\n' "$fake_account" "$page_id" >>"$FAKE_EDIT_LOG"
+                    else
+                        printf '%s\n' "$page_id" >>"$FAKE_EDIT_LOG"
+                    fi
                     ;;
                 get)
                     printf '%s\n' '---' '---'
-                    if [ -f "$FAKE_STATE_DIR/$page_id.md" ]; then
-                        /bin/cat "$FAKE_STATE_DIR/$page_id.md"
+                    if [ -f "$state_dir/$page_id.md" ]; then
+                        /bin/cat "$state_dir/$page_id.md"
                     fi
                     ;;
                 *)
@@ -115,13 +189,24 @@ fake_notion() {
                 esac
             done
             local page_id=${api_path##*/}
+            if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ] && [[ "$api_path" = /v1/pages/* ]]; then
+                case "$fake_account:$page_id" in
+                    "molcure:$FAKE_MOLCURE_CUSTOM_PAGE_ID"|"molcure:$FAKE_MOLCURE_PROFILE_PAGE_ID"|molcure:molcure-page-*) ;;
+                    "personal:$FAKE_PERSONAL_CUSTOM_PAGE_ID"|"personal:$FAKE_PERSONAL_PROFILE_PAGE_ID"|personal:personal-page-*) ;;
+                    *) return 94 ;;
+                esac
+            fi
             if [ "$method" = "PATCH" ]; then
-                printf '%s' "$data" >"$FAKE_META_DIR/$page_id.json"
-                printf '%s\n' "$page_id" >>"$FAKE_PATCH_LOG"
+                printf '%s' "$data" >"$meta_dir/$page_id.json"
+                if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ]; then
+                    printf '%s:%s\n' "$fake_account" "$page_id" >>"$FAKE_PATCH_LOG"
+                else
+                    printf '%s\n' "$page_id" >>"$FAKE_PATCH_LOG"
+                fi
                 printf '{"object":"page","id":"%s"}\n' "$page_id"
             else
-                if [ -f "$FAKE_META_DIR/$page_id.json" ]; then
-                    /usr/bin/jq -c --arg id "$page_id" '{object:"page",id:$id,properties:.properties}' "$FAKE_META_DIR/$page_id.json"
+                if [ -f "$meta_dir/$page_id.json" ]; then
+                    /usr/bin/jq -c --arg id "$page_id" '{object:"page",id:$id,properties:.properties}' "$meta_dir/$page_id.json"
                 else
                     /usr/bin/jq -cn --arg id "$page_id" '{object:"page",id:$id,properties:{}}'
                 fi
@@ -137,15 +222,15 @@ case "${1:-}" in
     --sync)
         exit 0
         ;;
-    whoami|datasources|pages|api)
+    whoami|datasources|pages|api|auth)
         fake_notion "$@"
         exit $?
         ;;
 esac
 
 SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
-DEV_ROOT=$(cd -- "$SCRIPT_DIR/../../../../../" && pwd)
-SYNC_SCRIPT="$DEV_ROOT/dotfiles/apps/codex/custom-instructions/sync-custom-instructions"
+DOTFILES_ROOT=$(git -C "$SCRIPT_DIR" rev-parse --show-toplevel)
+SYNC_SCRIPT="$DOTFILES_ROOT/apps/codex/custom-instructions/sync-custom-instructions"
 TMP_ROOT=$(mktemp -d "${TMPDIR:-/tmp}/skills-notion-sync-test.XXXXXX")
 case "${TMP_ROOT:?}" in
     "${TMPDIR:-/tmp}"/skills-notion-sync-test.*) ;;
@@ -206,11 +291,13 @@ FAKE_META_DIR="$TMP_ROOT/meta"
 FAKE_EDIT_LOG="$TMP_ROOT/edits.log"
 FAKE_PATCH_LOG="$TMP_ROOT/patches.log"
 FAKE_QUERY_JSON="$TMP_ROOT/query.json"
+FAKE_SECURITY_BIN="$TMP_ROOT/security-bin"
+FAKE_SECURITY_EVENTS="$TMP_ROOT/security-events"
 CONFIG="$CONFIG_DIR/notion-pages.conf"
 HELPER="$TMP_ROOT/helper"
 NTN="$TMP_ROOT/ntn"
 
-mkdir -p "$MIRROR_DIR" "$SKILLS_MIRROR_DIR" "$LEGACY_MIRROR_DIR" "$LEGACY_SKILLS_MIRROR_DIR" "$CONFIG_DIR" "$FAKE_STATE_DIR" "$FAKE_META_DIR"
+mkdir -p "$MIRROR_DIR" "$SKILLS_MIRROR_DIR" "$LEGACY_MIRROR_DIR" "$LEGACY_SKILLS_MIRROR_DIR" "$CONFIG_DIR" "$FAKE_STATE_DIR" "$FAKE_META_DIR" "$FAKE_SECURITY_BIN"
 printf '%s\n' 'legacy mirror must not be read' >"$LEGACY_MIRROR_DIR/custom-instructions.md"
 printf '%s\n' 'legacy mirror must not be read' >"$LEGACY_MIRROR_DIR/user-profile.md"
 mkdir -p "$LEGACY_SKILLS_MIRROR_DIR/legacy"
@@ -218,6 +305,41 @@ printf '%s\n' '---' 'name: legacy' '---' '# legacy mirror must not be read' >"$L
 cp "$0" "$HELPER"
 cp "$0" "$NTN"
 chmod 755 "$HELPER" "$NTN"
+cat >"$FAKE_SECURITY_BIN/security" <<'SECURITY_FAKE'
+#!/bin/bash
+set -euo pipefail
+[ "${1:-}" = "find-generic-password" ] || exit 64
+shift
+service=''
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        -s)
+            service=${2:-}
+            shift 2
+            ;;
+        -a)
+            shift 2
+            ;;
+        -w)
+            shift
+            ;;
+        *)
+            shift
+            ;;
+    esac
+done
+case "$service" in
+    my.notion.molcure) token=${FAKE_MOLCURE_TOKEN:?} ;;
+    my.notion.personal) token=${FAKE_PERSONAL_TOKEN:?} ;;
+    *) exit 44 ;;
+esac
+if [ "${FAKE_KEYCHAIN_MODE:-present}" != "present" ]; then
+    exit 45
+fi
+printf 'security:%s\n' "$service" >>"${FAKE_SECURITY_EVENTS:?}"
+printf '%s' "$token"
+SECURITY_FAKE
+chmod 755 "$FAKE_SECURITY_BIN/security"
 
 if [ -z "${CODEX_HARNESS_ROOT_OVERRIDE:-}" ]; then
     mkdir -p "$HARNESS_ROOT/custom-instructions" "$HARNESS_ROOT/skills/writing-references"
@@ -299,6 +421,7 @@ RUBY
 
 run_sync() {
     FAKE_HELPER_MODE=1 \
+    FAKE_ACCOUNT_TEST="${FAKE_ACCOUNT_TEST:-0}" \
     FAKE_STATUS_SOURCE="$HARNESS_ROOT/custom-instructions" \
     FAKE_STATUS_SKILLS="$HARNESS_ROOT/skills" \
     FAKE_STATUS_OUTPUT="$CODEX_HOME" \
@@ -310,12 +433,15 @@ run_sync() {
     FAKE_EDIT_LOG="$FAKE_EDIT_LOG" \
     FAKE_PATCH_LOG="$FAKE_PATCH_LOG" \
     FAKE_QUERY_JSON="$FAKE_QUERY_JSON" \
+    FAKE_SECURITY_EVENTS="${FAKE_SECURITY_EVENTS:-$TMP_ROOT/security-events}" \
+    PATH="${FAKE_SECURITY_BIN:+$FAKE_SECURITY_BIN:}$PATH" \
     NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
-    "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
+    "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "${SYNC_CONFIG_OVERRIDE:-$CONFIG}"
 }
 
 run_sync_with_preflight_fixture() {
     FAKE_HELPER_MODE=1 \
+    FAKE_ACCOUNT_TEST="${FAKE_ACCOUNT_TEST:-0}" \
     FAKE_EVENTS="$TMP_ROOT/preflight-events" \
     FAKE_STATUS_OUTPUT_LOG="$TMP_ROOT/status-output" \
     FAKE_STATUS_REQUIRED=1 \
@@ -331,6 +457,8 @@ run_sync_with_preflight_fixture() {
     FAKE_EDIT_LOG="$FAKE_EDIT_LOG" \
     FAKE_PATCH_LOG="$FAKE_PATCH_LOG" \
     FAKE_QUERY_JSON="$FAKE_QUERY_JSON" \
+    FAKE_SECURITY_EVENTS="${FAKE_SECURITY_EVENTS:-$TMP_ROOT/security-events}" \
+    PATH="${FAKE_SECURITY_BIN:+$FAKE_SECURITY_BIN:}$PATH" \
     NOTION_SYNC_MIRROR_ROOT_OVERRIDE="$MIRROR_ROOT" \
     "$SYNC_SCRIPT" "$HELPER" "$NTN" "$CODEX_HOME" "$CONFIG"
 }
@@ -645,4 +773,219 @@ printf '%s\n' '---' 'name: legacy-tags' 'metadata:' '  notion_sync: "true"' 'tag
 assert_rejected_without_updates 'legacy-tags' 'tags'
 rm -f "$SKILLS_MIRROR_DIR/writing-references/legacy-tags.md"
 
-printf '[SUCCESS] isolated sync tests passed (%s mirror files, %s synced files, %s excluded skills).\n' "$mirror_file_count" "$syncable_file_count" "$false_skill_count"
+ACCOUNT_TEST_DIR="$TMP_ROOT/account-test"
+mkdir -p "$ACCOUNT_TEST_DIR"
+FAKE_MOLCURE_TOKEN='fake-secret-molcure'
+FAKE_PERSONAL_TOKEN='fake-secret-personal'
+FAKE_MOLCURE_USER_ID='user-molcure'
+FAKE_PERSONAL_USER_ID='user-personal'
+FAKE_MOLCURE_WORKSPACE_ID='11111111111111111111111111111111'
+FAKE_PERSONAL_WORKSPACE_ID='44444444444444444444444444444444'
+FAKE_MOLCURE_CUSTOM_PAGE_ID='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA'
+FAKE_MOLCURE_PROFILE_PAGE_ID='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB'
+FAKE_MOLCURE_DATA_SOURCE_ID='AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC'
+FAKE_PERSONAL_CUSTOM_PAGE_ID='BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB'
+FAKE_PERSONAL_PROFILE_PAGE_ID='BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBC'
+FAKE_PERSONAL_DATA_SOURCE_ID='BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBD'
+FAKE_MOLCURE_QUERY_JSON="$ACCOUNT_TEST_DIR/molcure-query.json"
+FAKE_PERSONAL_QUERY_JSON="$ACCOUNT_TEST_DIR/personal-query.json"
+
+write_account_config() {
+    local path=$1 account=$2 source=$3 user_id=$4 workspace_id=$5
+    local custom_page_id=$6 profile_page_id=$7 data_source_id=$8
+    cat >"$path" <<EOF
+account_id=$account
+credential_source=$source
+expected_user_id=$user_id
+workspace_id=$workspace_id
+custom_instructions_page_id=$custom_page_id
+user_profile_page_id=$profile_page_id
+skills_data_source_id=$data_source_id
+EOF
+    chmod 600 "$path"
+}
+
+write_account_query() {
+    local account=$1 path=$2
+    /usr/bin/jq --arg prefix "$account-" '.results |= map(.id = ($prefix + .id))' \
+        "$FAKE_QUERY_JSON" >"$path"
+}
+
+MOLCURE_CONFIG="$ACCOUNT_TEST_DIR/molcure.conf"
+PERSONAL_CONFIG="$ACCOUNT_TEST_DIR/personal.conf"
+write_account_config "$MOLCURE_CONFIG" molcure ntn-default "$FAKE_MOLCURE_USER_ID" \
+    "$FAKE_MOLCURE_WORKSPACE_ID" AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB \
+    AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC
+write_account_config "$PERSONAL_CONFIG" personal keychain "$FAKE_PERSONAL_USER_ID" \
+    "$FAKE_PERSONAL_WORKSPACE_ID" BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBC \
+    BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBD
+
+write_account_query molcure "$FAKE_MOLCURE_QUERY_JSON"
+write_account_query personal "$FAKE_PERSONAL_QUERY_JSON"
+
+run_account_sync() {
+    local account=$1 config=$2 events=$3 log=$4 actual_user_id=${5:-} keychain_mode=${6:-present}
+    FAKE_ACCOUNT_TEST=1 \
+    FAKE_MOLCURE_TOKEN="$FAKE_MOLCURE_TOKEN" \
+    FAKE_PERSONAL_TOKEN="$FAKE_PERSONAL_TOKEN" \
+    FAKE_MOLCURE_USER_ID="$FAKE_MOLCURE_USER_ID" \
+    FAKE_PERSONAL_USER_ID="$FAKE_PERSONAL_USER_ID" \
+    FAKE_MOLCURE_WORKSPACE_ID="$FAKE_MOLCURE_WORKSPACE_ID" \
+    FAKE_PERSONAL_WORKSPACE_ID="$FAKE_PERSONAL_WORKSPACE_ID" \
+    FAKE_MOLCURE_CUSTOM_PAGE_ID="$FAKE_MOLCURE_CUSTOM_PAGE_ID" \
+    FAKE_MOLCURE_PROFILE_PAGE_ID="$FAKE_MOLCURE_PROFILE_PAGE_ID" \
+    FAKE_MOLCURE_DATA_SOURCE_ID="$FAKE_MOLCURE_DATA_SOURCE_ID" \
+    FAKE_PERSONAL_CUSTOM_PAGE_ID="$FAKE_PERSONAL_CUSTOM_PAGE_ID" \
+    FAKE_PERSONAL_PROFILE_PAGE_ID="$FAKE_PERSONAL_PROFILE_PAGE_ID" \
+    FAKE_PERSONAL_DATA_SOURCE_ID="$FAKE_PERSONAL_DATA_SOURCE_ID" \
+    FAKE_MOLCURE_QUERY_JSON="$FAKE_MOLCURE_QUERY_JSON" \
+    FAKE_PERSONAL_QUERY_JSON="$FAKE_PERSONAL_QUERY_JSON" \
+    FAKE_KEYCHAIN_MODE="$keychain_mode" \
+    FAKE_ACTUAL_USER_ID="$actual_user_id" \
+    FAKE_EVENTS="$events" \
+    FAKE_SECURITY_EVENTS="$FAKE_SECURITY_EVENTS" \
+    SYNC_CONFIG_OVERRIDE="$config" \
+        run_sync >"$log" 2>&1
+}
+
+account_edit_count() {
+    local account=$1
+    /usr/bin/grep -c "^$account:" "$FAKE_EDIT_LOG" 2>/dev/null || true
+}
+
+: >"$FAKE_EDIT_LOG"
+: >"$FAKE_PATCH_LOG"
+: >"$FAKE_SECURITY_EVENTS"
+run_account_sync molcure "$MOLCURE_CONFIG" "$ACCOUNT_TEST_DIR/molcure.events" "$ACCOUNT_TEST_DIR/molcure.log" || {
+    /bin/cat "$ACCOUNT_TEST_DIR/molcure.log" >&2
+    printf '[ERROR] MOLCUREアカウントの明示選択に失敗しました。\n' >&2
+    exit 1
+}
+molcure_edit_count=$(account_edit_count molcure)
+[ "$molcure_edit_count" -gt 0 ] || {
+    /bin/cat "$ACCOUNT_TEST_DIR/molcure.log" >&2
+    printf '[ERROR] MOLCUREアカウントへ同期しませんでした。\n' >&2
+    exit 1
+}
+/usr/bin/grep -Fqx 'credential:ntn-default' "$ACCOUNT_TEST_DIR/molcure.events" || {
+    printf '[ERROR] 既存MOLCURE Keychain経路を使っていません。\n' >&2
+    exit 1
+}
+
+run_account_sync personal "$PERSONAL_CONFIG" "$ACCOUNT_TEST_DIR/personal.events" "$ACCOUNT_TEST_DIR/personal.log" || {
+    /bin/cat "$ACCOUNT_TEST_DIR/personal.log" >&2
+    printf '[ERROR] 個人アカウントの明示選択に失敗しました。\n' >&2
+    exit 1
+}
+personal_edit_count=$(account_edit_count personal)
+[ "$personal_edit_count" -gt 0 ] || {
+    /bin/cat "$ACCOUNT_TEST_DIR/personal.log" >&2
+    printf '[ERROR] 同一内容を個人アカウントへも同期しませんでした。\n' >&2
+    exit 1
+}
+/usr/bin/grep -Fqx 'security:my.notion.personal' "$FAKE_SECURITY_EVENTS" || {
+    printf '[ERROR] 個人アカウント用Keychain項目を選択しませんでした。\n' >&2
+    exit 1
+}
+/usr/bin/grep -q '^notion:molcure:' "$ACCOUNT_TEST_DIR/molcure.events"
+/usr/bin/grep -q '^notion:personal:' "$ACCOUNT_TEST_DIR/personal.events"
+! /usr/bin/grep -q '^notion:personal:' "$ACCOUNT_TEST_DIR/molcure.events"
+! /usr/bin/grep -q '^notion:molcure:' "$ACCOUNT_TEST_DIR/personal.events"
+
+assert_account_rejection_has_no_writes() {
+    local label=$1 config=$2 actual_user_id=${3:-} keychain_mode=${4:-present}
+    local before_edits before_patches
+    before_edits=$(wc -l <"$FAKE_EDIT_LOG" | tr -d ' ')
+    before_patches=$(wc -l <"$FAKE_PATCH_LOG" | tr -d ' ')
+    if run_account_sync personal "$config" "$ACCOUNT_TEST_DIR/$label.events" "$ACCOUNT_TEST_DIR/$label.log" \
+        "$actual_user_id" "$keychain_mode"; then
+        printf '[ERROR] %sを安全に拒否しませんでした。\n' "$label" >&2
+        exit 1
+    fi
+    [ "$(wc -l <"$FAKE_EDIT_LOG" | tr -d ' ')" -eq "$before_edits" ] || {
+        printf '[ERROR] %sでNotion本文の部分更新が発生しました。\n' "$label" >&2
+        exit 1
+    }
+    [ "$(wc -l <"$FAKE_PATCH_LOG" | tr -d ' ')" -eq "$before_patches" ] || {
+        printf '[ERROR] %sでNotionメタデータの部分更新が発生しました。\n' "$label" >&2
+        exit 1
+    }
+}
+
+MISMATCH_CONFIG="$ACCOUNT_TEST_DIR/mismatch.conf"
+sed 's/^expected_user_id=user-personal$/expected_user_id=unexpected-user/' "$PERSONAL_CONFIG" >"$MISMATCH_CONFIG"
+assert_account_rejection_has_no_writes identity-mismatch "$MISMATCH_CONFIG"
+
+WORKSPACE_MISMATCH_CONFIG="$ACCOUNT_TEST_DIR/workspace-mismatch.conf"
+sed 's/^workspace_id=44444444444444444444444444444444$/workspace_id=55555555555555555555555555555555/' \
+    "$PERSONAL_CONFIG" >"$WORKSPACE_MISMATCH_CONFIG"
+assert_account_rejection_has_no_writes workspace-mismatch "$WORKSPACE_MISMATCH_CONFIG"
+
+UNKNOWN_CONFIG="$ACCOUNT_TEST_DIR/unknown.conf"
+sed 's/^account_id=personal$/account_id=unknown/' "$PERSONAL_CONFIG" >"$UNKNOWN_CONFIG"
+assert_account_rejection_has_no_writes unknown-account "$UNKNOWN_CONFIG"
+
+UNSET_CONFIG="$ACCOUNT_TEST_DIR/unset.conf"
+sed '/^account_id=/d; /^credential_source=/d; /^expected_user_id=/d' "$PERSONAL_CONFIG" >"$UNSET_CONFIG"
+assert_account_rejection_has_no_writes unset-account "$UNSET_CONFIG"
+
+UNKNOWN_SOURCE_CONFIG="$ACCOUNT_TEST_DIR/unknown-source.conf"
+sed 's/^credential_source=keychain$/credential_source=unknown/' "$PERSONAL_CONFIG" >"$UNKNOWN_SOURCE_CONFIG"
+assert_account_rejection_has_no_writes unknown-credential-source "$UNKNOWN_SOURCE_CONFIG"
+
+MISSING_CREDENTIAL_CONFIG="$ACCOUNT_TEST_DIR/missing-credential.conf"
+cp "$PERSONAL_CONFIG" "$MISSING_CREDENTIAL_CONFIG"
+assert_account_rejection_has_no_writes missing-credential "$MISSING_CREDENTIAL_CONFIG" '' missing
+
+WRONG_TARGET_CONFIG="$ACCOUNT_TEST_DIR/wrong-target.conf"
+sed "s/^user_profile_page_id=$FAKE_PERSONAL_PROFILE_PAGE_ID\$/user_profile_page_id=$FAKE_MOLCURE_PROFILE_PAGE_ID/" \
+    "$PERSONAL_CONFIG" >"$WRONG_TARGET_CONFIG"
+assert_account_rejection_has_no_writes wrong-target-page "$WRONG_TARGET_CONFIG"
+
+WRONG_DATA_SOURCE_CONFIG="$ACCOUNT_TEST_DIR/wrong-data-source.conf"
+sed "s/^skills_data_source_id=$FAKE_PERSONAL_DATA_SOURCE_ID\$/skills_data_source_id=$FAKE_MOLCURE_DATA_SOURCE_ID/" \
+    "$PERSONAL_CONFIG" >"$WRONG_DATA_SOURCE_CONFIG"
+assert_account_rejection_has_no_writes wrong-data-source "$WRONG_DATA_SOURCE_CONFIG"
+
+# A changed snapshot forces both accounts through Notion work concurrently and
+# proves that their credentials and completion caches stay independent.
+printf '%s\n' '# concurrent account-isolation probe' >>"$HARNESS_ROOT/custom-instructions/custom-instructions.md"
+before_concurrent_molcure=$(account_edit_count molcure)
+before_concurrent_personal=$(account_edit_count personal)
+run_account_sync molcure "$MOLCURE_CONFIG" "$ACCOUNT_TEST_DIR/concurrent-molcure.events" \
+    "$ACCOUNT_TEST_DIR/concurrent-molcure.log" &
+molcure_pid=$!
+run_account_sync personal "$PERSONAL_CONFIG" "$ACCOUNT_TEST_DIR/concurrent-personal.events" \
+    "$ACCOUNT_TEST_DIR/concurrent-personal.log" &
+personal_pid=$!
+molcure_status=0
+personal_status=0
+wait "$molcure_pid" || molcure_status=$?
+wait "$personal_pid" || personal_status=$?
+if [ "$molcure_status" -ne 0 ] || [ "$personal_status" -ne 0 ]; then
+    /bin/cat "$ACCOUNT_TEST_DIR/concurrent-molcure.log" "$ACCOUNT_TEST_DIR/concurrent-personal.log" >&2
+    printf '[ERROR] 同時実行時にアカウント別同期が失敗しました。\n' >&2
+    exit 1
+fi
+[ "$(account_edit_count molcure)" -gt "$before_concurrent_molcure" ] || {
+    printf '[ERROR] 同時実行時にMOLCURE側の同期がキャッシュで誤って省略されました。\n' >&2
+    exit 1
+}
+[ "$(account_edit_count personal)" -gt "$before_concurrent_personal" ] || {
+    printf '[ERROR] 同時実行時に個人側の同期がキャッシュで誤って省略されました。\n' >&2
+    exit 1
+}
+/usr/bin/grep -q '^notion:molcure:' "$ACCOUNT_TEST_DIR/concurrent-molcure.events"
+/usr/bin/grep -q '^notion:personal:' "$ACCOUNT_TEST_DIR/concurrent-personal.events"
+! /usr/bin/grep -q '^notion:personal:' "$ACCOUNT_TEST_DIR/concurrent-molcure.events"
+! /usr/bin/grep -q '^notion:molcure:' "$ACCOUNT_TEST_DIR/concurrent-personal.events"
+
+for log_file in "$ACCOUNT_TEST_DIR"/*.log; do
+    if /usr/bin/grep -F -e "$FAKE_MOLCURE_TOKEN" -e "$FAKE_PERSONAL_TOKEN" "$log_file"; then
+        printf '[ERROR] 認証情報が出力へ漏れました: %s\n' "$log_file" >&2
+        exit 1
+    fi
+done
+
+printf '[SUCCESS] account-isolation tests passed; legacy suite had %s mirror files and %s synced files.\n' \
+    "$mirror_file_count" "$syncable_file_count"
