@@ -282,7 +282,7 @@ launch_notion_config=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:4' "$
     exit 1
 }
 set +e
-PATH="$fake_bin:$PATH" HOME="$TMP_ROOT/home" FAKE_NTN_ENFORCE_TOKEN=1 \
+PATH="$fake_bin:$PATH" HOME="$TMP_ROOT/home" FAKE_NTN_ENFORCE_TOKEN=1 FAKE_NTN_SETUP_ACCOUNT=none \
     FAKE_SETUP_EVENTS="$TMP_ROOT/launch-helper.events" FAKE_SETUP_STATE_FILE="$TMP_ROOT/state" \
     FAKE_SETUP_AUTH="$TMP_ROOT/auth" FAKE_SWIFTC="$fake_swiftc" \
     NOTION_READBACK_WAIT_SECONDS=0 "$launch_program" "$launch_helper" "$launch_ntn" \
