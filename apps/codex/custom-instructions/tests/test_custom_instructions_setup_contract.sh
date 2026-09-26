@@ -281,6 +281,8 @@ launch_notion_config=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:4' "$
     printf '[ERROR] LaunchAgent設定に個人用資格情報の選択がありません。\n' >&2
     exit 1
 }
+: >"$TMP_ROOT/launch-ntn.events"
+: >"$TMP_ROOT/launch-security.events"
 set +e
 PATH="$fake_bin:$PATH" HOME="$TMP_ROOT/home" FAKE_NTN_ENFORCE_TOKEN=1 FAKE_NTN_SETUP_ACCOUNT=none \
     FAKE_SETUP_EVENTS="$TMP_ROOT/launch-helper.events" FAKE_SETUP_STATE_FILE="$TMP_ROOT/state" \
