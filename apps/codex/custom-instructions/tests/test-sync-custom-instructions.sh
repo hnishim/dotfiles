@@ -65,6 +65,16 @@ fake_notion() {
     local state_dir="$FAKE_STATE_DIR"
     local meta_dir="$FAKE_META_DIR"
 
+    fake_api_uuid() {
+        local value=$1
+        if [ "${FAKE_API_UUID_HYPHENS:-0}" != "1" ] || [[ ! "$value" =~ ^[A-Fa-f0-9]{32}$ ]]; then
+            printf '%s' "$value"
+            return 0
+        fi
+        printf '%s-%s-%s-%s-%s' "${value:0:8}" "${value:8:4}" "${value:12:4}" \
+            "${value:16:4}" "${value:20:12}"
+    }
+
     if [ "$command" = "auth" ] && [ "${1:-}" = "token" ]; then
         if [ -n "${FAKE_EVENTS:-}" ]; then
             printf '%s\n' 'credential:ntn-default' >>"$FAKE_EVENTS"
@@ -128,6 +138,8 @@ fake_notion() {
                         fake_workspace_id=$FAKE_PERSONAL_WORKSPACE_ID
                     fi
                 fi
+                fake_user_id=$(fake_api_uuid "$fake_user_id")
+                fake_workspace_id=$(fake_api_uuid "$fake_workspace_id")
                 if [ "$fake_account" = "molcure" ]; then
                     printf '{"object":"bot","id":"bot-molcure","type":"bot","bot":{"owner":{"type":"user","user":{"id":"%s"}},"workspace_id":"%s"}}\n' \
                         "$fake_user_id" "$fake_workspace_id"
@@ -216,19 +228,28 @@ fake_notion() {
             else
                 if [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ] && [[ "$api_path" = /v1/data_sources/* ]]; then
                     local owner_workspace=$FAKE_PERSONAL_WORKSPACE_ID
+                    local response_id
                     [ "$target_account" = molcure ] && owner_workspace=$FAKE_MOLCURE_WORKSPACE_ID
+                    response_id=$(fake_api_uuid "$page_id")
+                    owner_workspace=$(fake_api_uuid "$owner_workspace")
                     printf '{"object":"data_source","id":"%s","parent":{"type":"workspace","workspace_id":"%s"}}\n' \
-                        "$page_id" "$owner_workspace"
+                        "$response_id" "$owner_workspace"
                 elif [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ] && [ -f "$meta_dir/$page_id.json" ]; then
                     local owner_workspace=$FAKE_PERSONAL_WORKSPACE_ID
+                    local response_id
                     [ "$target_account" = molcure ] && owner_workspace=$FAKE_MOLCURE_WORKSPACE_ID
-                    /usr/bin/jq -c --arg id "$page_id" --arg workspace "$owner_workspace" \
+                    response_id=$(fake_api_uuid "$page_id")
+                    owner_workspace=$(fake_api_uuid "$owner_workspace")
+                    /usr/bin/jq -c --arg id "$response_id" --arg workspace "$owner_workspace" \
                         '{object:"page",id:$id,parent:{type:"workspace",workspace_id:$workspace},properties:.properties}' \
                         "$meta_dir/$page_id.json"
                 elif [ "${FAKE_ACCOUNT_TEST:-0}" = "1" ]; then
                     local owner_workspace=$FAKE_PERSONAL_WORKSPACE_ID
+                    local response_id
                     [ "$target_account" = molcure ] && owner_workspace=$FAKE_MOLCURE_WORKSPACE_ID
-                    /usr/bin/jq -cn --arg id "$page_id" --arg workspace "$owner_workspace" \
+                    response_id=$(fake_api_uuid "$page_id")
+                    owner_workspace=$(fake_api_uuid "$owner_workspace")
+                    /usr/bin/jq -cn --arg id "$response_id" --arg workspace "$owner_workspace" \
                         '{object:"page",id:$id,parent:{type:"workspace",workspace_id:$workspace},properties:{}}'
                 elif [ -f "$meta_dir/$page_id.json" ]; then
                     /usr/bin/jq -c --arg id "$page_id" '{object:"page",id:$id,properties:.properties}' "$meta_dir/$page_id.json"
@@ -870,6 +891,7 @@ run_account_sync() {
     FAKE_ACTUAL_USER_ID="$actual_user_id" \
     FAKE_EVENTS="$events" \
     FAKE_SECURITY_EVENTS="$FAKE_SECURITY_EVENTS" \
+    FAKE_API_UUID_HYPHENS="${FAKE_API_UUID_HYPHENS:-0}" \
     SYNC_CONFIG_OVERRIDE="$config" \
         run_sync >"$log" 2>&1
 }
@@ -1071,6 +1093,39 @@ fi
 /usr/bin/grep -q '^notion:personal:' "$ACCOUNT_TEST_DIR/concurrent-personal.events"
 ! /usr/bin/grep -q '^notion:personal:' "$ACCOUNT_TEST_DIR/concurrent-molcure.events"
 ! /usr/bin/grep -q '^notion:molcure:' "$ACCOUNT_TEST_DIR/concurrent-personal.events"
+
+# Notion may return hyphenated UUIDs when the valid saved IDs are hyphenless.
+HYPHEN_API_DIR="$ACCOUNT_TEST_DIR/hyphenated-api-ids"
+mkdir -p "$HYPHEN_API_DIR"
+FAKE_PERSONAL_USER_ID='aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+FAKE_PERSONAL_WORKSPACE_ID='bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'
+FAKE_PERSONAL_CUSTOM_PAGE_ID='cccccccccccccccccccccccccccccccc'
+FAKE_PERSONAL_PROFILE_PAGE_ID='dddddddddddddddddddddddddddddddd'
+FAKE_PERSONAL_DATA_SOURCE_ID='eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+HYPHEN_API_CONFIG="$HYPHEN_API_DIR/personal.conf"
+write_account_config "$HYPHEN_API_CONFIG" personal keychain "$FAKE_PERSONAL_USER_ID" \
+    "$FAKE_PERSONAL_WORKSPACE_ID" "$FAKE_PERSONAL_CUSTOM_PAGE_ID" \
+    "$FAKE_PERSONAL_PROFILE_PAGE_ID" "$FAKE_PERSONAL_DATA_SOURCE_ID"
+HYPHEN_API_EVENTS="$HYPHEN_API_DIR/events.log"
+FAKE_SECURITY_EVENTS="$HYPHEN_API_DIR/security-events.log"
+export FAKE_SECURITY_EVENTS
+: >"$HYPHEN_API_EVENTS"
+: >"$FAKE_SECURITY_EVENTS"
+FAKE_API_UUID_HYPHENS=1
+before_hyphen_api_personal=$(account_edit_count personal)
+run_account_sync personal "$HYPHEN_API_CONFIG" "$HYPHEN_API_EVENTS" \
+    "$HYPHEN_API_DIR/sync.log" "$FAKE_PERSONAL_USER_ID" || {
+    /bin/cat "$HYPHEN_API_DIR/sync.log" >&2
+    printf '[ERROR] APIが返すハイフン付きUUIDを設定と照合できませんでした。\n' >&2
+    exit 1
+}
+[ "$(account_edit_count personal)" -gt "$before_hyphen_api_personal" ] || {
+    printf '[ERROR] UUID表記が異なる設定で個人アカウント同期が進みませんでした。\n' >&2
+    exit 1
+}
+assert_account_preflight_precedes_writes personal "$FAKE_PERSONAL_CUSTOM_PAGE_ID" \
+    "$FAKE_PERSONAL_PROFILE_PAGE_ID" "$FAKE_PERSONAL_DATA_SOURCE_ID" "$HYPHEN_API_EVENTS"
+FAKE_API_UUID_HYPHENS=0
 
 for log_file in "$ACCOUNT_TEST_DIR"/*.log; do
     if /usr/bin/grep -F -e "$FAKE_MOLCURE_TOKEN" -e "$FAKE_PERSONAL_TOKEN" "$log_file"; then
