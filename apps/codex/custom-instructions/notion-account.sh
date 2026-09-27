@@ -18,6 +18,19 @@ notion_valid_id() {
     printf '%s\n' "$1" | grep -Eq '^[0-9A-Fa-f]{32}$|^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
 }
 
+notion_ids_equal() {
+    local actual=$1
+    local expected=$2
+
+    if ! notion_valid_id "$actual" || ! notion_valid_id "$expected"; then
+        [ "$actual" = "$expected" ]
+        return $?
+    fi
+    actual=$(printf '%s' "$actual" | tr '[:upper:]' '[:lower:]' | tr -d '-')
+    expected=$(printf '%s' "$expected" | tr '[:upper:]' '[:lower:]' | tr -d '-')
+    [ "$actual" = "$expected" ]
+}
+
 notion_account_load_config() {
     local config=$1
     local allow_legacy=${2:-0}
@@ -135,8 +148,8 @@ notion_account_verify_identity() {
     NOTION_ACTUAL_USER_ID=$("$jq_executable" -er '.bot.owner.user.id // .user.id // empty' "$response_file" 2>/dev/null) || return 1
     NOTION_ACTUAL_WORKSPACE_ID=$("$jq_executable" -er '.bot.workspace_id // .workspace_id // empty' "$response_file" 2>/dev/null) || return 1
     [ -n "$NOTION_ACTUAL_USER_ID" ] && [ -n "$NOTION_ACTUAL_WORKSPACE_ID" ] || return 1
-    [ "$NOTION_ACTUAL_WORKSPACE_ID" = "$expected_workspace_id" ] || return 1
-    [ -z "$expected_user_id" ] || [ "$NOTION_ACTUAL_USER_ID" = "$expected_user_id" ]
+    notion_ids_equal "$NOTION_ACTUAL_WORKSPACE_ID" "$expected_workspace_id" || return 1
+    [ -z "$expected_user_id" ] || notion_ids_equal "$NOTION_ACTUAL_USER_ID" "$expected_user_id"
 }
 
 notion_account_verify_resource() {
@@ -155,7 +168,7 @@ notion_account_verify_resource() {
     esac
     actual_object=$("$jq_executable" -er '.object // empty' "$response_file" 2>/dev/null) || return 1
     actual_id=$("$jq_executable" -er '.id // empty' "$response_file" 2>/dev/null) || return 1
-    [ "$actual_id" = "$expected_id" ] || return 1
+    notion_ids_equal "$actual_id" "$expected_id" || return 1
     if [ "$actual_object" != "$expected_object" ]; then
         if [ "$allow_legacy_shape" = 1 ] && [ "$kind" = data_source ] && [ "$actual_object" = page ]; then
             legacy_data_source_shape=true
@@ -171,7 +184,7 @@ notion_account_verify_resource() {
         return 0
     fi
     if [ -n "$actual_workspace" ]; then
-        [ "$actual_workspace" = "$expected_workspace_id" ] || return 1
+        notion_ids_equal "$actual_workspace" "$expected_workspace_id" || return 1
         return 0
     fi
 
