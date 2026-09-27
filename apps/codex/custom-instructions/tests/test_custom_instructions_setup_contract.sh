@@ -208,6 +208,11 @@ run_setup() {
     CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE="$fake_logs" CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE="$fake_cache" \
     CODEX_HARNESS_ROOT_OVERRIDE="$fixture_harness" CODEX_HOME_DIR_OVERRIDE="$codex_home" \
     NTN_EXECUTABLE_OVERRIDE="${SETUP_NTN_OVERRIDE:-$TMP_ROOT/fake-ntn}" \
+    NOTION_EXPECTED_USER_ID_OVERRIDE="${SETUP_EXPECTED_USER_OVERRIDE:-}" \
+    NOTION_WORKSPACE_ID_OVERRIDE="${SETUP_WORKSPACE_OVERRIDE:-}" \
+    NOTION_CUSTOM_INSTRUCTIONS_PAGE_ID_OVERRIDE="${SETUP_CUSTOM_PAGE_OVERRIDE:-}" \
+    NOTION_USER_PROFILE_PAGE_ID_OVERRIDE="${SETUP_PROFILE_PAGE_OVERRIDE:-}" \
+    NOTION_SKILLS_DATA_SOURCE_ID_OVERRIDE="${SETUP_SKILLS_SOURCE_OVERRIDE:-}" \
     NOTION_ACCOUNT_ID_OVERRIDE="${SETUP_ACCOUNT_OVERRIDE:-}" CODEX_HARNESS_PREPARE_ONLY=1 \
         /bin/bash "$SETUP" >"$TMP_ROOT/setup.log" 2>&1 || {
             if [ "${SETUP_ALLOW_FAILURE:-0}" != 1 ]; then
@@ -347,7 +352,15 @@ PERSONAL_CONFIG
     : >"$TMP_ROOT/launch-ntn.events"
     : >"$TMP_ROOT/launch-security.events"
     set +e
-    SETUP_ALLOW_FAILURE=1 SETUP_NTN_OVERRIDE="$setup_ntn" SETUP_ACCOUNT_OVERRIDE="$account_override" run_setup
+    if [ "$account_override" = personal ]; then
+        SETUP_ALLOW_FAILURE=1 SETUP_NTN_OVERRIDE="$setup_ntn" SETUP_ACCOUNT_OVERRIDE=personal \
+        SETUP_EXPECTED_USER_OVERRIDE=user-personal SETUP_WORKSPACE_OVERRIDE=44444444444444444444444444444444 \
+        SETUP_CUSTOM_PAGE_OVERRIDE=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB \
+        SETUP_PROFILE_PAGE_OVERRIDE=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBC \
+        SETUP_SKILLS_SOURCE_OVERRIDE=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBD run_setup
+    else
+        SETUP_ALLOW_FAILURE=1 SETUP_NTN_OVERRIDE="$setup_ntn" SETUP_ACCOUNT_OVERRIDE="$account_override" run_setup
+    fi
     local setup_status=$?
     set -e
     [ "$setup_status" -ne 0 ]
@@ -363,8 +376,8 @@ PERSONAL_CONFIG
 
 # A personal override, a saved Personal config, and a missing Notion CLI must
 # all fail before credentials, Notion access, or LaunchAgent replacement.
-assert_setup_rejected molcure "$TMP_ROOT/fake-ntn" personal
 assert_setup_rejected personal "$TMP_ROOT/fake-ntn" ''
+assert_setup_rejected molcure "$TMP_ROOT/fake-ntn" personal
 assert_setup_rejected molcure "$TMP_ROOT/missing-ntn" ''
 printf '%s\n' '[PASS] generated LaunchAgent arguments preserve the explicit MOLCURE Notion account'
 printf '%s\n' '[PASS] setup rejects Personal account selections/configuration before Notion or LaunchAgent access'
