@@ -48,6 +48,39 @@ elif NTN_EXECUTABLE=$(command -v ntn 2>/dev/null); then
 else
     NTN_EXECUTABLE="$HOME/.local/bin/ntn"
 fi
+
+reject_non_molcure_setup() {
+    log_error "このセットアップはMOLCURE専用です。Personal Notionの同期設定は扱いません。"
+    exit 1
+}
+
+if [ -n "${NOTION_ACCOUNT_ID_OVERRIDE:-}" ] && [ "$NOTION_ACCOUNT_ID_OVERRIDE" != molcure ]; then
+    reject_non_molcure_setup
+fi
+if [ -L "$NOTION_CONFIG" ]; then
+    log_error "Notion設定がsymlinkのため停止します。"
+    exit 1
+fi
+if [ -e "$NOTION_CONFIG" ] && [ ! -f "$NOTION_CONFIG" ]; then
+    log_error "Notion設定が通常ファイルではありません。"
+    exit 1
+fi
+if [ -f "$NOTION_CONFIG" ]; then
+    if ! saved_account_id=$(notion_config_value "$NOTION_CONFIG" account_id); then
+        log_error "保存済みNotion設定のaccount_idを確認できません。"
+        exit 1
+    fi
+    case "$saved_account_id" in
+        personal) reject_non_molcure_setup ;;
+        molcure|"") ;;
+        *) reject_non_molcure_setup ;;
+    esac
+fi
+if [ ! -x "$NTN_EXECUTABLE" ]; then
+    log_error "MOLCURE専用のNotion同期には実行可能なNotion CLIが必要です: $NTN_EXECUTABLE"
+    exit 1
+fi
+
 LAUNCH_AGENTS_DIR="${LAUNCH_AGENTS_DIR_OVERRIDE:-$HOME/Library/LaunchAgents}"
 TARGET_PLIST="$LAUNCH_AGENTS_DIR/$LABEL.plist"
 LOG_DIR="${CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE:-$HOME/Library/Logs}"
@@ -220,9 +253,23 @@ install_sync_launch_agent() {
     local temp_plist="$build_root/$LABEL.plist"
     local attempt
     local job_state
+    local launch_agent_account_id
     local previous_runs=0
     local current_runs
     local run_observed=false
+
+    if [ ! -f "$NOTION_CONFIG" ] || [ -L "$NOTION_CONFIG" ]; then
+        log_error "MOLCURE専用LaunchAgentに渡すNotion設定がありません。"
+        return 1
+    fi
+    if ! launch_agent_account_id=$(notion_config_value "$NOTION_CONFIG" account_id); then
+        log_error "MOLCURE専用LaunchAgentのaccount_idを確認できません。"
+        return 1
+    fi
+    if [ "$launch_agent_account_id" != molcure ]; then
+        log_error "MOLCURE以外のNotion設定をLaunchAgentへ渡せません。"
+        return 1
+    fi
 
     cp "$SOURCE_PLIST" "$temp_plist"
     /usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
@@ -289,15 +336,8 @@ install_sync_launch_agent() {
     return 1
 }
 
-if [ ! -x "$NTN_EXECUTABLE" ]; then
-    log_warning "Notion CLIが見つかりません。Notion同期の設定をスキップします: $NTN_EXECUTABLE"
-    install_sync_launch_agent || exit 1
-    exit 0
-fi
-
 read_local_config() {
     local key=$1
-    [ "${ACCOUNT_SELECTION_CHANGED:-false}" = false ] || return 0
     [ -f "$NOTION_CONFIG" ] || return 0
     notion_config_value "$NOTION_CONFIG" "$key"
 }
@@ -315,42 +355,15 @@ ACCOUNT_CUSTOM_PAGE_ID=''
 ACCOUNT_PROFILE_PAGE_ID=''
 ACCOUNT_SKILLS_DATA_SOURCE_ID=''
 ACCOUNT_CONFIG_LEGACY=false
-ACCOUNT_SELECTION_CHANGED=false
 if [ -f "$NOTION_CONFIG" ]; then
     if ! notion_account_load_config "$NOTION_CONFIG" 1; then
         log_error "Notion設定のアカウント選択を確認できません。"
         exit 1
     fi
-    if [ -n "${NOTION_ACCOUNT_ID_OVERRIDE:-}" ]; then
-        case "$NOTION_ACCOUNT_ID_OVERRIDE" in
-            molcure|personal) ;;
-            *) log_error "NOTION_ACCOUNT_ID_OVERRIDEはmolcureまたはpersonalを指定してください。"; exit 1 ;;
-        esac
-        if [ "$NOTION_ACCOUNT_ID_OVERRIDE" != "$ACCOUNT_ID" ]; then
-            ACCOUNT_SELECTION_CHANGED=true
-            ACCOUNT_ID=$NOTION_ACCOUNT_ID_OVERRIDE
-            case "$ACCOUNT_ID" in
-                molcure) CREDENTIAL_SOURCE="${NOTION_CREDENTIAL_SOURCE_OVERRIDE:-ntn-default}" ;;
-                personal) CREDENTIAL_SOURCE="${NOTION_CREDENTIAL_SOURCE_OVERRIDE:-keychain}" ;;
-            esac
-            EXPECTED_USER_ID="${NOTION_EXPECTED_USER_ID_OVERRIDE:-}"
-            ACCOUNT_WORKSPACE_ID=''
-            ACCOUNT_CUSTOM_PAGE_ID=''
-            ACCOUNT_PROFILE_PAGE_ID=''
-            ACCOUNT_SKILLS_DATA_SOURCE_ID=''
-            ACCOUNT_CONFIG_LEGACY=false
-        fi
-    fi
+    [ "$ACCOUNT_ID" = molcure ] || reject_non_molcure_setup
 else
-    ACCOUNT_ID="${NOTION_ACCOUNT_ID_OVERRIDE:-}"
-    if [ -z "$ACCOUNT_ID" ] && [ -t 0 ]; then
-        read -r -p 'Notion account_id (molcure/personal): ' ACCOUNT_ID
-    fi
-    case "$ACCOUNT_ID" in
-        molcure) CREDENTIAL_SOURCE="${NOTION_CREDENTIAL_SOURCE_OVERRIDE:-ntn-default}" ;;
-        personal) CREDENTIAL_SOURCE="${NOTION_CREDENTIAL_SOURCE_OVERRIDE:-keychain}" ;;
-        *) log_error "Notion account_idを明示してください（molcure/personal）。"; exit 1 ;;
-    esac
+    ACCOUNT_ID=molcure
+    CREDENTIAL_SOURCE="${NOTION_CREDENTIAL_SOURCE_OVERRIDE:-ntn-default}"
     EXPECTED_USER_ID="${NOTION_EXPECTED_USER_ID_OVERRIDE:-}"
     ACCOUNT_CONFIG_LEGACY=false
 fi
