@@ -335,7 +335,8 @@ assert_setup_rejected() {
     local plist="$fake_launch_agents/my.notion.sync.plist"
     local config_before="$TMP_ROOT/rejected-config.before"
     local plist_before="$TMP_ROOT/rejected-plist.before"
-    if [ "$config_account" = personal ]; then
+    case "$config_account" in
+    personal)
         cat >"$config" <<'PERSONAL_CONFIG'
 account_id=personal
 credential_source=keychain
@@ -345,8 +346,28 @@ custom_instructions_page_id=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
 user_profile_page_id=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBC
 skills_data_source_id=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBD
 PERSONAL_CONFIG
-        chmod 600 "$config"
-    fi
+        ;;
+    molcure)
+        cat >"$config" <<'MOLCURE_CONFIG'
+account_id=molcure
+credential_source=ntn-default
+expected_user_id=user-molcure
+workspace_id=55555555555555555555555555555555
+custom_instructions_page_id=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+user_profile_page_id=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB
+skills_data_source_id=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAC
+MOLCURE_CONFIG
+        ;;
+    *)
+        printf '[ERROR] 未知のテスト用Notion設定です: %s\n' "$config_account" >&2
+        exit 1
+        ;;
+    esac
+    chmod 600 "$config"
+    /usr/bin/grep -Fqx "account_id=$config_account" "$config" || {
+        printf '[ERROR] 拒否テストの初期設定が想定アカウントと一致しません。\n' >&2
+        exit 1
+    }
     cp "$config" "$config_before"
     cp "$plist" "$plist_before"
     : >"$TMP_ROOT/launch-ntn.events"
