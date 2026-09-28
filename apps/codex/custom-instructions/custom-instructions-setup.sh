@@ -41,6 +41,7 @@ MIRROR_ROOT="$APPLICATION_SUPPORT_DIR/mirrors"
 SYNC_EXECUTABLE="$APPLICATION_SUPPORT_DIR/sync-custom-instructions"
 ACCOUNT_HELPER_EXECUTABLE="$APPLICATION_SUPPORT_DIR/notion-account.sh"
 NOTION_CONFIG="$APPLICATION_SUPPORT_DIR/notion-pages.conf"
+PLISTBUDDY_EXECUTABLE="${PLISTBUDDY_EXECUTABLE_OVERRIDE:-/usr/libexec/PlistBuddy}"
 if [ -n "${NTN_EXECUTABLE_OVERRIDE:-}" ]; then
     NTN_EXECUTABLE="$NTN_EXECUTABLE_OVERRIDE"
 elif NTN_EXECUTABLE=$(command -v ntn 2>/dev/null); then
@@ -272,15 +273,15 @@ install_sync_launch_agent() {
     fi
 
     cp "$SOURCE_PLIST" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:1 $HELPER_EXECUTABLE" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $NTN_EXECUTABLE" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :WatchPaths:1 $skills_dir" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:1 $HELPER_EXECUTABLE" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:2 $NTN_EXECUTABLE" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :WatchPaths:1 $skills_dir" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
     plutil -lint "$temp_plist" >/dev/null
 
     if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then

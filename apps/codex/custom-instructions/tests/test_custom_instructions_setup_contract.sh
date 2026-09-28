@@ -115,7 +115,31 @@ printf '%s\n' '#!/bin/bash' 'rm -rf -- "$2"' 'cp -R -- "$1" "$2"' >"$fake_bin/di
 printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/plutil"
 printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/launchctl"
 printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/defaults"
-printf '%s\n' '#!/bin/bash' 'exit 0' >"$fake_bin/PlistBuddy"
+cat >"$fake_bin/PlistBuddy" <<'PLISTBUDDY_FAKE'
+#!/usr/bin/env python3
+import plistlib
+import sys
+
+if len(sys.argv) != 4 or sys.argv[1] != "-c":
+    raise SystemExit(2)
+command, plist_path = sys.argv[2], sys.argv[3]
+if not command.startswith("Set "):
+    raise SystemExit(2)
+key_path, value = command[4:].split(" ", 1)
+with open(plist_path, "rb") as plist_file:
+    plist = plistlib.load(plist_file)
+parts = key_path.lstrip(":").split(":")
+target = plist
+for part in parts[:-1]:
+    target = target[int(part)] if isinstance(target, list) else target[part]
+last = parts[-1]
+if isinstance(target, list):
+    target[int(last)] = value
+else:
+    target[last] = value
+with open(plist_path, "wb") as plist_file:
+    plistlib.dump(plist, plist_file, fmt=plistlib.FMT_XML)
+PLISTBUDDY_FAKE
 cat >"$fake_bin/security" <<'SECURITY_FAKE'
 #!/bin/bash
 set -euo pipefail
@@ -208,6 +232,7 @@ run_setup() {
     CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE="$fake_logs" CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE="$fake_cache" \
     CODEX_HARNESS_ROOT_OVERRIDE="$fixture_harness" CODEX_HOME_DIR_OVERRIDE="$codex_home" \
     NTN_EXECUTABLE_OVERRIDE="${SETUP_NTN_OVERRIDE:-$TMP_ROOT/fake-ntn}" \
+    PLISTBUDDY_EXECUTABLE_OVERRIDE="$fake_bin/PlistBuddy" \
     NOTION_EXPECTED_USER_ID_OVERRIDE="${SETUP_EXPECTED_USER_OVERRIDE:-}" \
     NOTION_WORKSPACE_ID_OVERRIDE="${SETUP_WORKSPACE_OVERRIDE:-}" \
     NOTION_CUSTOM_INSTRUCTIONS_PAGE_ID_OVERRIDE="${SETUP_CUSTOM_PAGE_OVERRIDE:-}" \
