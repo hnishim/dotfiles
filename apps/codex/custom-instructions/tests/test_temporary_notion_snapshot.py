@@ -92,6 +92,16 @@ class TemporarySnapshotContract(unittest.TestCase):
         return [line for line in self.events.read_text().splitlines()
                 if line.startswith(prefix)] if self.events.exists() else []
 
+    def state_file(self, label):
+        config = dict(line.split("=", 1) for line in self.config.read_text().splitlines())
+        scope = [config.get("account_id", "molcure"), config["workspace_id"],
+                 config["custom_instructions_page_id"], config["user_profile_page_id"],
+                 config["skills_data_source_id"]]
+        scope_bytes = ("\0".join(scope) + "\0").encode("ascii")
+        scope_hash = hashlib.sha256(scope_bytes).hexdigest()
+        state_key = hashlib.sha256(label.encode("ascii")).hexdigest()
+        return self.support / "state" / scope_hash / (state_key + ".sha256")
+
     def assert_ok(self, result):
         self.assertEqual(result.returncode, 0, result.stderr)
 
@@ -143,11 +153,11 @@ class TemporarySnapshotContract(unittest.TestCase):
     def test_readback_failure_preserves_hash_and_cleans_snapshot(self):
         bad = self.run_sync(FAKE_READBACK_MISMATCH="1")
         self.assertNotEqual(bad.returncode, 0, bad.stdout)
-        key = hashlib.sha256(b"custom-instructions").hexdigest()
-        self.assertFalse((self.support / "state" / (key + ".sha256")).exists())
+        state_file = self.state_file("custom-instructions")
+        self.assertFalse(state_file.exists())
         self.assertEqual(self.snapshots(), [])
         self.assert_ok(self.run_sync())
-        self.assertTrue((self.support / "state" / (key + ".sha256")).exists())
+        self.assertTrue(state_file.exists())
 
     def test_overlapping_launch_agent_and_manual_sync_are_serialized(self):
         first = self.start_sync(FAKE_PAUSE_EDIT="0.8")
@@ -178,8 +188,7 @@ class TemporarySnapshotContract(unittest.TestCase):
         self.assertIn("custom v2", (self.pages / (CUSTOM_ID + ".md")).read_text())
         custom_snapshot = self.events_of("helper:custom-hash:")
         self.assertEqual(len(custom_snapshot), 2)
-        state_key = hashlib.sha256(b"custom-instructions").hexdigest()
-        state_hash = (self.support / "state" / (state_key + ".sha256")).read_text().strip()
+        state_hash = self.state_file("custom-instructions").read_text().strip()
         self.assertEqual(state_hash, custom_snapshot[-1].split(":")[-1])
         self.assertEqual(self.snapshots(), [])
         count = len(self.events_of("notion:edit-start:"))
@@ -194,6 +203,20 @@ class TemporarySnapshotContract(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.events_of("notion:edit-start:"), [])
         self.assertEqual(self.snapshots(), [])
+
+    def test_target_preflight_precedes_snapshot_and_writes(self):
+        self.assert_ok(self.run_sync())
+        self.assertEqual(self.events_of("notion:api:")[:3], [
+            "notion:api:GET:pages:" + CUSTOM_ID,
+            "notion:api:GET:pages:" + PROFILE_ID,
+            "notion:api:GET:data_sources:" + SOURCE_ID,
+        ])
+        events = self.events.read_text(encoding="utf-8").splitlines()
+        third_preflight = events.index("notion:api:GET:data_sources:" + SOURCE_ID)
+        snapshot = next(i for i, event in enumerate(events) if event.startswith("helper:snapshot:"))
+        first_write = next(i for i, event in enumerate(events) if event.startswith("notion:edit-start:"))
+        self.assertLess(third_preflight, snapshot)
+        self.assertLess(snapshot, first_write)
 
 
 FAKE_HELPER = r'''#!/usr/bin/env python3
@@ -281,7 +304,23 @@ elif args[:2] == ["pages", "get"]:
     # Readback must reflect the bytes saved by pages edit; do not add a second frontmatter.
     print(content, end="")
 elif args[0] == "api":
-    print(json.dumps({"object":"page", "properties":{}}))
+    path = args[1].strip("/").split("/")
+    if len(path) != 3 or path[0] != "v1":
+        sys.exit(64)
+    resource_kind, resource_id = path[1], path[2]
+    method = "GET"
+    if "-X" in args:
+        method = args[args.index("-X") + 1]
+    event("notion:api:" + method + ":" + resource_kind + ":" + resource_id)
+    if resource_kind == "pages":
+        response = {"object":"page", "id":resource_id,
+                    "workspace_id":"1" * 32, "properties":{}}
+    elif resource_kind == "data_sources":
+        response = {"object":"data_source", "id":resource_id,
+                    "workspace_id":"1" * 32}
+    else:
+        sys.exit(64)
+    print(json.dumps(response))
 else:
     sys.exit(64)
 '''
