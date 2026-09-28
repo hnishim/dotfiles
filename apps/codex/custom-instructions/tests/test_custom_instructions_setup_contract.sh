@@ -280,11 +280,21 @@ printf '%s\n' authorized >"$TMP_ROOT/state"
 export FAKE_PERSONAL_TOKEN='test-personal-token-never-print'
 SETUP_NTN_OVERRIDE="$TMP_ROOT/fake-ntn" run_setup
 launch_plist="$fake_launch_agents/my.notion.sync.plist"
-launch_program=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:0' "$launch_plist")
-launch_helper=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:1' "$launch_plist")
-launch_ntn=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:2' "$launch_plist")
-launch_codex_home=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:3' "$launch_plist")
-launch_notion_config=$(/usr/libexec/PlistBuddy -c 'Print :ProgramArguments:4' "$launch_plist")
+read_plist_argument() {
+    python3 - "$launch_plist" "$1" <<'PY'
+import plistlib
+import sys
+
+with open(sys.argv[1], "rb") as plist_file:
+    plist = plistlib.load(plist_file)
+print(plist["ProgramArguments"][int(sys.argv[2])])
+PY
+}
+launch_program=$(read_plist_argument 0)
+launch_helper=$(read_plist_argument 1)
+launch_ntn=$(read_plist_argument 2)
+launch_codex_home=$(read_plist_argument 3)
+launch_notion_config=$(read_plist_argument 4)
 [ "$launch_ntn" = "$TMP_ROOT/fake-ntn" ]
 [ -f "$launch_notion_config" ]
 /usr/bin/grep -Fqx 'account_id=molcure' "$launch_notion_config" || {
