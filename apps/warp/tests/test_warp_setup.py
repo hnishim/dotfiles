@@ -48,9 +48,11 @@ class WarpWeeklyMaintenanceTests(unittest.TestCase):
         self.assertEqual(len(commands), 1)
         self.assertEqual(
             commands[0],
-            'bash "$HOME/Library/Application Support/my.launchd.weekly-maintenance/weekly-maintenance.sh" confirm-run',
+            'bash "$HOME/Library/Application Support/my.launchd.weekly-maintenance/weekly-maintenance.sh" run',
         )
-        self.assertNotIn("/private/tmp", SOURCE.read_text(encoding="utf-8"))
+        source_text = SOURCE.read_text(encoding="utf-8")
+        self.assertNotIn("confirm-run", source_text)
+        self.assertNotIn("/private/tmp", source_text)
         self.assertNotIn("hir311_", SOURCE.read_text(encoding="utf-8"))
 
     def test_setup_links_target_without_changing_other_config_or_keybindings(self):
