@@ -15,8 +15,12 @@ HELPER_EXECUTABLE=$1
 NTN_EXECUTABLE=$2
 CODEX_HOME_DIR=$3
 NOTION_CONFIG=$4
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
+source "$SCRIPT_DIR/notion-account.sh"
 MIRROR_ROOT="${NOTION_SYNC_MIRROR_ROOT_OVERRIDE:-$(dirname -- "$NOTION_CONFIG")/mirrors}"
 STATE_DIR="$(dirname -- "$NOTION_CONFIG")/state"
+STATE_SCOPE_HASH=''
+CACHE_DIR=''
 JQ_EXECUTABLE=/usr/bin/jq
 RUBY_EXECUTABLE=/usr/bin/ruby
 
@@ -123,12 +127,7 @@ if ! "$HELPER_EXECUTABLE" --sync; then
 fi
 
 if [ ! -x "$NTN_EXECUTABLE" ]; then
-    printf '[WARNING] Notion CLIが見つかりません。CodexとMOLCURE Notionの同期をスキップします。\n' >&2
-    exit 0
-fi
-
-if ! "$NTN_EXECUTABLE" whoami >/dev/null; then
-    printf '[WARNING] MOLCURE Notionにログインしていません。CodexとMOLCURE Notionの同期をスキップします。\n' >&2
+    printf '[WARNING] Notion CLIが見つかりません。Codexと設定済みNotionの同期をスキップします。\n' >&2
     exit 0
 fi
 
@@ -137,20 +136,33 @@ if [ ! -f "$NOTION_CONFIG" ]; then
     exit 0
 fi
 
+if [ -L "$NOTION_CONFIG" ]; then
+    printf '[ERROR] Notion設定がsymlinkのため同期を停止します。\n' >&2
+    exit 1
+fi
+
+if ! notion_account_load_config "$NOTION_CONFIG" 1; then
+    printf '[ERROR] Notionアカウント設定が不正です。同期を停止します。\n' >&2
+    exit 1
+fi
+if [ "$ACCOUNT_CONFIG_LEGACY" != true ] && [ -z "$EXPECTED_USER_ID" ]; then
+    printf '[ERROR] expected_user_idが未設定です。同期を停止します。\n' >&2
+    exit 1
+fi
+if ! notion_account_select_credential; then
+    printf '[ERROR] 選択したNotionアカウントの認証情報を取得できません。Notion同期を停止します。\n' >&2
+    exit 1
+fi
+
 if [ ! -x "$JQ_EXECUTABLE" ] || [ ! -x "$RUBY_EXECUTABLE" ]; then
     printf '[ERROR] JSON/frontmatter解析に必要な実行ファイルが見つかりません。\n' >&2
     exit 1
 fi
 
-read_config() {
-    local key=$1
-    sed -n "s/^${key}=//p" "$NOTION_CONFIG" | tail -n 1
-}
-
-workspace_id=$(read_config workspace_id)
-custom_page_id=$(read_config custom_instructions_page_id)
-profile_page_id=$(read_config user_profile_page_id)
-skills_data_source_id=$(read_config skills_data_source_id)
+workspace_id=$ACCOUNT_WORKSPACE_ID
+custom_page_id=$ACCOUNT_CUSTOM_PAGE_ID
+profile_page_id=$ACCOUNT_PROFILE_PAGE_ID
+skills_data_source_id=$ACCOUNT_SKILLS_DATA_SOURCE_ID
 
 is_notion_id() {
     printf '%s\n' "$1" | grep -Eq '^[0-9A-Fa-f]{32}$|^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
@@ -168,11 +180,6 @@ if ! is_notion_id "$skills_data_source_id"; then
     exit 0
 fi
 
-export NOTION_WORKSPACE_ID="$workspace_id"
-
-mkdir -p "$STATE_DIR"
-chmod 700 "$STATE_DIR"
-
 temp_dir=$(mktemp -d "${TMPDIR:-/tmp}/custom-instructions-notion.XXXXXX")
 case "${temp_dir:?}" in
     "${TMPDIR:-/tmp}"/custom-instructions-notion.*) ;;
@@ -184,6 +191,7 @@ esac
 
 cleanup() {
     local status=$?
+    unset ACCOUNT_TOKEN ACCOUNT_USE_NTN_DEFAULT
     if [ -n "${snapshot_dir:-}" ]; then
         case "$snapshot_dir" in
             "$MIRROR_ROOT"/run-*)
@@ -210,6 +218,45 @@ cleanup() {
     exit "$status"
 }
 trap cleanup EXIT
+
+if [ "$ACCOUNT_CONFIG_LEGACY" = true ]; then
+    if ! notion_account_run_cli whoami < /dev/null > /dev/null 2>&1; then
+        printf '[ERROR] MOLCURE既定認証に接続できません。Notion同期を停止します。\n' >&2
+        exit 1
+    fi
+else
+    if ! notion_account_verify_identity "$EXPECTED_USER_ID" "$workspace_id" "$temp_dir/notion-whoami.json" "$JQ_EXECUTABLE"; then
+        printf '[ERROR] Notionの利用者またはワークスペースが設定と一致しません。更新前に停止しました。\n' >&2
+        exit 1
+    fi
+fi
+
+for target_index in 0 1 2; do
+    case "$target_index" in
+        0) target_kind=page; target_id=$custom_page_id; target_label=custom-instructions-page ;;
+        1) target_kind=page; target_id=$profile_page_id; target_label=user-profile-page ;;
+        2) target_kind=data_source; target_id=$skills_data_source_id; target_label=Skills-data-source ;;
+    esac
+    if [ "$target_kind" = page ]; then
+        target_path="/v1/pages/$target_id"
+    else
+        target_path="/v1/data_sources/$target_id"
+    fi
+    target_response="$temp_dir/$target_label.json"
+    if ! notion_account_run_cli api "$target_path" -X GET < /dev/null >"$target_response" 2>/dev/null ||
+       ! notion_account_verify_resource "$target_kind" "$target_id" "$workspace_id" "$target_response" \
+            "$([ "$ACCOUNT_CONFIG_LEGACY" = true ] && printf 1 || printf 0)" "$JQ_EXECUTABLE"; then
+        printf '[ERROR] 選択したアカウントでNotionの%sを確認できません。更新前に停止しました。\n' "$target_label" >&2
+        exit 1
+    fi
+done
+
+mkdir -p "$STATE_DIR"
+chmod 700 "$STATE_DIR"
+STATE_SCOPE_HASH=$(printf '%s\0' "$ACCOUNT_ID" "$workspace_id" "$custom_page_id" "$profile_page_id" "$skills_data_source_id" | shasum -a 256 | awk '{print $1}')
+CACHE_DIR="$STATE_DIR/$STATE_SCOPE_HASH"
+mkdir -p "$CACHE_DIR"
+chmod 700 "$CACHE_DIR"
 
 snapshot_dir=$(mktemp -d "$MIRROR_ROOT/run-XXXXXXXX")
 case "$snapshot_dir" in
@@ -399,7 +446,7 @@ sync_page() {
 
     source_hash=$(shasum -a 256 "$source_file" | awk '{print $1}')
     state_key=$(printf '%s' "$label" | shasum -a 256 | awk '{print $1}')
-    state_file="$STATE_DIR/$state_key.sha256"
+    state_file="$CACHE_DIR/$state_key.sha256"
     if [ -f "$state_file" ]; then
         saved_hash=$(sed -n '1p' "$state_file")
     fi
@@ -417,10 +464,10 @@ sync_page() {
     attempt=1
     while [ "$attempt" -le 3 ]; do
         if [ -n "$metadata_payload" ] &&
-           ! "$NTN_EXECUTABLE" api "/v1/pages/$page_id" -X PATCH --data "$metadata_payload" < /dev/null >"$metadata_response"; then
+           ! notion_account_run_cli api "/v1/pages/$page_id" -X PATCH --data "$metadata_payload" < /dev/null >"$metadata_response"; then
             printf '[ERROR] %s のNotionプロパティ更新に失敗しました（%d/3）。\n' "$label" "$attempt" >&2
         elif [ -n "$metadata_payload" ]; then
-            if "$NTN_EXECUTABLE" api "/v1/pages/$page_id" -X GET < /dev/null >"$page_response" &&
+            if notion_account_run_cli api "/v1/pages/$page_id" -X GET < /dev/null >"$page_response" &&
                ! verify_metadata "$page_response" "$metadata"; then
                 printf '[ERROR] %s のNotionプロパティ再読込結果が正本と一致しません（%d/3）。\n' "$label" "$attempt" >&2
             else
@@ -429,14 +476,14 @@ sync_page() {
         fi
 
         if [ -z "$metadata_payload" ] &&
-           "$NTN_EXECUTABLE" pages edit "$page_id" <"$source_file" >"$temp_dir/${label}.update" &&
+           notion_account_run_cli pages edit "$page_id" <"$source_file" >"$temp_dir/${label}.update" &&
            /bin/sleep "$readback_wait_seconds" &&
-           "$NTN_EXECUTABLE" pages get "$page_id" >"$actual_file"; then
+           notion_account_run_cli pages get "$page_id" >"$actual_file"; then
             normalize_markdown "$actual_file" >"$normalized_file"
             if cmp -s "$expected_file" "$normalized_file" &&
                { [ -z "$metadata" ] ||
                  /bin/sleep "$readback_wait_seconds" &&
-                 "$NTN_EXECUTABLE" api "/v1/pages/$page_id" -X GET < /dev/null >"$page_response" &&
+                 notion_account_run_cli api "/v1/pages/$page_id" -X GET < /dev/null >"$page_response" &&
                  verify_metadata "$page_response" "$metadata"; }; then
                 printf '%s\n' "$source_hash" >"$temp_dir/${label}.sha256"
                 install -m 600 "$temp_dir/${label}.sha256" "$state_file"
@@ -503,7 +550,7 @@ while :; do
     if [ -n "$cursor" ]; then
         query_args+=(--start-cursor "$cursor")
     fi
-    if ! "$NTN_EXECUTABLE" "${query_args[@]}" >"$query_json"; then
+    if ! notion_account_run_cli "${query_args[@]}" >"$query_json"; then
         printf '[ERROR] Skillsデータソースの照会に失敗しました。\n' >&2
         exit 1
     fi

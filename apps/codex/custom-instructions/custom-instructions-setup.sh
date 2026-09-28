@@ -4,12 +4,13 @@ if [ -z "${BASH_VERSION:-}" ] || set -o | grep -q '^posix[[:space:]]*on$'; then
     exec /bin/bash "$0" "$@"
 fi
 
-# Custom InstructionsとSkillsをCodexとMOLCURE Notionへ同期する。
+# Custom InstructionsとSkillsをCodexとNotionへ同期する。
 
 set -euo pipefail
 
 # 共通ライブラリを読み込み
 source "$(dirname "$0")/../../../lib/common.sh"
+source "$(dirname "$0")/notion-account.sh"
 
 export LC_ALL=C
 export LANG=C
@@ -28,6 +29,7 @@ ENTITLEMENTS="$ASSET_DIR/CustomInstructionsSync.entitlements"
 SOURCE_PLIST="$ASSET_DIR/$LABEL.plist"
 MIRROR_LAYOUT_SOURCE="$ASSET_DIR/mirror-layout.sh"
 SYNC_SOURCE="$ASSET_DIR/sync-custom-instructions"
+ACCOUNT_HELPER_SOURCE="$ASSET_DIR/notion-account.sh"
 CODEX_HOME_DIR="${CODEX_HOME_DIR_OVERRIDE:-${CODEX_HOME:-$HOME/.codex}}"
 CUSTOM_INSTRUCTIONS_DIR_HINT="${CUSTOM_INSTRUCTIONS_DIR_HINT:-$HARNESS_ROOT/custom-instructions}"
 SKILLS_DIR_HINT="${SKILLS_DIR_HINT:-$HARNESS_ROOT/skills}"
@@ -37,7 +39,9 @@ HELPER_EXECUTABLE="$APP_PATH/Contents/MacOS/$EXECUTABLE_NAME"
 APPLICATION_SUPPORT_DIR="${CUSTOM_INSTRUCTIONS_SUPPORT_DIR_OVERRIDE:-$HOME/Library/Application Support/$LABEL}"
 MIRROR_ROOT="$APPLICATION_SUPPORT_DIR/mirrors"
 SYNC_EXECUTABLE="$APPLICATION_SUPPORT_DIR/sync-custom-instructions"
+ACCOUNT_HELPER_EXECUTABLE="$APPLICATION_SUPPORT_DIR/notion-account.sh"
 NOTION_CONFIG="$APPLICATION_SUPPORT_DIR/notion-pages.conf"
+PLISTBUDDY_EXECUTABLE="${PLISTBUDDY_EXECUTABLE_OVERRIDE:-/usr/libexec/PlistBuddy}"
 if [ -n "${NTN_EXECUTABLE_OVERRIDE:-}" ]; then
     NTN_EXECUTABLE="$NTN_EXECUTABLE_OVERRIDE"
 elif NTN_EXECUTABLE=$(command -v ntn 2>/dev/null); then
@@ -45,6 +49,39 @@ elif NTN_EXECUTABLE=$(command -v ntn 2>/dev/null); then
 else
     NTN_EXECUTABLE="$HOME/.local/bin/ntn"
 fi
+
+reject_non_molcure_setup() {
+    log_error "このセットアップはMOLCURE専用です。Personal Notionの同期設定は扱いません。"
+    exit 1
+}
+
+if [ -n "${NOTION_ACCOUNT_ID_OVERRIDE:-}" ] && [ "$NOTION_ACCOUNT_ID_OVERRIDE" != molcure ]; then
+    reject_non_molcure_setup
+fi
+if [ -L "$NOTION_CONFIG" ]; then
+    log_error "Notion設定がsymlinkのため停止します。"
+    exit 1
+fi
+if [ -e "$NOTION_CONFIG" ] && [ ! -f "$NOTION_CONFIG" ]; then
+    log_error "Notion設定が通常ファイルではありません。"
+    exit 1
+fi
+if [ -f "$NOTION_CONFIG" ]; then
+    if ! saved_account_id=$(notion_config_value "$NOTION_CONFIG" account_id); then
+        log_error "保存済みNotion設定のaccount_idを確認できません。"
+        exit 1
+    fi
+    case "$saved_account_id" in
+        personal) reject_non_molcure_setup ;;
+        molcure|"") ;;
+        *) reject_non_molcure_setup ;;
+    esac
+fi
+if [ ! -x "$NTN_EXECUTABLE" ]; then
+    log_error "MOLCURE専用のNotion同期には実行可能なNotion CLIが必要です: $NTN_EXECUTABLE"
+    exit 1
+fi
+
 LAUNCH_AGENTS_DIR="${LAUNCH_AGENTS_DIR_OVERRIDE:-$HOME/Library/LaunchAgents}"
 TARGET_PLIST="$LAUNCH_AGENTS_DIR/$LABEL.plist"
 LOG_DIR="${CUSTOM_INSTRUCTIONS_LOG_DIR_OVERRIDE:-$HOME/Library/Logs}"
@@ -53,8 +90,9 @@ STDERR_PATH="$LOG_DIR/$LABEL.err.log"
 DOMAIN="gui/$(id -u)"
 MODULE_CACHE_DIR="${CUSTOM_INSTRUCTIONS_MODULE_CACHE_OVERRIDE:-$HOME/Library/Caches/$LABEL/SwiftModuleCache}"
 BOOKMARK_DOMAIN='my.notion.sync.helper'
+JQ_EXECUTABLE=/usr/bin/jq
 
-for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$MIRROR_LAYOUT_SOURCE" "$SYNC_SOURCE"; do
+for required_file in "$SWIFT_SOURCE" "$INFO_PLIST" "$ENTITLEMENTS" "$SOURCE_PLIST" "$MIRROR_LAYOUT_SOURCE" "$SYNC_SOURCE" "$ACCOUNT_HELPER_SOURCE"; do
     if [ ! -f "$required_file" ]; then
         log_error "必要なファイルが見つかりません: $required_file"
         exit 1
@@ -87,6 +125,7 @@ chmod 700 "$APPLICATION_SUPPORT_DIR"
 mkdir -p "$MIRROR_ROOT"
 chmod 700 "$MIRROR_ROOT"
 install -m 755 "$SYNC_SOURCE" "$SYNC_EXECUTABLE"
+install -m 644 "$ACCOUNT_HELPER_SOURCE" "$ACCOUNT_HELPER_EXECUTABLE"
 
 DEFAULTS_EXECUTABLE=$(command -v defaults 2>/dev/null || true)
 bookmark_domain_was_present=false
@@ -105,6 +144,7 @@ esac
 
 cleanup() {
     local status=$?
+    unset ACCOUNT_TOKEN ACCOUNT_USE_NTN_DEFAULT
     case "${build_root:?}" in
         "${TMPDIR:-/tmp}"/custom-instructions-sync-build.*) rm -rf -- "$build_root" ;;
         *) log_error "一時ディレクトリを削除しません: $build_root" ;;
@@ -214,20 +254,34 @@ install_sync_launch_agent() {
     local temp_plist="$build_root/$LABEL.plist"
     local attempt
     local job_state
+    local launch_agent_account_id
     local previous_runs=0
     local current_runs
     local run_observed=false
 
+    if [ ! -f "$NOTION_CONFIG" ] || [ -L "$NOTION_CONFIG" ]; then
+        log_error "MOLCURE専用LaunchAgentに渡すNotion設定がありません。"
+        return 1
+    fi
+    if ! launch_agent_account_id=$(notion_config_value "$NOTION_CONFIG" account_id); then
+        log_error "MOLCURE専用LaunchAgentのaccount_idを確認できません。"
+        return 1
+    fi
+    if [ "$launch_agent_account_id" != molcure ]; then
+        log_error "MOLCURE以外のNotion設定をLaunchAgentへ渡せません。"
+        return 1
+    fi
+
     cp "$SOURCE_PLIST" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:1 $HELPER_EXECUTABLE" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:2 $NTN_EXECUTABLE" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :WatchPaths:1 $skills_dir" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
-    /usr/libexec/PlistBuddy -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:0 $SYNC_EXECUTABLE" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:1 $HELPER_EXECUTABLE" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:2 $NTN_EXECUTABLE" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:3 $CODEX_HOME_DIR" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :ProgramArguments:4 $NOTION_CONFIG" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :WatchPaths:0 $custom_instructions_dir" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :WatchPaths:1 $skills_dir" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :StandardOutPath $STDOUT_PATH" "$temp_plist"
+    "$PLISTBUDDY_EXECUTABLE" -c "Set :StandardErrorPath $STDERR_PATH" "$temp_plist"
     plutil -lint "$temp_plist" >/dev/null
 
     if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
@@ -283,41 +337,46 @@ install_sync_launch_agent() {
     return 1
 }
 
-if [ ! -x "$NTN_EXECUTABLE" ]; then
-    log_warning "Notion CLIが見つかりません。MOLCURE Notion同期の設定をスキップします: $NTN_EXECUTABLE"
-    install_sync_launch_agent || exit 1
-    exit 0
-fi
-
-if ! "$NTN_EXECUTABLE" whoami >/dev/null; then
-    log_warning "MOLCURE Notionにログインしていません。MOLCURE Notion同期の設定をスキップします。ntn login後に再実行してください。"
-    install_sync_launch_agent || exit 1
-    exit 0
-fi
-
 read_local_config() {
     local key=$1
-    if [ -f "$NOTION_CONFIG" ]; then
-        sed -n "s/^${key}=//p" "$NOTION_CONFIG" | tail -n 1
-    fi
-    return 0
+    [ -f "$NOTION_CONFIG" ] || return 0
+    notion_config_value "$NOTION_CONFIG" "$key"
 }
 
-is_notion_id() {
-    printf '%s\n' "$1" | grep -Eq '^[0-9A-Fa-f]{32}$|^[0-9A-Fa-f]{8}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{4}-[0-9A-Fa-f]{12}$'
-}
-
-workspace_id="${NOTION_WORKSPACE_ID_OVERRIDE:-$(read_local_config workspace_id)}"
-if [ -z "$workspace_id" ]; then
-    notion_cli_config="${NOTION_HOME:-$HOME/.config/notion}/config.json"
-    if [ -f "$notion_cli_config" ]; then
-        workspace_id=$(/usr/bin/plutil -extract defaultWorkspaceIds.prod raw -o - "$notion_cli_config" 2>/dev/null || true)
-    fi
+if [ -L "$NOTION_CONFIG" ]; then
+    log_error "Notion設定がsymlinkのため停止します。"
+    exit 1
 fi
 
-custom_page_id="${NOTION_CUSTOM_INSTRUCTIONS_PAGE_ID_OVERRIDE:-$(read_local_config custom_instructions_page_id)}"
-profile_page_id="${NOTION_USER_PROFILE_PAGE_ID_OVERRIDE:-$(read_local_config user_profile_page_id)}"
-skills_data_source_id="${NOTION_SKILLS_DATA_SOURCE_ID_OVERRIDE:-$(read_local_config skills_data_source_id)}"
+ACCOUNT_ID=''
+CREDENTIAL_SOURCE=''
+EXPECTED_USER_ID=''
+ACCOUNT_WORKSPACE_ID=''
+ACCOUNT_CUSTOM_PAGE_ID=''
+ACCOUNT_PROFILE_PAGE_ID=''
+ACCOUNT_SKILLS_DATA_SOURCE_ID=''
+ACCOUNT_CONFIG_LEGACY=false
+if [ -f "$NOTION_CONFIG" ]; then
+    if ! notion_account_load_config "$NOTION_CONFIG" 1; then
+        log_error "Notion設定のアカウント選択を確認できません。"
+        exit 1
+    fi
+    [ "$ACCOUNT_ID" = molcure ] || reject_non_molcure_setup
+else
+    ACCOUNT_ID=molcure
+    CREDENTIAL_SOURCE="${NOTION_CREDENTIAL_SOURCE_OVERRIDE:-ntn-default}"
+    EXPECTED_USER_ID="${NOTION_EXPECTED_USER_ID_OVERRIDE:-}"
+    ACCOUNT_CONFIG_LEGACY=false
+fi
+
+workspace_id="${NOTION_WORKSPACE_ID_OVERRIDE:-${ACCOUNT_WORKSPACE_ID:-$(read_local_config workspace_id)}}"
+custom_page_id="${NOTION_CUSTOM_INSTRUCTIONS_PAGE_ID_OVERRIDE:-${ACCOUNT_CUSTOM_PAGE_ID:-$(read_local_config custom_instructions_page_id)}}"
+profile_page_id="${NOTION_USER_PROFILE_PAGE_ID_OVERRIDE:-${ACCOUNT_PROFILE_PAGE_ID:-$(read_local_config user_profile_page_id)}}"
+skills_data_source_id="${NOTION_SKILLS_DATA_SOURCE_ID_OVERRIDE:-${ACCOUNT_SKILLS_DATA_SOURCE_ID:-$(read_local_config skills_data_source_id)}}"
+
+if [ -z "$workspace_id" ] && [ -t 0 ]; then
+    read -r -p 'Notion workspace ID: ' workspace_id
+fi
 
 if [ -z "$custom_page_id" ] && [ -t 0 ]; then
     read -r -p '基本的なガイドラインのNotionページID: ' custom_page_id
@@ -330,21 +389,47 @@ if [ -z "$skills_data_source_id" ] && [ -t 0 ]; then
 fi
 
 for notion_id in "$workspace_id" "$custom_page_id" "$profile_page_id" "$skills_data_source_id"; do
-    if ! is_notion_id "$notion_id"; then
-        log_error "MOLCURE NotionのワークスペースID、ページID、SkillsデータソースIDを確認できません。"
+    if ! notion_valid_id "$notion_id"; then
+        log_error "選択したNotionアカウントのワークスペースID、ページID、SkillsデータソースIDを確認できません。"
         exit 1
     fi
 done
 
+if [ ! -x "$JQ_EXECUTABLE" ]; then
+    log_error "Notion認証応答の確認に必要なJSON解析ツールが見つかりません: $JQ_EXECUTABLE"
+    exit 1
+fi
+
+if [ "$CREDENTIAL_SOURCE" = ntn-default ] && [ "$ACCOUNT_ID" != molcure ]; then
+    log_error "ntn既定認証はMOLCUREアカウントにだけ指定できます。"
+    exit 1
+fi
+if [ "$ACCOUNT_ID" = personal ] && [ "$CREDENTIAL_SOURCE" != keychain ]; then
+    log_error "個人用Notion認証にはKeychainを指定してください。"
+    exit 1
+fi
+ACCOUNT_WORKSPACE_ID=$workspace_id
+if ! notion_account_select_credential; then
+    log_error "選択したNotionアカウントの認証情報を取得できません。"
+    exit 1
+fi
+if ! notion_account_verify_identity "$EXPECTED_USER_ID" "$workspace_id" "$build_root/notion-whoami.json" "$JQ_EXECUTABLE"; then
+    log_error "Notionの認証先、利用者、またはワークスペースが設定と一致しません。"
+    exit 1
+fi
+if [ -z "$EXPECTED_USER_ID" ]; then
+    EXPECTED_USER_ID=$NOTION_ACTUAL_USER_ID
+fi
+
 notion_config_temp="$build_root/notion-pages.conf"
-printf 'workspace_id=%s\ncustom_instructions_page_id=%s\nuser_profile_page_id=%s\nskills_data_source_id=%s\n' \
-    "$workspace_id" "$custom_page_id" "$profile_page_id" "$skills_data_source_id" >"$notion_config_temp"
+printf 'account_id=%s\ncredential_source=%s\nexpected_user_id=%s\nworkspace_id=%s\ncustom_instructions_page_id=%s\nuser_profile_page_id=%s\nskills_data_source_id=%s\n' \
+    "$ACCOUNT_ID" "$CREDENTIAL_SOURCE" "$EXPECTED_USER_ID" "$workspace_id" "$custom_page_id" "$profile_page_id" "$skills_data_source_id" >"$notion_config_temp"
 install -m 600 "$notion_config_temp" "$NOTION_CONFIG"
 
 if [ "${CODEX_HARNESS_PREPARE_ONLY:-0}" = "1" ]; then
-    log_info "harness準備モードのためNotion remote syncを実行しません。"
+    log_info "Harness準備モードのためNotion同期を実行しません。"
 else
-    log_info "MOLCURE Notion同期はLaunchAgentの通常起動で一度だけ実行します。"
+    log_info "選択したNotionアカウントの同期はLaunchAgentの通常起動で一度だけ実行します。"
 fi
 
 install_sync_launch_agent || exit 1
