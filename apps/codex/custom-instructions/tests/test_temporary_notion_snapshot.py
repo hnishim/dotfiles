@@ -218,6 +218,22 @@ class TemporarySnapshotContract(unittest.TestCase):
         self.assertLess(third_preflight, snapshot)
         self.assertLess(snapshot, first_write)
 
+    def test_target_preflight_rejects_id_and_workspace_mismatches_without_side_effects(self):
+        for mismatch in ("id", "workspace"):
+            with self.subTest(mismatch=mismatch):
+                self.events.unlink(missing_ok=True)
+                result = self.run_sync(FAKE_API_MISMATCH=mismatch)
+                self.assertNotEqual(result.returncode, 0, result.stdout)
+                self.assertEqual(self.events_of("notion:api:"), [
+                    "notion:api:GET:pages:" + CUSTOM_ID,
+                ])
+                self.assertEqual(self.events_of("helper:snapshot:"), [])
+                self.assertEqual(self.events_of("notion:edit-start:"), [])
+                state_files = list((self.support / "state").rglob("*.sha256")) \
+                    if (self.support / "state").exists() else []
+                self.assertEqual(state_files, [], "mismatched target updated the sync cache")
+                self.assertEqual(self.snapshots(), [])
+
 
 FAKE_HELPER = r'''#!/usr/bin/env python3
 import hashlib
@@ -320,6 +336,10 @@ elif args[0] == "api":
                     "workspace_id":"1" * 32}
     else:
         sys.exit(64)
+    if os.environ.get("FAKE_API_MISMATCH") == "id":
+        response["id"] = "9" * 32
+    elif os.environ.get("FAKE_API_MISMATCH") == "workspace":
+        response["workspace_id"] = "8" * 32
     print(json.dumps(response))
 else:
     sys.exit(64)
