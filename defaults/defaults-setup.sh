@@ -406,6 +406,9 @@ set_user_default com.apple.finder QLEnableTextSelection -bool true finder
 # ズーム機能のキーボードショートカットを無効化
 set_user_default com.apple.universalaccess closeViewHotkeysEnabled -bool false
 
+# --- Universal Control ---
+set_current_host_default com.apple.universalcontrol Disable -bool true
+
 # --- 日本語入力（Mac標準） ---
 # かわせみを使用する場合には特に不要な設定
 # Windows風のキー操作を有効化
