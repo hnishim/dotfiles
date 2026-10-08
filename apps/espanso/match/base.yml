@@ -106,6 +106,7 @@ matches:
 
   - trigger: etc
     replace: "etc. "
+    left_word: true
 
   - trigger: e.g
     replace: "e.g., "
