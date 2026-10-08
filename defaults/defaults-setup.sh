@@ -454,13 +454,13 @@ set_user_dict_entry com.apple.finder NSUserKeyEquivalents \
 
 # FinderとPreviewでタブ移動のショートカットキーを設定 (⌥⌘→, ⌥⌘←)
 set_user_dict_entry com.apple.finder NSUserKeyEquivalents \
-  "Show Next Tab" "" "@~\\U2192" "@~\\U2192" finder
+  "Show Next Tab" "" "@~→" "@~\\U2192" finder
 set_user_dict_entry com.apple.finder NSUserKeyEquivalents \
-  "Show Previous Tab" "" "@~\\U2190" "@~\\U2190" finder
+  "Show Previous Tab" "" "@~←" "@~\\U2190" finder
 set_user_dict_entry com.apple.Preview NSUserKeyEquivalents \
-  "Show Next Tab" "" "@~\\U2192" "@~\\U2192"
+  "Show Next Tab" "" "@~→" "@~\\U2192"
 set_user_dict_entry com.apple.Preview NSUserKeyEquivalents \
-  "Show Previous Tab" "" "@~\\U2190" "@~\\U2190"
+  "Show Previous Tab" "" "@~←" "@~\\U2190"
 
 # Notionで「現在のページへのリンクをコピー」のショートカットを設定 (⌘⇧C)
 set_user_dict_entry notion.id NSUserKeyEquivalents \
