@@ -131,7 +131,7 @@ class DefaultsDictEntryTests(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.helper, cls.calls = _read_helper_and_shortcut_calls()
         cls.values = ("@~→", "@~←", "@~→", "@~←")
-        cls.encoded_values = (r"@~\\U2192", r"@~\\U2190", r"@~\\U2192", r"@~\\U2190")
+        cls.encoded_values = (r"@~\U2192", r"@~\U2190", r"@~\U2192", r"@~\U2190")
 
     def test_existing_unicode_arrows_do_not_trigger_rewrites(self) -> None:
         for call, expected in zip(self.calls, self.values):
