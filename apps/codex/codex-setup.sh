@@ -51,6 +51,8 @@ verify_system_skills_gate() {
         fi
 
         for candidate in \
+            "/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex" \
+            "$HOME/Applications/ChatGPT.app/Contents/Resources/codex-cli/bin/codex" \
             "/Applications/ChatGPT.app/Contents/Resources/codex" \
             "$HOME/Applications/ChatGPT.app/Contents/Resources/codex"; do
             if [ -x "$candidate" ]; then
