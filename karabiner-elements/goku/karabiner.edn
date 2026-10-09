@@ -24,20 +24,31 @@
   :tos {
     ;; ⌥Tは日本語の確定動作（かわせみで定義必要：「変換と確定」→「全文節確定」、「候補操作」→「候補決定」）
     ;; 角括弧 []
-    :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :t :modi :option}                          {:key :left_arrow}]
-    :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+    :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter}                          {:key :left_arrow}]
+    :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :return_or_enter} {:key :u :modi :control} {:key :left_arrow}]
+    ;; Comment out: only for KAWASEMI
+    ;; :to_square_brackets_jp_non-xls [{:key :open_bracket} {:key :close_bracket} {:key :t :modi :option}                          {:key :left_arrow}]
+    ;; :to_square_brackets_jp_xls     [{:key :open_bracket} {:key :close_bracket} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+
     :to_square_brackets_en_non-xls [{:key :open_bracket} {:key :close_bracket}                                                  {:key :left_arrow}]
     :to_square_brackets_en_xls     [{:key :open_bracket} {:key :close_bracket}                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; 波括弧 {}
-    :to_curly_brackets_jp_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :t :modi :option}                          {:key :left_arrow}]
-    :to_curly_brackets_jp_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+    :to_curly_brackets_jp_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter}                          {:key :left_arrow}]
+    :to_curly_brackets_jp_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :return_or_enter} {:key :u :modi :control} {:key :left_arrow}]
+    ;; Comment out: only for KAWASEMI
+    ;; :to_curly_brackets_jp_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :t :modi :option}                          {:key :left_arrow}]
+    ;; :to_curly_brackets_jp_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+
     :to_curly_brackets_en_non-xls [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                                                  {:key :left_arrow}]
     :to_curly_brackets_en_xls     [{:key :open_bracket :modi :shift} {:key :close_bracket :modi :shift}                         {:key :u :modi :control} {:key :left_arrow}]
 
     ;; 丸括弧 ()
-    :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :t :modi :option}                          {:key :left_arrow}]
-    :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
+    :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter}                          {:key :left_arrow}]
+    :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :return_or_enter} {:key :u :modi :control} {:key :left_arrow}]
+    ;; Comment out: only for KAWASEMI
+    ;; :to_parentheses_jp_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :t :modi :option}                          {:key :left_arrow}]
+    ;; :to_parentheses_jp_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift} {:key :t :modi :option} {:key :u :modi :control} {:key :left_arrow}]
     :to_parentheses_en_non-xls [{:key :9 :modi :shift} {:key :0 :modi :shift}                                                  {:key :left_arrow}]
     :to_parentheses_en_xls     [{:key :9 :modi :shift} {:key :0 :modi :shift}                         {:key :u :modi :control} {:key :left_arrow}]
 
@@ -193,9 +204,10 @@
       [:!CCOOm :vk_none] ;; Cmd + Option（ともに左右共通）+ M
     ]}
 
-    {:des "英字入力時、⌥Tを無効化"
-     :rules [
-      [:!OOt :vk_none :!ja] ;; Opt（左右共通）+ T
-    ]}
+    ;; Comment out: only for KAWASEMI
+    ;; {:des "英字入力時、⌥Tを無効化"
+    ;;  :rules [
+    ;;   [:!OOt :vk_none :!ja] ;; Opt（左右共通）+ T
+    ;; ]}
   ]
 }
