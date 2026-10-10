@@ -42,7 +42,23 @@ write_source() {
 }
 
 run_setup() {
-    HOME="$HOME_DIR" PATH="$TMP/bin:$PATH" bash "$FIXTURE/apps/zen/zen-setup.sh" >/dev/null 2>&1
+    env -u ZEN_PROFILE_PATH HOME="$HOME_DIR" PATH="$TMP/bin:$PATH" \
+        bash "$FIXTURE/apps/zen/zen-setup.sh" >/dev/null 2>&1
+}
+
+run_setup_with_profile() {
+    local profile_path="$1"
+    HOME="$HOME_DIR" ZEN_PROFILE_PATH="$profile_path" PATH="$TMP/bin:$PATH" \
+        bash "$FIXTURE/apps/zen/zen-setup.sh" >/dev/null 2>&1
+}
+
+normalize_path() {
+    local path="$1"
+    (cd -- "$(dirname -- "$path")" && printf '%s/%s\n' "$(pwd -P)" "$(basename -- "$path")")
+}
+
+expected_source_path() {
+    normalize_path "$SOURCE"
 }
 
 scenario_uninitialized_skips() {
@@ -62,11 +78,11 @@ scenario_link_and_rerun() {
     write_source
     run_setup || return 1
     [ -L "$TARGET" ] || return 1
-    [ "$(readlink "$TARGET")" = "$SOURCE" ] || return 1
+    [ "$(normalize_path "$(readlink "$TARGET")")" = "$(expected_source_path)" ] || return 1
     [ "$(cat "$TARGET")" = '{"shortcuts":[]}' ] || return 1
     run_setup || return 1
     [ -L "$TARGET" ] || return 1
-    [ "$(readlink "$TARGET")" = "$SOURCE" ] || return 1
+    [ "$(normalize_path "$(readlink "$TARGET")")" = "$(expected_source_path)" ] || return 1
 }
 
 scenario_conflict_is_preserved() {
@@ -99,8 +115,40 @@ INI
     [ ! -e "$ZEN_ROOT/Profiles/other.default/zen-keyboard-shortcuts.json" ] || return 1
 }
 
+scenario_conflicting_profile_defaults_skip() {
+    init_case contradictory
+    local active_profile="$ZEN_ROOT/Profiles/active.default"
+    local active_target="$active_profile/zen-keyboard-shortcuts.json"
+    write_source
+    mkdir -p "$active_profile"
+    cat >"$ZEN_ROOT/profiles.ini" <<'INI'
+[Profile0]
+Name=inactive-default
+IsRelative=1
+Path=Profiles/fixture.default
+Default=1
+[Profile1]
+Name=active-install
+IsRelative=1
+Path=Profiles/active.default
+[InstallABC123]
+Default=Profiles/active.default
+Locked=1
+INI
+    run_setup || return 1
+    { [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; } || return 1
+    { [ ! -e "$active_target" ] && [ ! -L "$active_target" ]; } || return 1
+    run_setup_with_profile "$active_profile" || return 1
+    [ -L "$active_target" ] || return 1
+    [ "$(normalize_path "$(readlink "$active_target")")" = "$(expected_source_path)" ] || return 1
+    { [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; } || return 1
+    run_setup_with_profile "$active_profile" || return 1
+    [ -L "$active_target" ] || return 1
+    [ "$(normalize_path "$(readlink "$active_target")")" = "$(expected_source_path)" ] || return 1
+}
+
 failures=0
-for scenario in scenario_uninitialized_skips scenario_link_and_rerun scenario_conflict_is_preserved scenario_ambiguous_profile_skips; do
+for scenario in scenario_uninitialized_skips scenario_link_and_rerun scenario_conflict_is_preserved scenario_ambiguous_profile_skips scenario_conflicting_profile_defaults_skip; do
     if (set -e; "$scenario"); then
         printf '[PASS] %s\n' "$scenario"
     else
