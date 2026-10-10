@@ -42,14 +42,14 @@ write_source() {
 }
 
 run_setup() {
-    env -u ZEN_PROFILE_PATH HOME="$HOME_DIR" PATH="$TMP/bin:$PATH" \
-        bash "$FIXTURE/apps/zen/zen-setup.sh" >/dev/null 2>&1
+    SETUP_OUTPUT=$(env -u ZEN_PROFILE_PATH HOME="$HOME_DIR" PATH="$TMP/bin:$PATH" \
+        bash "$FIXTURE/apps/zen/zen-setup.sh" 2>&1)
 }
 
 run_setup_with_profile() {
     local profile_path="$1"
-    HOME="$HOME_DIR" ZEN_PROFILE_PATH="$profile_path" PATH="$TMP/bin:$PATH" \
-        bash "$FIXTURE/apps/zen/zen-setup.sh" >/dev/null 2>&1
+    SETUP_OUTPUT=$(HOME="$HOME_DIR" ZEN_PROFILE_PATH="$profile_path" PATH="$TMP/bin:$PATH" \
+        bash "$FIXTURE/apps/zen/zen-setup.sh" 2>&1)
 }
 
 normalize_path() {
@@ -136,6 +136,7 @@ Default=Profiles/active.default
 Locked=1
 INI
     run_setup || return 1
+    [[ "$SETUP_OUTPUT" == *"利用プロファイルを一意に特定できません"* && "$SETUP_OUTPUT" == *"ZEN_PROFILE_PATHを指定してください"* ]] || return 1
     { [ ! -e "$TARGET" ] && [ ! -L "$TARGET" ]; } || return 1
     { [ ! -e "$active_target" ] && [ ! -L "$active_target" ]; } || return 1
     run_setup_with_profile "$active_profile" || return 1
