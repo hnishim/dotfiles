@@ -31,6 +31,7 @@ setup_scripts=(
     "nextdns/nextdns-setup.sh"
     "duti/duti-setup.sh"
     "apps/snapzy/snapzy-setup.sh"
+    "apps/azookey/azookey-setup.sh"
     "karabiner-elements/karabiner-setup.sh"
     "gitignore/global-gitignore-setup.sh"
     "apps/codex/codex-setup.sh"
