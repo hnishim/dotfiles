@@ -308,8 +308,7 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -342,8 +341,7 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "modifiers" : [ "control" ],
             "key_code" : "u"
@@ -444,8 +442,7 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -490,8 +487,7 @@
           }, {
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "modifiers" : [ "control" ],
             "key_code" : "u"
@@ -633,8 +629,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -672,8 +667,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "modifiers" : [ "control" ],
             "key_code" : "u"
@@ -786,8 +780,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -834,8 +827,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "close_bracket"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "modifiers" : [ "control" ],
             "key_code" : "u"
@@ -978,8 +970,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "0"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1014,8 +1005,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "0"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "modifiers" : [ "control" ],
             "key_code" : "u"
@@ -1122,8 +1112,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "0"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1170,8 +1159,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "0"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "modifiers" : [ "control" ],
             "key_code" : "u"
@@ -1771,8 +1759,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "0"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "key_code" : "left_arrow"
           } ],
@@ -1800,8 +1787,7 @@
             "modifiers" : [ "shift" ],
             "key_code" : "0"
           }, {
-            "modifiers" : [ "option" ],
-            "key_code" : "t"
+            "key_code" : "return_or_enter"
           }, {
             "modifiers" : [ "control" ],
             "key_code" : "u"
@@ -1963,26 +1949,6 @@
           },
           "to" : [ {
             "key_code" : "vk_none"
-          } ],
-          "type" : "basic"
-        } ]
-      }, {
-        "description" : "英字入力時、⌥Tを無効化",
-        "manipulators" : [ {
-          "from" : {
-            "key_code" : "t",
-            "modifiers" : {
-              "mandatory" : [ "option" ]
-            }
-          },
-          "to" : [ {
-            "key_code" : "vk_none"
-          } ],
-          "conditions" : [ {
-            "input_sources" : [ {
-              "language" : "ja"
-            } ],
-            "type" : "input_source_unless"
           } ],
           "type" : "basic"
         } ]
