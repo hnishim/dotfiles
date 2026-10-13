@@ -6,7 +6,6 @@ SCRIPT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
 SOURCE_DIR="$SCRIPT_DIR/CustomInputTable"
 SOURCE_TSV="$SOURCE_DIR/custom_input_table.tsv"
 SOURCE_SYNC="$SCRIPT_DIR/azookey-custom-table-sync.sh"
-SOURCE_PLIST="$SCRIPT_DIR/launchd/my.azookey.sync.plist"
 TABLE_NAME=custom_input_table.tsv
 
 CONTAINER_ROOT="$HOME/Library/Containers/dev.ensan.inputmethod.azooKeyMac"
@@ -30,22 +29,11 @@ DOMAIN="gui/$(id -u)"
 TEMP_TABLE=""
 TEMP_DIR=""
 TEMP_SCRIPT=""
-TEMP_PLIST=""
-TEMP_PLIST_BACKUP=""
-AGENT_STOPPED=0
-AGENT_REGISTRATION_ATTEMPTED=0
-SETUP_COMPLETE=0
+RETIRED_PLIST=""
 
 cleanup() {
-    if [ "$AGENT_STOPPED" -eq 1 ] && [ "$AGENT_REGISTRATION_ATTEMPTED" -eq 0 ] &&
-        [ "$SETUP_COMPLETE" -eq 0 ] && [ -f "$TARGET_PLIST" ]; then
-        launchctl bootstrap "$DOMAIN" "$TARGET_PLIST" >/dev/null 2>&1 ||
-            log_error "セットアップ失敗後に既存LaunchAgentを再登録できませんでした"
-    fi
     if [ -n "$TEMP_TABLE" ] && [ -e "$TEMP_TABLE" ]; then rm -f "$TEMP_TABLE"; fi
     if [ -n "$TEMP_SCRIPT" ] && [ -e "$TEMP_SCRIPT" ]; then rm -f "$TEMP_SCRIPT"; fi
-    if [ -n "$TEMP_PLIST" ] && [ -e "$TEMP_PLIST" ]; then rm -f "$TEMP_PLIST"; fi
-    if [ -n "$TEMP_PLIST_BACKUP" ] && [ -e "$TEMP_PLIST_BACKUP" ]; then rm -f "$TEMP_PLIST_BACKUP"; fi
     if [ -n "$TEMP_DIR" ] && [ -d "$TEMP_DIR" ]; then
         rm -f "$TEMP_DIR/$TABLE_NAME"
         rmdir "$TEMP_DIR" 2>/dev/null || true
@@ -65,6 +53,7 @@ ensure_directory_shape() {
         log_error "$labelがディレクトリではないため変更しません: $path"
         return 1
     fi
+    return 0
 }
 
 ensure_file_shape() {
@@ -118,6 +107,7 @@ install_source_in_empty_table_dir() {
 
 prepare_container_table() {
     if [ -L "$AZOOKEY_TABLE_DIR" ]; then
+        local link_target
         link_target=$(readlink "$AZOOKEY_TABLE_DIR") || {
             log_error "既存リンクを確認できないため移行しません"
             return 1
@@ -193,12 +183,44 @@ prepare_container_table() {
 
 stop_existing_agent() {
     if launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; then
-        launchctl bootout "$DOMAIN/$LABEL" || {
-            log_error "稼働中のLaunchAgentを停止できないため変更しません"
+        if ! launchctl bootout "$DOMAIN/$LABEL"; then
+            log_error "旧LaunchAgentを停止できないため表の移行・同期を中止します"
             return 1
-        }
-        AGENT_STOPPED=1
+        fi
     fi
+}
+
+retire_existing_agent() {
+    local base_path="$RUNTIME_DIR/$LABEL.plist.disabled"
+    local candidate="$base_path"
+    local suffix=1
+
+    if [ ! -e "$TARGET_PLIST" ] && [ ! -L "$TARGET_PLIST" ]; then
+        return 0
+    fi
+    if [ -L "$TARGET_PLIST" ] || [ ! -f "$TARGET_PLIST" ]; then
+        log_error "旧LaunchAgent定義を安全に退避できません。次回ログイン時も起動する可能性があります: $TARGET_PLIST"
+        return 1
+    fi
+
+    while :; do
+        if [ -e "$candidate" ] || [ -L "$candidate" ]; then
+            candidate="$base_path.$suffix"
+            suffix=$((suffix + 1))
+            continue
+        fi
+
+        if mv -n "$TARGET_PLIST" "$candidate"; then
+            if [ ! -e "$TARGET_PLIST" ] && [ ! -L "$TARGET_PLIST" ]; then
+                RETIRED_PLIST="$candidate"
+                printf '旧LaunchAgent定義を退避しました: %s\n' "$RETIRED_PLIST"
+                return 0
+            fi
+        else
+            log_error "旧LaunchAgent定義を退避できません。次回ログイン時も起動する可能性があります: $TARGET_PLIST"
+            return 1
+        fi
+    done
 }
 
 install_runtime_script() {
@@ -208,67 +230,18 @@ install_runtime_script() {
     TEMP_SCRIPT=""
 }
 
-install_launch_agent() {
-    TEMP_PLIST=$(mktemp "$LAUNCH_AGENTS_DIR/.my.azookey.sync.XXXXXX") || return 1
-    cp "$SOURCE_PLIST" "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -replace ProgramArguments -array "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -insert ProgramArguments.0 -string "$RUNTIME_SCRIPT" "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -insert ProgramArguments.1 -string "$SOURCE_TSV" "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -insert ProgramArguments.2 -string "$AZOOKEY_TABLE_TSV" "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -insert ProgramArguments.3 -string "$LOG_FILE" "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -insert ProgramArguments.4 -string "$STATE_FILE" "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -replace WatchPaths -array "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -insert WatchPaths.0 -string "$SOURCE_DIR" "$TEMP_PLIST" || return 1
-    /usr/bin/plutil -lint "$TEMP_PLIST" >/dev/null || return 1
+log_info "AzooKeyのカスタム表を設定・同期しています..."
 
-    if [ -f "$TARGET_PLIST" ]; then
-        TEMP_PLIST_BACKUP=$(mktemp "$LAUNCH_AGENTS_DIR/.my.azookey.sync.backup.XXXXXX") || return 1
-        cp -p "$TARGET_PLIST" "$TEMP_PLIST_BACKUP" || return 1
-    fi
-    mv "$TEMP_PLIST" "$TARGET_PLIST" || return 1
-    TEMP_PLIST=""
-    AGENT_REGISTRATION_ATTEMPTED=1
-    if launchctl bootstrap "$DOMAIN" "$TARGET_PLIST"; then
-        if [ -n "$TEMP_PLIST_BACKUP" ] && [ -e "$TEMP_PLIST_BACKUP" ]; then
-            rm -f "$TEMP_PLIST_BACKUP" || log_warning "旧LaunchAgent定義の一時退避を削除できませんでした"
-        fi
-        TEMP_PLIST_BACKUP=""
-        return 0
-    fi
-
-    if [ -n "$TEMP_PLIST_BACKUP" ] && [ -e "$TEMP_PLIST_BACKUP" ]; then
-        if mv "$TEMP_PLIST_BACKUP" "$TARGET_PLIST"; then
-            TEMP_PLIST_BACKUP=""
-            if [ "$AGENT_STOPPED" -eq 1 ]; then
-                if launchctl bootstrap "$DOMAIN" "$TARGET_PLIST"; then
-                    AGENT_STOPPED=0
-                else
-                    log_error "新しいLaunchAgentの登録に失敗し、旧定義も再登録できませんでした"
-                fi
-            fi
-        else
-            log_error "新しいLaunchAgentの登録に失敗しました。旧定義は退避先に残しています: $TEMP_PLIST_BACKUP"
-            TEMP_PLIST_BACKUP=""
-            return 1
-        fi
-    fi
-    log_error "LaunchAgentの登録に失敗しました"
-    return 1
-}
-
-log_info "AzooKeyのカスタム表を同期設定しています..."
-
-if [ ! -f "$SOURCE_TSV" ]; then
-    log_warning "カスタム入力表がないためAzooKeyの同期設定をスキップします: $SOURCE_TSV"
-    exit 0
-fi
 if [ -L "$SOURCE_DIR" ] || [ -L "$SOURCE_TSV" ] || [ ! -d "$SOURCE_DIR" ]; then
     log_error "dotfiles側のカスタム表のパスが不正です"
     exit 1
 fi
-if [ ! -f "$SOURCE_SYNC" ] || [ -L "$SOURCE_SYNC" ] ||
-    [ ! -f "$SOURCE_PLIST" ] || [ -L "$SOURCE_PLIST" ]; then
-    log_error "同期スクリプトまたはLaunchAgent定義がありません"
+if [ ! -f "$SOURCE_TSV" ] || [ ! -r "$SOURCE_TSV" ]; then
+    log_error "dotfiles側のカスタム入力表がないか読み取れません: $SOURCE_TSV"
+    exit 1
+fi
+if [ -L "$SOURCE_SYNC" ] || [ ! -f "$SOURCE_SYNC" ]; then
+    log_error "同期処理がないか通常ファイルではありません: $SOURCE_SYNC"
     exit 1
 fi
 reject_unexpected_entries "$SOURCE_DIR" || exit 1
@@ -283,35 +256,37 @@ for directory in \
     "$CONTAINER_APP_SUPPORT" \
     "$AZOOKEY_PARENT_DIR" \
     "$RUNTIME_PARENT" \
-    "$RUNTIME_DIR" \
     "$LAUNCH_AGENTS_DIR"; do
     ensure_directory_shape "$directory" "保存先" || exit 1
 done
-ensure_file_shape "$RUNTIME_SCRIPT" "同期スクリプト" || exit 1
+ensure_file_shape "$RUNTIME_SCRIPT" "同期処理" || exit 1
 ensure_file_shape "$STATE_FILE" "同期状態" || exit 1
 ensure_file_shape "$LOG_FILE" "同期ログ" || exit 1
-ensure_file_shape "$TARGET_PLIST" "LaunchAgent定義" || exit 1
 
-mkdir -p "$AZOOKEY_PARENT_DIR" "$RUNTIME_DIR" "$LAUNCH_AGENTS_DIR" || {
-    log_error "同期に必要なディレクトリを作成できません"
+mkdir -p "$AZOOKEY_PARENT_DIR" "$RUNTIME_PARENT" || {
+    log_error "同期に必要な親ディレクトリを作成できません"
     exit 1
 }
 
 stop_existing_agent || exit 1
+if [ -L "$RUNTIME_DIR" ] || { [ -e "$RUNTIME_DIR" ] && [ ! -d "$RUNTIME_DIR" ]; }; then
+    log_error "旧LaunchAgentの退避先を安全に使えません。次回ログイン時も起動する可能性があります: $RUNTIME_DIR"
+    exit 1
+fi
+mkdir -p "$RUNTIME_DIR" || {
+    log_error "旧LaunchAgentの退避先を作成できません。次回ログイン時も起動する可能性があります: $RUNTIME_DIR"
+    exit 1
+}
+retire_existing_agent || exit 1
 prepare_container_table || exit 1
 install_runtime_script || {
-    log_error "ローカル実行用スクリプトを配置できません"
+    log_error "同期処理を配置できません"
     exit 1
 }
 "$RUNTIME_SCRIPT" "$SOURCE_TSV" "$AZOOKEY_TABLE_TSV" "$LOG_FILE" "$STATE_FILE" || {
-    log_error "初回同期を完了できません。保存先と正本を保持しています"
+    log_error "単発同期を完了できません。保存先と正本を保持しています"
     exit 1
 }
-install_launch_agent || {
-    log_error "LaunchAgentを登録できません。正本と保存先の表は保持しています"
-    exit 1
-}
-SETUP_COMPLETE=1
 
-printf 'Registered %s\n' "$TARGET_PLIST"
-printf 'Runtime script: %s\n' "$RUNTIME_SCRIPT"
+printf 'AzooKeyのカスタム表を同期しました: %s\n' "$AZOOKEY_TABLE_TSV"
+printf '次回の同期も同じコマンドを実行してください: bash apps/azookey/azookey-setup.sh\n'
