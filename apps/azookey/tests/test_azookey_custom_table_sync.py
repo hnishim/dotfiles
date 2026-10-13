@@ -225,6 +225,7 @@ class CustomTableSyncTests(unittest.TestCase):
         self.state_file.unlink()
         self.assertNotEqual(self.run_setup().returncode, 0)
         self.assertEqual(self.table_tsv.read_bytes(), original)
+        self.assertFalse(self.state_file.exists())
 
     def test_unreadable_source_preserves_table_and_state(self):
         self.legacy_link()
@@ -279,14 +280,16 @@ class CustomTableSyncTests(unittest.TestCase):
         original, state = self.table_tsv.read_bytes(), self.state_file.read_bytes()
         self.source_tsv.write_text("ca\tか\nmi\tみ\n", encoding="utf-8")
         self.fake_command("cp",
-            '#!/bin/sh\ncase "$2" in */.custom_input_table.tsv.*) [ "$TEST_FAIL" = 1 ] && { printf partial > "$2"; exit 74; };; esac\nexec /bin/cp "$@"\n')
-        self.assertNotEqual(self.run_helper(TEST_FAIL="1").returncode, 0)
+            '#!/bin/sh\ncase "$2" in */.custom_input_table.tsv.*) [ "$TEST_FAIL_COPY" = 1 ] && { printf partial > "$2"; exit 74; };; esac\nexec /bin/cp "$@"\n')
+        self.assertNotEqual(self.run_helper(TEST_FAIL_COPY="1").returncode, 0)
         self.assertEqual((self.table_tsv.read_bytes(), self.state_file.read_bytes()), (original, state))
         self.assert_no_table_temps()
 
         self.fake_command("mv",
             '#!/bin/sh\nlast=""; for arg in "$@"; do last="$arg"; done\n[ "$TEST_FAIL" = 1 ] && [ "$last" = "$TEST_TARGET" ] && exit 75\nexec /bin/mv "$@"\n')
-        self.assertNotEqual(self.run_helper(TEST_FAIL="1", TEST_TARGET=str(self.table_tsv)).returncode, 0)
+        replace_failure = self.run_helper(TEST_FAIL="1", TEST_TARGET=str(self.table_tsv))
+        self.assertNotEqual(replace_failure.returncode, 0)
+        self.assertIn("SYNC_BLOCKED atomic_replace_failed", replace_failure.stdout + replace_failure.stderr)
         self.assertEqual((self.table_tsv.read_bytes(), self.state_file.read_bytes()), (original, state))
         self.assert_no_table_temps()
 
