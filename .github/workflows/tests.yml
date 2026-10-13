@@ -15,6 +15,7 @@ name: Tests
 # - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — static Python source-contract inspection only
 # - apps/cursor/tests/test_mac_path_paste_setup.sh — isolated mock git/npm/Cursor + temporary HOME; not real macOS/Cursor
 # - apps/ferdium/tests/test_ferdium_setup.sh — temporary HOME + filesystem/symlink fixture only
+# - apps/azookey/tests/test_azookey_custom_table_sync.py — temporary HOME, real macOS plist tools, fake launchctl; no App Sandbox/iCloud event validation
 # - hammerspoon/tests/test_commands_path_contract.sh — repository/static contract test; requires rg
 # - lib/tests/test_hir119_karabiner_setup.sh — temporary fixture; goku/launchctl/common helpers are test doubles
 # - lib/tests/test_karabiner_migration.sh — temp filesystem + static contracts; optional goku runtime check self-skips when unavailable
@@ -92,4 +93,5 @@ jobs:
           bash apps/codex/custom-instructions/tests/test-mirror-layout.sh
           bash apps/codex/custom-instructions/tests/test-temporary-snapshot-swift.sh
           bash lib/tests/test_symlink_helpers.sh
+          python3 -m unittest discover -s apps/azookey/tests -p 'test_azookey_custom_table_sync.py'
           python3 -m unittest discover -s lib/tests -p 'test_weekly_maintenance_setup.py'
