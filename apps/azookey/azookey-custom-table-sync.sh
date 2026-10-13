@@ -26,7 +26,7 @@ validate_tsv() {
     local path="$1"
 
     [ ! -L "$path" ] && [ -f "$path" ] && [ -r "$path" ] && [ -s "$path" ] || return 1
-    iconv -f UTF-8 -t UTF-8 "$path" >/dev/null 2>&1 || return 1
+    iconv -f UTF-8 -t UTF-8 "$path" 2>/dev/null | cmp -s - "$path" || return 1
     if LC_ALL=C grep -q "$(printf '\r')" "$path"; then return 1; fi
     LC_ALL=C awk -F '\t' '
         NF != 2 || $1 == "" || $2 == "" { exit 1 }
