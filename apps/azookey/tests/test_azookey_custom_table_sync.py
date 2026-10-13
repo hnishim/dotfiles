@@ -127,6 +127,11 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertIn(OLD_PLIST, [path.read_bytes() for path in self.retired_plists()])
         self.assert_no_bootstrap()
 
+    def assert_retired_plist_path_reported(self, result):
+        preserved = [path for path in self.retired_plists() if path.read_bytes() == OLD_PLIST]
+        self.assertEqual(len(preserved), 1)
+        self.assertIn(str(preserved[0]), result.stdout + result.stderr)
+
     def assert_no_table_temps(self):
         self.assertEqual([p.name for p in self.table_dir.iterdir() if p != self.table_tsv], [])
 
@@ -344,6 +349,7 @@ class CustomTableSyncTests(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assert_old_agent_retired()
+        self.assert_retired_plist_path_reported(result)
         self.assertTrue(any(line.startswith("bootout ") for line in self.launchctl_log.read_text().splitlines()))
         self.assertTrue(self.table_tsv.is_file())
 
@@ -371,6 +377,7 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertGreaterEqual(len(self.retired_plists()), 2)
         self.assertIn(OLD_PLIST, [path.read_bytes() for path in self.retired_plists()])
         self.assert_old_agent_retired()
+        self.assert_retired_plist_path_reported(result)
 
     def test_stop_failure_keeps_plist_and_prevents_table_migration(self):
         self.install_old_agent(loaded=True)
@@ -379,6 +386,7 @@ class CustomTableSyncTests(unittest.TestCase):
         result = self.run_setup(LAUNCHCTL_TEST_BOOTOUT_FAIL="1")
 
         self.assertNotEqual(result.returncode, 0)
+        self.assertIn("停止できない", result.stdout + result.stderr)
         self.assertEqual(self.launch_agent.read_bytes(), OLD_PLIST)
         self.assertTrue(self.active_marker.exists())
         self.assertTrue(self.table_dir.is_symlink())
@@ -449,7 +457,7 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assert_no_bootstrap()
 
     def test_setup_does_not_depend_on_legacy_plist_template(self):
-        (self.app / "launchd" / f"{LABEL}.plist").unlink()
+        (self.app / "launchd" / f"{LABEL}.plist").unlink(missing_ok=True)
         self.legacy_link()
 
         result = self.run_setup()
