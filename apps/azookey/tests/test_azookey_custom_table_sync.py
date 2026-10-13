@@ -138,6 +138,24 @@ class CustomTableSyncTests(unittest.TestCase):
         state_file = Path(self.plist()["ProgramArguments"][-1])
         self.assertEqual(state_file.read_text().strip(), hashlib.sha256(source).hexdigest())
 
+    def test_large_multibyte_table_migrates_and_syncs(self):
+        original = "".join(f"k{index:03d}\tか\n" for index in range(866))
+        self.source_tsv.write_text(original, encoding="utf-8")
+        self.legacy_link()
+
+        setup = self.setup_app()
+
+        self.assertEqual(setup.returncode, 0, setup.stderr)
+        self.assertEqual(self.table_tsv.read_text(encoding="utf-8"), original)
+        self.assert_agent()
+
+        updated = "".join(f"k{index:03d}\tき\n" for index in range(866))
+        self.source_tsv.write_text(updated, encoding="utf-8")
+        sync = self.run_sync()
+
+        self.assertEqual(sync.returncode, 0, sync.stderr)
+        self.assertEqual(self.table_tsv.read_text(encoding="utf-8"), updated)
+
     def test_unknown_link_target_entry_is_preserved_and_blocks_migration(self):
         self.legacy_link()
         extra = self.source_dir / "unexpected.txt"
