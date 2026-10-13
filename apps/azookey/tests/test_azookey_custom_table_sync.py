@@ -94,11 +94,20 @@ class CustomTableSyncTests(unittest.TestCase):
         with self.launch_agent.open("rb") as stream:
             return plistlib.load(stream)
 
-    def run_sync(self):
+    def run_sync(self, **overrides):
         return subprocess.run(
-            self.plist()["ProgramArguments"], cwd=self.repo, env=self.env(),
+            self.plist()["ProgramArguments"], cwd=self.repo, env=self.env(**overrides),
             capture_output=True, text=True, errors="replace", timeout=30,
         )
+
+    def fake_command(self, name, script):
+        executable = self.bin / name
+        executable.write_text(script, encoding="utf-8")
+        executable.chmod(0o755)
+
+    def assert_no_table_temporary_files(self):
+        leftovers = [entry.name for entry in self.table_dir.iterdir() if entry != self.table_tsv]
+        self.assertEqual(leftovers, [])
 
     def legacy_link(self):
         self.table_dir.symlink_to(self.source_dir, target_is_directory=True)
@@ -208,6 +217,42 @@ class CustomTableSyncTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertEqual(self.table_tsv.read_bytes(), original)
 
+    def test_missing_source_preserves_destination_and_state(self):
+        self.legacy_link()
+        setup = self.setup_app()
+        self.assertEqual(setup.returncode, 0, setup.stderr)
+        state_file = Path(self.assert_agent()["ProgramArguments"][-1])
+        original = self.table_tsv.read_bytes()
+        old_state = state_file.read_bytes()
+        self.source_tsv.unlink()
+
+        result = self.run_sync()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.table_tsv.read_bytes(), original)
+        self.assertEqual(state_file.read_bytes(), old_state)
+        self.assert_no_table_temporary_files()
+
+    def test_unreadable_source_preserves_destination_and_state(self):
+        self.legacy_link()
+        setup = self.setup_app()
+        self.assertEqual(setup.returncode, 0, setup.stderr)
+        state_file = Path(self.assert_agent()["ProgramArguments"][-1])
+        original = self.table_tsv.read_bytes()
+        old_state = state_file.read_bytes()
+        self.source_tsv.write_text("ca\tか\nnu\tぬ\n", encoding="utf-8")
+        original_mode = self.source_tsv.stat().st_mode & 0o777
+        self.source_tsv.chmod(0)
+        try:
+            result = self.run_sync()
+        finally:
+            self.source_tsv.chmod(original_mode)
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.table_tsv.read_bytes(), original)
+        self.assertEqual(state_file.read_bytes(), old_state)
+        self.assert_no_table_temporary_files()
+
     def test_missing_or_corrupt_sync_state_cannot_replace_destination(self):
         self.legacy_link()
         setup = self.setup_app()
@@ -255,7 +300,7 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertEqual(self.table_tsv.stat().st_mtime_ns, mtime)
         self.assertEqual(self.table_tsv.read_text(encoding="utf-8"), SAMPLE_TSV)
 
-    def test_replace_failure_preserves_previous_destination_and_state(self):
+    def test_copy_failure_preserves_previous_destination_state_and_cleans_up(self):
         self.legacy_link()
         setup = self.setup_app()
         self.assertEqual(setup.returncode, 0, setup.stderr)
@@ -263,15 +308,51 @@ class CustomTableSyncTests(unittest.TestCase):
         original = self.table_tsv.read_bytes()
         old_state = state_file.read_bytes()
         self.source_tsv.write_text("ca\tか\nmi\tみ\n", encoding="utf-8")
-        self.table_dir.chmod(0o500)
-        try:
-            result = self.run_sync()
-        finally:
-            self.table_dir.chmod(0o700)
+        self.fake_command(
+            "cp",
+            "#!/bin/sh\n"
+            'if [ "$AZOOKEY_TEST_COPY_FAIL" = 1 ]; then\n'
+            '  printf partial > "$2"\n'
+            "  exit 74\n"
+            "fi\n"
+            'exec /bin/cp "$@"\n',
+        )
+
+        result = self.run_sync(AZOOKEY_TEST_COPY_FAIL="1")
 
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(self.table_tsv.read_bytes(), original)
         self.assertEqual(state_file.read_bytes(), old_state)
+        self.assert_no_table_temporary_files()
+
+    def test_replace_failure_preserves_previous_destination_state_and_cleans_up(self):
+        self.legacy_link()
+        setup = self.setup_app()
+        self.assertEqual(setup.returncode, 0, setup.stderr)
+        state_file = Path(self.assert_agent()["ProgramArguments"][-1])
+        original = self.table_tsv.read_bytes()
+        old_state = state_file.read_bytes()
+        self.source_tsv.write_text("ca\tか\nmi\tみ\n", encoding="utf-8")
+        self.fake_command(
+            "mv",
+            "#!/bin/sh\n"
+            'last=""\n'
+            'for arg in "$@"; do last="$arg"; done\n'
+            'if [ "$AZOOKEY_TEST_REPLACE_FAIL" = 1 ] && [ "$last" = "$AZOOKEY_TEST_REPLACE_TARGET" ]; then\n'
+            "  exit 75\n"
+            "fi\n"
+            'exec /bin/mv "$@"\n',
+        )
+
+        result = self.run_sync(
+            AZOOKEY_TEST_REPLACE_FAIL="1",
+            AZOOKEY_TEST_REPLACE_TARGET=str(self.table_tsv),
+        )
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(self.table_tsv.read_bytes(), original)
+        self.assertEqual(state_file.read_bytes(), old_state)
+        self.assert_no_table_temporary_files()
 
     def test_state_write_failure_is_reconciled_on_next_equal_sync(self):
         self.legacy_link()
@@ -280,11 +361,13 @@ class CustomTableSyncTests(unittest.TestCase):
         state_file = Path(self.assert_agent()["ProgramArguments"][-1])
         old_state = state_file.read_bytes()
         self.source_tsv.write_text("ca\tか\nmo\tも\n", encoding="utf-8")
-        self.runtime_dir.chmod(0o500)
+        runtime_dir = state_file.parent
+        old_mode = runtime_dir.stat().st_mode & 0o777
+        runtime_dir.chmod(old_mode & ~0o222)
         try:
             failed_state_write = self.run_sync()
         finally:
-            self.runtime_dir.chmod(0o700)
+            runtime_dir.chmod(old_mode)
 
         self.assertNotEqual(failed_state_write.returncode, 0)
         self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
