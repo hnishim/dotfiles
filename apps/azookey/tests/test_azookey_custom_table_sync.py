@@ -165,6 +165,32 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertEqual(self.table_tsv.read_text(encoding="utf-8"), updated)
         self.assertEqual(self.state_file.read_text().strip(), hashlib.sha256(updated.encode()).hexdigest())
 
+    def test_setup_initializes_missing_target_directory_without_agent(self):
+        result = self.run_setup()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.table_dir.is_dir())
+        self.assertFalse(self.table_dir.is_symlink())
+        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
+        self.assertEqual(self.state_file.read_text().strip(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
+        self.assertFalse(self.launch_agent.exists())
+        self.assert_no_bootstrap()
+        self.assert_no_table_temps()
+
+    def test_setup_initializes_empty_target_directory_without_agent(self):
+        self.table_dir.mkdir()
+
+        result = self.run_setup()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.table_dir.is_dir())
+        self.assertFalse(self.table_dir.is_symlink())
+        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
+        self.assertEqual(self.state_file.read_text().strip(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
+        self.assertFalse(self.launch_agent.exists())
+        self.assert_no_bootstrap()
+        self.assert_no_table_temps()
+
     def test_independent_table_edit_is_preserved_and_blocks_sync(self):
         self.legacy_link()
         self.assertEqual(self.run_setup().returncode, 0)
@@ -262,6 +288,33 @@ class CustomTableSyncTests(unittest.TestCase):
             '#!/bin/sh\nlast=""; for arg in "$@"; do last="$arg"; done\n[ "$TEST_FAIL" = 1 ] && [ "$last" = "$TEST_TARGET" ] && exit 75\nexec /bin/mv "$@"\n')
         self.assertNotEqual(self.run_helper(TEST_FAIL="1", TEST_TARGET=str(self.table_tsv)).returncode, 0)
         self.assertEqual((self.table_tsv.read_bytes(), self.state_file.read_bytes()), (original, state))
+        self.assert_no_table_temps()
+
+    def test_source_change_during_copy_preserves_previous_table_and_state(self):
+        self.legacy_link()
+        self.assertEqual(self.run_setup().returncode, 0)
+        original, state = self.table_tsv.read_bytes(), self.state_file.read_bytes()
+        self.source_tsv.write_text("ca\tか\nko\tこ\n", encoding="utf-8")
+        mutation_file = Path(self.tmp.name) / "source mutation.tsv"
+        mutation_file.write_text("ca\tか\nki\tき\n", encoding="utf-8")
+        self.fake_command(
+            "cp",
+            '#!/bin/sh\n'
+            'case "$2" in */.custom_input_table.tsv.*)\n'
+            '  /bin/cp "$@" || exit $?\n'
+            '  /bin/cp "$AZOOKEY_TEST_MUTATION_FILE" "$1" || exit $?\n'
+            '  exit 0;;\n'
+            'esac\n'
+            'exec /bin/cp "$@"\n',
+        )
+
+        result = self.run_helper(AZOOKEY_TEST_MUTATION_FILE=str(mutation_file))
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("source_changed_during_copy", result.stdout + result.stderr)
+        self.assertEqual(self.source_tsv.read_bytes(), mutation_file.read_bytes())
+        self.assertEqual((self.table_tsv.read_bytes(), self.state_file.read_bytes()), (original, state))
+        self.assert_no_table_temps()
 
     def test_state_write_failure_can_be_reconciled(self):
         self.legacy_link()
