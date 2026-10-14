@@ -15,7 +15,7 @@ name: Tests
 # - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — static Python source-contract inspection only
 # - apps/cursor/tests/test_mac_path_paste_setup.sh — isolated mock git/npm/Cursor + temporary HOME; not real macOS/Cursor
 # - apps/ferdium/tests/test_ferdium_setup.sh — temporary HOME + filesystem/symlink fixture only
-# - apps/azookey/tests/test_azookey_custom_table_sync.py — temporary HOME, real macOS plist tools, fake launchctl; no App Sandbox/iCloud event validation
+# - apps/azookey/tests/test_azookey_custom_table_sync.py — 一時HOMEと実macOS拡張属性、launchctl模擬。移行専用テストとApp Sandbox/iCloud確認は対象外
 # - hammerspoon/tests/test_commands_path_contract.sh — repository/static contract test; requires rg
 # - lib/tests/test_hir119_karabiner_setup.sh — temporary fixture; goku/launchctl/common helpers are test doubles
 # - lib/tests/test_karabiner_migration.sh — temp filesystem + static contracts; optional goku runtime check self-skips when unavailable
