@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""HIR-355 regression tests for one-shot AzooKey table sync and cleanup."""
+"""HIR-355 permanent regression tests for recurring AzooKey table sync."""
 from __future__ import annotations
 
 import hashlib
 import os
-import plistlib
 import shutil
 import subprocess
 import sys
@@ -22,8 +21,6 @@ TABLE_REL = Path("Library/Containers/dev.ensan.inputmethod.azooKeyMac/Data/Libra
                  "Application Support/azooKeyMac/CustomInputTable")
 RUNTIME_REL = Path("Library/Application Support/my.azookey.sync")
 SAMPLE_TSV = "ca\tか\nky\tき\n"
-STATUS_LOG = b"2026-10-13T00:00:00Z SYNC_NO_CHANGE\n"
-
 
 @unittest.skipUnless(sys.platform == "darwin", "requires macOS shell, xattr, and filesystem behavior")
 class CustomTableSyncTests(unittest.TestCase):
@@ -50,10 +47,6 @@ class CustomTableSyncTests(unittest.TestCase):
         self.table_tsv = self.table_dir / "custom_input_table.tsv"
         self.launch_agent = self.home / "Library/LaunchAgents" / f"{LABEL}.plist"
         self.runtime_dir = self.home / RUNTIME_REL
-        self.runtime_script = self.runtime_dir / "azookey-custom-table-sync.sh"
-        self.state_file = self.runtime_dir / "last-synced.sha256"
-        self.sync_log = self.runtime_dir / "sync.log"
-        self.retired_plist = self.runtime_dir / f"{LABEL}.plist.disabled"
         self.sync_script = self.app / "azookey-custom-table-sync.sh"
         self.fake_launchctl()
 
@@ -84,11 +77,9 @@ class CustomTableSyncTests(unittest.TestCase):
                               env=self.env(**overrides), capture_output=True, text=True,
                               errors="replace", timeout=30)
 
-    def run_helper(self, legacy_state=False, **overrides):
-        args = ["/bin/bash", str(self.sync_script), str(self.source_tsv), str(self.table_tsv)]
-        if legacy_state:
-            args.append(str(self.state_file))
-        return subprocess.run(args, cwd=self.repo, env=self.env(**overrides), capture_output=True,
+    def run_helper(self, **overrides):
+        return subprocess.run(["/bin/bash", str(self.sync_script), str(self.source_tsv), str(self.table_tsv)],
+                              cwd=self.repo, env=self.env(**overrides), capture_output=True,
                               text=True, errors="replace", timeout=30)
 
     def fake_command(self, name, body):
@@ -100,29 +91,11 @@ class CustomTableSyncTests(unittest.TestCase):
         self.fake_command("xattr", "#!/bin/sh\n"
             'if [ "$1" = "-p" ] && [ "$TEST_XATTR_READ_FAIL" = 1 ]; then exit 81; fi\n'
             'if [ "$1" = "-p" ] && [ "$TEST_XATTR_READBACK_FAIL" = 1 ] && [ -e "$TEST_XATTR_WRITE_MARKER" ]; then exit 85; fi\n'
+            'if [ "$1" = "-p" ] && [ "$TEST_XATTR_READBACK_MISMATCH" = 1 ] && [ -e "$TEST_XATTR_WRITE_MARKER" ]; then printf "%064d\n" 0; exit 0; fi\n'
             'if [ "$1" = "-w" ] && [ "$TEST_XATTR_WRITE_FAIL" = 1 ]; then exit 82; fi\n'
-            'if [ "$1" = "-w" ]; then /usr/bin/xattr "$@" || exit $?; [ "$TEST_XATTR_READBACK_FAIL" = 1 ] && : > "$TEST_XATTR_WRITE_MARKER"; exit 0; fi\n'
+            'if [ "$1" = "-w" ]; then /usr/bin/xattr "$@" || exit $?; { [ "$TEST_XATTR_READBACK_FAIL" = 1 ] || [ "$TEST_XATTR_READBACK_MISMATCH" = 1 ]; } && : > "$TEST_XATTR_WRITE_MARKER"; exit 0; fi\n'
             'if [ "$1" != "-p" ] && [ "$1" != "-w" ] && [ "$TEST_XATTR_LIST_FAIL" = 1 ]; then exit 83; fi\n'
             'exec /usr/bin/xattr "$@"\n')
-
-    def legacy_plist_bytes(self):
-        return plistlib.dumps({"Label": LABEL, "ProgramArguments": ["/bin/bash", str(self.runtime_script),
-                                str(self.source_tsv), str(self.table_tsv)], "RunAtLoad": True},
-                              fmt=plistlib.FMT_XML)
-
-    def install_legacy_runtime(self, state_value=None):
-        self.runtime_dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(self.sync_script, self.runtime_script)
-        if state_value is not None:
-            self.state_file.write_text(state_value + "\n", encoding="ascii")
-        self.sync_log.write_bytes(STATUS_LOG)
-        self.retired_plist.write_bytes(self.legacy_plist_bytes())
-
-    def install_old_agent(self, loaded=False):
-        self.launch_agent.parent.mkdir(parents=True, exist_ok=True)
-        self.launch_agent.write_bytes(self.legacy_plist_bytes())
-        if loaded:
-            self.active_marker.touch()
 
     def set_attr(self, name, value):
         result = subprocess.run(["xattr", "-w", name, value, str(self.table_dir)], capture_output=True, text=True)
@@ -169,32 +142,17 @@ class CustomTableSyncTests(unittest.TestCase):
                 if empty:
                     shutil.rmtree(self.table_dir)
 
-    def test_setup_migrates_legacy_state_stops_agent_and_removes_known_assets(self):
+    def test_setup_syncs_source_updates_without_runtime_storage(self):
         self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_text("old\tお\n", encoding="utf-8")
-        old_hash = hashlib.sha256(self.table_tsv.read_bytes()).hexdigest()
-        self.install_legacy_runtime(old_hash)
-        self.install_old_agent(loaded=True)
+        self.table_tsv.write_bytes(self.source_tsv.read_bytes())
+        self.set_attr(STATE_ATTRIBUTE, hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
+        self.source_tsv.write_text("ca\tか\nku\tく\n", encoding="utf-8")
         result = self.run_setup()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
         self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
         self.assert_runtime_removed()
         self.assertFalse(self.launch_agent.exists())
-        self.assertFalse(self.active_marker.exists())
-        self.assertTrue(any(x.startswith("bootout ") for x in self.launchctl_log.read_text().splitlines()))
-        self.assert_no_bootstrap()
-        self.assertNotIn(self.table_tsv.read_text(encoding="utf-8"), result.stdout + result.stderr)
-
-    def test_setup_reruns_sync_without_recreating_runtime_directory(self):
-        self.assertEqual(self.run_setup().returncode, 0)
-        self.source_tsv.write_text("ca\tか\nku\tく\n", encoding="utf-8")
-        updated, unchanged = self.run_setup(), self.run_setup()
-        self.assertEqual(updated.returncode, 0, updated.stdout + updated.stderr)
-        self.assertEqual(unchanged.returncode, 0, unchanged.stdout + unchanged.stderr)
-        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
-        self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-        self.assert_runtime_removed()
         self.assert_no_bootstrap()
 
     def test_helper_reconciles_missing_state_and_preserves_other_attributes(self):
@@ -220,24 +178,6 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertIsNone(self.get_attr())
         self.assertFalse(self.runtime_dir.exists())
 
-    def test_helper_migrates_legacy_state_and_prefers_existing_attribute(self):
-        self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_text("old\tお\n", encoding="utf-8")
-        self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
-        self.source_tsv.write_text("ca\tか\nmi\tみ\n", encoding="utf-8")
-        migrated = self.run_helper(legacy_state=True)
-        self.assertEqual(migrated.returncode, 0, migrated.stdout + migrated.stderr)
-        self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-        self.table_tsv.write_text("prior\tい\n", encoding="utf-8")
-        authoritative = hashlib.sha256(self.table_tsv.read_bytes()).hexdigest()
-        self.set_attr(STATE_ATTRIBUTE, authoritative)
-        self.state_file.write_text("0" * 64 + "\n", encoding="ascii")
-        self.source_tsv.write_text("ca\tか\nnu\tぬ\n", encoding="utf-8")
-        result = self.run_helper(legacy_state=True)
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
-        self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-
     def test_helper_preserves_independent_edit_and_never_persists_log(self):
         self.table_dir.mkdir(parents=True)
         self.table_tsv.write_bytes(self.source_tsv.read_bytes())
@@ -254,18 +194,18 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertFalse(self.runtime_dir.exists())
         self.assertNotIn("zx", result.stdout + result.stderr)
 
-    def test_helper_rejects_corrupt_state_even_if_legacy_file_exists(self):
+    def test_helper_rejects_corrupt_persistent_attribute(self):
         self.table_dir.mkdir(parents=True)
         self.table_tsv.write_text("old\tお\n", encoding="utf-8")
         self.set_attr(STATE_ATTRIBUTE, "invalid")
-        self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
         original = self.table_tsv.read_bytes()
         self.source_tsv.write_text("ca\tか\nke\tけ\n", encoding="utf-8")
-        result = self.run_helper(legacy_state=True)
+        result = self.run_helper()
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("state_invalid", result.stdout + result.stderr)
         self.assertEqual(self.table_tsv.read_bytes(), original)
         self.assertEqual(self.get_attr(), "invalid")
+        self.assertFalse(self.runtime_dir.exists())
 
     def test_helper_fails_closed_on_attribute_list_and_read_errors(self):
         self.table_dir.mkdir(parents=True)
@@ -313,6 +253,19 @@ class CustomTableSyncTests(unittest.TestCase):
         retry = self.run_helper()
         self.assertEqual(retry.returncode, 0, retry.stdout + retry.stderr)
         self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
+
+    def test_helper_rejects_mismatched_state_readback(self):
+        self.table_dir.mkdir(parents=True)
+        self.table_tsv.write_bytes(self.source_tsv.read_bytes())
+        self.fake_xattr_faults()
+        marker = Path(self.tmp.name) / "xattr-wrote"
+        result = self.run_helper(TEST_XATTR_READBACK_MISMATCH="1",
+                                 TEST_XATTR_WRITE_MARKER=str(marker))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertTrue(marker.exists())
+        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
+        self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
+        self.assertFalse(self.runtime_dir.exists())
 
     def test_helper_atomic_replace_keeps_parent_attributes(self):
         self.table_dir.mkdir(parents=True)
@@ -374,130 +327,6 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertEqual(self.get_attr(), state)
         self.assert_no_table_temps()
 
-    def test_setup_refuses_unknown_runtime_entry_without_deleting_known_assets(self):
-        self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_bytes(self.source_tsv.read_bytes())
-        self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
-        unknown = self.runtime_dir / ".private-note"
-        unknown.write_text("preserve\n", encoding="utf-8")
-        originals = {p.name: p.read_bytes() for p in (self.runtime_script, self.state_file, self.sync_log, self.retired_plist)}
-        result = self.run_setup()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertEqual(unknown.read_text(encoding="utf-8"), "preserve\n")
-        self.assertEqual({p.name: p.read_bytes() for p in (self.runtime_script, self.state_file, self.sync_log, self.retired_plist)}, originals)
-        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
-
-    def test_setup_refuses_modified_runtime_copy_before_stopping_agent(self):
-        self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_bytes(self.source_tsv.read_bytes())
-        self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
-        self.runtime_script.write_text("modified\n", encoding="utf-8")
-        self.install_old_agent(loaded=True)
-        result = self.run_setup()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertTrue(self.active_marker.exists())
-        self.assertTrue(self.launch_agent.exists())
-        self.assertTrue(self.runtime_dir.exists())
-
-    def test_setup_refuses_unrecognized_log_and_retired_plist(self):
-        for kind in ("log", "plist"):
-            with self.subTest(kind=kind):
-                self.table_dir.mkdir(parents=True)
-                self.table_tsv.write_bytes(self.source_tsv.read_bytes())
-                self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
-                if kind == "log":
-                    self.sync_log.write_text("private content\n", encoding="utf-8")
-                    bad = self.sync_log
-                else:
-                    self.retired_plist.write_text("not a plist\n", encoding="utf-8")
-                    bad = self.retired_plist
-                result = self.run_setup()
-                self.assertNotEqual(result.returncode, 0)
-                self.assertTrue(bad.exists())
-                shutil.rmtree(self.runtime_dir)
-                shutil.rmtree(self.table_dir)
-
-    def test_setup_stop_failure_preserves_agent_runtime_and_table(self):
-        self.table_dir.parent.mkdir(parents=True)
-        self.table_dir.symlink_to(self.source_dir, target_is_directory=True)
-        self.install_legacy_runtime(hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-        self.install_old_agent(loaded=True)
-        result = self.run_setup(LAUNCHCTL_TEST_BOOTOUT_FAIL="1")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertTrue(self.launch_agent.exists())
-        self.assertTrue(self.active_marker.exists())
-        self.assertTrue(self.runtime_dir.exists())
-        self.assertTrue(self.table_dir.is_symlink())
-        self.assert_no_bootstrap()
-
-    def test_setup_plist_removal_failure_stops_before_table_sync(self):
-        self.table_dir.parent.mkdir(parents=True)
-        self.table_dir.symlink_to(self.source_dir, target_is_directory=True)
-        self.install_legacy_runtime(hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-        self.install_old_agent(loaded=False)
-        self.fake_command("rm", "#!/bin/sh\nfor arg in \"$@\"; do [ \"$arg\" = \"$TEST_FAIL_REMOVE\" ] && exit 84; done\nexec /bin/rm \"$@\"\n")
-        result = self.run_setup(TEST_FAIL_REMOVE=str(self.launch_agent))
-        self.assertNotEqual(result.returncode, 0)
-        self.assertTrue(self.launch_agent.exists())
-        self.assertTrue(self.runtime_dir.exists())
-        self.assertTrue(self.table_dir.is_symlink())
-        self.assert_no_bootstrap()
-
-    def test_setup_rejects_runtime_directory_symlink_without_following(self):
-        self.runtime_dir.parent.mkdir(parents=True)
-        elsewhere = self.home / "unrelated"
-        elsewhere.mkdir()
-        sentinel = elsewhere / "sentinel"
-        sentinel.write_text("keep\n", encoding="utf-8")
-        self.runtime_dir.symlink_to(elsewhere, target_is_directory=True)
-        result = self.run_setup()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertTrue(self.runtime_dir.is_symlink())
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "keep\n")
-        self.assertFalse(self.table_dir.exists())
-
-    def test_setup_partial_cleanup_retries_and_removes_runtime_folder(self):
-        self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_bytes(self.source_tsv.read_bytes())
-        self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
-        self.source_tsv.write_text("ca\tか\nri\tり\n", encoding="utf-8")
-        self.fake_command("rm", "#!/bin/sh\nfor arg in \"$@\"; do [ \"$arg\" = \"$TEST_FAIL_REMOVE\" ] && exit 84; done\nexec /bin/rm \"$@\"\n")
-        partial = self.run_setup(TEST_FAIL_REMOVE=str(self.runtime_script))
-        self.assertNotEqual(partial.returncode, 0)
-        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
-        self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-        self.assertTrue(self.runtime_dir.exists())
-        self.assertTrue(self.runtime_script.exists())
-        self.assertNotIn("同期しました", partial.stdout)
-        retry = self.run_setup()
-        self.assertEqual(retry.returncode, 0, retry.stdout + retry.stderr)
-        self.assert_runtime_removed()
-        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
-
-    def test_setup_migrates_legacy_symlink_and_removes_runtime_directory(self):
-        self.table_dir.parent.mkdir(parents=True)
-        self.table_dir.symlink_to(self.source_dir, target_is_directory=True)
-        self.install_legacy_runtime(hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-        result = self.run_setup()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertTrue(self.table_dir.is_dir())
-        self.assertFalse(self.table_dir.is_symlink())
-        self.assertEqual(self.table_tsv.read_bytes(), self.source_tsv.read_bytes())
-        self.assertEqual(self.get_attr(), hashlib.sha256(self.source_tsv.read_bytes()).hexdigest())
-        self.assert_runtime_removed()
-
-    def test_large_multibyte_table_syncs_through_setup(self):
-        original = "".join(f"k{n:03d}\tか\n" for n in range(866))
-        self.source_tsv.write_text(original, encoding="utf-8")
-        self.assertEqual(self.run_setup().returncode, 0)
-        updated = "".join(f"k{n:03d}\tき\n" for n in range(866))
-        self.source_tsv.write_text(updated, encoding="utf-8")
-        result = self.run_setup()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertEqual(self.table_tsv.read_text(encoding="utf-8"), updated)
-        self.assertEqual(self.get_attr(), hashlib.sha256(updated.encode()).hexdigest())
-        self.assert_runtime_removed()
-
     def test_helper_copy_and_atomic_replace_failures_preserve_table_and_state(self):
         self.table_dir.mkdir(parents=True)
         self.table_tsv.write_bytes(self.source_tsv.read_bytes())
@@ -517,78 +346,6 @@ class CustomTableSyncTests(unittest.TestCase):
         self.assertEqual(self.table_tsv.read_bytes(), SAMPLE_TSV.encode())
         self.assertEqual(self.get_attr(), state)
         self.assert_no_table_temps()
-
-    def test_setup_refuses_unknown_source_and_container_assets(self):
-        extra_source = self.source_dir / "unexpected"
-        extra_source.write_text("keep\n", encoding="utf-8")
-        source_failure = self.run_setup()
-        self.assertNotEqual(source_failure.returncode, 0)
-        self.assertTrue(extra_source.exists())
-        extra_source.unlink()
-        self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_text("user data\t保持\n", encoding="utf-8")
-        extra_target = self.table_dir / "other-data"
-        extra_target.write_text("keep\n", encoding="utf-8")
-        target_failure = self.run_setup()
-        self.assertNotEqual(target_failure.returncode, 0)
-        self.assertEqual(self.table_tsv.read_text(encoding="utf-8"), "user data\t保持\n")
-        self.assertEqual(extra_target.read_text(encoding="utf-8"), "keep\n")
-        self.assertFalse(self.runtime_dir.exists())
-
-    def test_setup_refuses_unexpected_container_link(self):
-        self.table_dir.parent.mkdir(parents=True)
-        elsewhere = self.home / "unrelated table"
-        elsewhere.mkdir()
-        sentinel = elsewhere / "custom_input_table.tsv"
-        sentinel.write_text("user data\t保持\n", encoding="utf-8")
-        self.table_dir.symlink_to(elsewhere, target_is_directory=True)
-        result = self.run_setup()
-        self.assertNotEqual(result.returncode, 0)
-        self.assertTrue(self.table_dir.is_symlink())
-        self.assertEqual(sentinel.read_text(encoding="utf-8"), "user data\t保持\n")
-        self.assertFalse(self.runtime_dir.exists())
-
-    def test_setup_removes_valid_numbered_retired_plist_backup(self):
-        self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_bytes(self.source_tsv.read_bytes())
-        self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
-        numbered = self.runtime_dir / f"{LABEL}.plist.disabled.1"
-        numbered.write_bytes(self.legacy_plist_bytes())
-        result = self.run_setup()
-        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assert_runtime_removed()
-
-    def test_setup_rmdir_failure_preserves_late_unknown_asset_and_reports_failure(self):
-        self.table_dir.mkdir(parents=True)
-        self.table_tsv.write_bytes(self.source_tsv.read_bytes())
-        self.install_legacy_runtime(hashlib.sha256(self.table_tsv.read_bytes()).hexdigest())
-        self.fake_command("rm", "#!/bin/sh\n"
-            'for arg in "$@"; do\n'
-            '  if [ "$arg" = "$TEST_ADD_UNKNOWN_ON_REMOVE" ]; then\n'
-            '    /bin/rm "$@" || exit $?; : > "$TEST_RUNTIME_DIR/.appeared-during-cleanup"; exit 0;\n'
-            '  fi\n'
-            'done\nexec /bin/rm "$@"\n')
-        result = self.run_setup(TEST_ADD_UNKNOWN_ON_REMOVE=str(self.state_file))
-        self.assertNotEqual(result.returncode, 0)
-        self.assertTrue((self.runtime_dir / ".appeared-during-cleanup").exists())
-        self.assertTrue(self.runtime_dir.exists())
-        self.assertNotIn("同期しました", result.stdout)
-
-    def test_readme_documents_single_command_cleanup_and_state_attribute(self):
-        readme = (self.app / "README.md").read_text(encoding="utf-8")
-        command = "bash apps/azookey/azookey-setup.sh"
-        self.assertEqual(readme.count(command), 1)
-        self.assertIn("手動同期", readme)
-        self.assertIn("my.azookey.sync.last-synced.sha256", readme)
-        self.assertIn("Application Support/my.azookey.sync", readme)
-        self.assertIn("拡張属性", readme)
-        self.assertIn("削除", readme)
-        self.assertNotIn("次回の同期も同じコマンド", readme)
-        self.assertNotIn("my.azookey.sync.plist.disabled", readme)
-        self.assertNotIn("WatchPaths", readme)
-        self.assertNotIn("RunAtLoad", readme)
-        self.assertNotIn("launchctl bootstrap", readme)
-
 
 if __name__ == "__main__":
     unittest.main()
