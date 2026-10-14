@@ -356,10 +356,10 @@ migrate_state_to_directory() {
 
 create_staged_table_directory() {
     TEMP_DIR=$(mktemp -d "$AZOOKEY_PARENT_DIR/.CustomInputTable.migration.XXXXXX") || return 1
+    migrate_state_to_directory "$TEMP_DIR" || return 1
     cp "$SOURCE_TSV" "$TEMP_DIR/$TABLE_NAME" || return 1
     cmp -s "$SOURCE_TSV" "$TEMP_DIR/$TABLE_NAME" || return 1
     /bin/bash "$SOURCE_SYNC" --validate "$TEMP_DIR/$TABLE_NAME" >/dev/null || return 1
-    migrate_state_to_directory "$TEMP_DIR" || return 1
 }
 
 publish_staged_table_directory() {
