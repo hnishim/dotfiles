@@ -12,7 +12,7 @@ name: Tests
 # - apps/codex/custom-instructions/tests/test-sync-custom-instructions.sh — isolated temp harness + fake helper/ntn; standard shell/Ruby/JQ boundary
 # - apps/codex/custom-instructions/tests/test_custom_instructions_setup_contract.sh — xcrun/codesign/ditto/plutil/launchctl/defaults/PlistBuddy are test doubles
 # - apps/codex/tests/test_codex_setup_delegation_contract.sh — temporary repository-shaped fixture + Bash/Python/stub delegates
-# - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — static Python source-contract inspection only
+# - apps/codex/tests/test_setup_macos_codex_entrypoint.sh — Pythonによる入口契約検査と一時リポジトリでのBash実行。代替セットアップでHomebrewのPATHがCodex setupへ渡ることを確認（AzooKey本体とmacOS固有処理は実行しない）
 # - apps/cursor/tests/test_mac_path_paste_setup.sh — isolated mock git/npm/Cursor + temporary HOME; not real macOS/Cursor
 # - apps/ferdium/tests/test_ferdium_setup.sh — temporary HOME + filesystem/symlink fixture only
 # - apps/azookey/tests/test_azookey_custom_table_sync.py — 一時HOMEと実macOS拡張属性、launchctl模擬。移行専用テストとApp Sandbox/iCloud確認は対象外
