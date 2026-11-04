@@ -83,8 +83,8 @@ com.apple.DiskImageMounter com.apple.disk-image-udif viewer
 com.apple.DiskImageMounter public.iso-image viewer
 com.apple.installer com.apple.installer-package-archive viewer
 
-# Default Browser and URL links (Arc)
-company.thebrowser.Browser com.apple.web-internet-location viewer
-company.thebrowser.Browser com.microsoft.internet-shortcut viewer
-company.thebrowser.Browser http
-company.thebrowser.Browser mailto
+# Default Browser and URL links (Zen)
+app.zen-browser.zen com.apple.web-internet-location viewer
+app.zen-browser.zen com.microsoft.internet-shortcut viewer
+app.zen-browser.zen http
+app.zen-browser.zen mailto
