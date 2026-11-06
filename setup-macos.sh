@@ -40,6 +40,7 @@ setup_scripts=(
     "apps/cursor/cursor-setup.sh"
     "apps/ferdium/ferdium-setup.sh"
     "apps/zen/zen-setup.sh"
+    "apps/finicky/finicky-setup.sh"
     "apps/amphetamine/amphetamine-setup.sh"
     "textlint/textlint-setup.sh"
     "hammerspoon/hammerspoon-setup.sh"
