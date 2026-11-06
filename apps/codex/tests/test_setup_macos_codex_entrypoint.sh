@@ -21,6 +21,7 @@ if not match:
 
 entries = re.findall(r'^\s+"([^"]+)"\s*$', match.group("body"), re.M)
 assert entries.count("apps/codex/codex-setup.sh") == 1, entries
+assert entries.count("apps/finicky/finicky-setup.sh") == 1, entries
 assert entries.count("launchd/weekly-maintenance-setup.sh") == 1, entries
 for forbidden in (
     "apps/codex/agents-setup.sh",
@@ -121,6 +122,7 @@ setup_scripts=(
     "apps/cursor/cursor-setup.sh"
     "apps/ferdium/ferdium-setup.sh"
     "apps/zen/zen-setup.sh"
+    "apps/finicky/finicky-setup.sh"
     "apps/amphetamine/amphetamine-setup.sh"
     "textlint/textlint-setup.sh"
     "hammerspoon/hammerspoon-setup.sh"
