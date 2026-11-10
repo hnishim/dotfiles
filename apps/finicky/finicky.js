@@ -16,7 +16,7 @@ export default {
     {
       match: containsAny([
         "twitter.com/",
-        "https://x.com/",
+        "://x.com/",
         "amazon.co.jp/",
         "saisoncard.co.jp/",
         "jcb.co.jp/",
