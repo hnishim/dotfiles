@@ -51,6 +51,8 @@ export default {
         "tjg.account.box.com/",
         "axcelead.box.com/",
         "booking.elsi.jp/",
+        "smarthr.plus",
+        "cp.molcure.com",
       ]),
       browser: zenSpace("MOLCURE"),
     },
