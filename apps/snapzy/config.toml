@@ -44,7 +44,7 @@ reverse_magnifier_zoom_direction = false
 show_magnifier_by_default = true
 show_magnifier_color_panel = true
 magnifier_size = "medium"
-include_window_shadow = true
+include_window_shadow = false
 
 [capture.scrolling]
 show_hints = true
