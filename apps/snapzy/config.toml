@@ -8,7 +8,7 @@ use_liquid_glass = true
 play_sounds = false
 url_scheme_enabled = true
 show_menu_bar_icon = false
-start_at_login = true
+start_at_login = false
 export_location = "~/Documents/screenshots"
 
 [updates]
