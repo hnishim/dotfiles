@@ -1,0 +1,56 @@
+{
+  "routes": [
+    {
+      "space": "Personal",
+      "sites": [
+        "twitter.com",
+        "x.com",
+        "amazon.co.jp",
+        "saisoncard.co.jp",
+        "jcb.co.jp",
+        "aplus.co.jp",
+        "topcard.co.jp",
+        "jal.co.jp",
+        "ana.co.jp",
+        "smbc-card.co.jp",
+        "offers-exchange.co.jp",
+        "netbk.co.jp",
+        "linkedin.com",
+        "8card.net",
+        "sbishinseibank.co.jp",
+        "sbisec.co.jp",
+        "monex.co.jp",
+        "kabu.co.jp",
+        "connect-sec.co.jp",
+        "coincheck.com",
+        "sbivc.co.jp",
+        "benefit401k.com",
+        "etrade.com",
+        "atwork.morganstanley.com"
+      ]
+    },
+    {
+      "space": "MOLCURE",
+      "sites": [
+        "jobcan.jp",
+        "tjg.account.box.com",
+        "axcelead.box.com",
+        "booking.elsi.jp",
+        "smarthr.plus",
+        "cp.molcure.com",
+        "molcure.slack.com"
+      ]
+    },
+    {
+      "space": "H2O",
+      "sites": [
+        "nulab.com",
+        "backlog.com",
+        "chat.google.com",
+        "meet.google.com",
+        "workhub.site",
+        "h2obox.app.box.com"
+      ]
+    }
+  ]
+}
