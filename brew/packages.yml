@@ -12,6 +12,7 @@ formulae:
   - python3
   - terminal-notifier
   - yq # brew-setup.sh スクリプト用（このYAMLファイルを処理するため）
+
   - yqrashawn/goku/goku
 
   # - rclone # Google Drive 同期用
@@ -27,7 +28,6 @@ casks:
     - deskpad
     - espanso
     - fantastical
-    - finicky
     - font-ibm-plex-sans-jp
     - font-plemol-jp
     - google-drive
@@ -44,8 +44,9 @@ casks:
     - slack
     - snapzy
     - warp
-    - zen
     - zoom
+
+    - driceroland/tap/search
 
     # 外したもの
     # - obsidian
@@ -65,6 +66,8 @@ casks:
     # - shottr
     # - arc
     # - pearcleaner
+    # - finicky
+    # - zen
 
   personal:
     - scansnap-home
