@@ -41,6 +41,7 @@ setup_scripts=(
     "apps/ferdium/ferdium-setup.sh"
     "apps/zen/zen-setup.sh"
     "apps/finicky/finicky-setup.sh"
+    "apps/search/search-setup.sh"
     "apps/amphetamine/amphetamine-setup.sh"
     "textlint/textlint-setup.sh"
     "hammerspoon/hammerspoon-setup.sh"
