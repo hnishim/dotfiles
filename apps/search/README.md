@@ -1,10 +1,10 @@
-# Search Browserのスペース振り分け設定
+# Search Browserの設定管理
 
-`Send links to a space` はSearchのiCloud同期の対象外なので、`routes.json` と `search-setup.sh` で再現します。`defaults/defaults-setup.sh` とは独立しており、`setup-macos.sh` から実行されます。
+Search固有の利用者設定と「Send links to a space」の振り分けルールを管理します。`defaults/defaults-setup.sh` とは独立しており、既存の `setup-macos.sh` から `search-setup.sh` が実行されます。
 
 ## 準備と適用
 
-1. Search Browserで `Personal`/`MOLCURE`/`H2O` という名前のスペースを作成し、必要ならSearchのスペース同期を済ませます。これらが既存の**プロファイル**であってスペースではない場合は、そのプロファイル内の実際のスペース名を `routes.json` に指定します。同名のスペースが複数ある場合は対象グループへ `"profile": "プロファイル名"` を追加します
+1. Search Browserで `Personal`/`MOLCURE`/`H2O` の**3プロファイル（各1スペース）**を用意します。各プロファイルのスペース名をそれぞれ同名にします。スペース名が重複する場合だけ、`routes.json` の対象グループに `"profile": "プロファイル名"` を追加します。プロファイル名に含まれる絵文字は、スペース名が一意なら影響しません
 2. Searchの **Settings → Spaces & Pins** でスペース機能を有効にします
 3. Searchを完全終了してから、dotfilesリポジトリのルートで以下を実行します
 
@@ -13,7 +13,27 @@ bash apps/search/search-setup.sh --check
 bash apps/search/search-setup.sh
 ```
 
-`--check` は設定を変更しません。適用時はSearchが起動中なら停止し、現在の2キーの設定だけを `~/Library/Application Support/Search Routing Backups/` にバックアップします。すでに一致している場合は何も書き込みません。
+`--check` は一般設定と振り分けルールの両方を検証し、何も変更しません。適用時は両方を事前検証し、一般設定→ルーティングの順に実行します。Searchが起動中の場合は書き込みを拒否します。一致している設定は書き込みません。振り分けルールの変更前には2キーの内容だけを `~/Library/Application Support/Search Routing Backups/` に保存します。
+
+## ファイルと管理範囲
+
+- `search-setup.sh`：入口。両設定を事前検証してから順番に適用
+- `search-preferences-setup.sh`：外観・サイドバー・タブ・リンク・検索・フォーム等の38項目を `defaults write` で管理。`--check` は読み取り専用
+- `search-routes-setup.py`：スペースUUIDを解決して振り分けルールを適用。旧 `search-setup.py` から改名
+- `routes.json`：37ドメインの振り分け定義
+
+一般設定だけを確認／適用する場合：
+
+```bash
+bash apps/search/search-preferences-setup.sh --check
+bash apps/search/search-preferences-setup.sh
+```
+
+一般設定スクリプトは `icloud.sync`（iCloudの有効化）、ダウンロード先、カスタム `shortcuts`、CloudKit内部情報、端末ID、ウィンドウ位置、パスワード・履歴・拡張機能の実行時状態は管理しません。`contacts.fill` と `passkeys` を設定しても、macOS側のアクセス権限・署名条件までは付与されません。
+
+## 同期上の注意
+
+新しい「Sync with iCloud」はPersonalプロファイルのスペース・ピン・ブックマーク等のみ対象で、MOLCURE・H2Oの追加プロファイルは自動作成しません。新しいMacでは追加プロファイルと同名スペースを作成してから、このセットアップを実行してください。従来のフォルダ同期でも、異なるUUIDの追加プロファイル同士を自動対応付けするわけではありません。「Send links to a space」は同期対象外です。
 
 ## 設定ファイル
 
