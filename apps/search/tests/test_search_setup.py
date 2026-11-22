@@ -5,7 +5,7 @@ from pathlib import Path
 import tempfile
 import unittest
 
-SCRIPT = Path(__file__).resolve().parents[1] / "search-setup.py"
+SCRIPT = Path(__file__).resolve().parents[1] / "search-routes-setup.py"
 spec = importlib.util.spec_from_file_location("search_setup", SCRIPT)
 setup = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(setup)
