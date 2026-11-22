@@ -83,8 +83,11 @@ com.apple.DiskImageMounter com.apple.disk-image-udif viewer
 com.apple.DiskImageMounter public.iso-image viewer
 com.apple.installer com.apple.installer-package-archive viewer
 
-# Default Browser and URL links (Zen)
-app.zen-browser.zen com.apple.web-internet-location viewer
-app.zen-browser.zen com.microsoft.internet-shortcut viewer
-app.zen-browser.zen http
-app.zen-browser.zen mailto
+# Default Browser and URL links (Search)
+com.officecommun.search com.apple.web-internet-location viewer
+com.officecommun.search com.microsoft.internet-shortcut viewer
+com.officecommun.search http
+com.officecommun.search https
+
+# Default email address links (Meru)
+sh.zoid.meru mailto
